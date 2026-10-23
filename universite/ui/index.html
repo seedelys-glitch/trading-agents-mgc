@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Université MGC</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="barre">
+  <div class="titre"><span class="lingot">MGC</span> Université <small>recherche &amp; simulation — aucun ordre</small></div>
+  <div class="voyants" id="voyants"></div>
+  <nav class="actions">
+    <button id="b-demander" class="principal">Demander au directeur</button>
+    <button id="b-donnees">Données</button>
+    <button id="b-boucles">Boucles</button>
+    <button id="b-documents">Documents</button>
+    <button id="b-reglages">Réglages</button>
+  </nav>
+</header>
+
+<main id="hall-zone">
+  <svg id="hall" viewBox="0 0 1600 1000" role="img" aria-label="Le grand hall de l'université : les 14 agents à leur bureau">
+    <defs>
+      <radialGradient id="sol" cx="50%" cy="50%" r="60%">
+        <stop offset="0%" stop-color="var(--sol-centre)"/><stop offset="100%" stop-color="var(--sol-bord)"/>
+      </radialGradient>
+      <marker id="fleche" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--or)"/>
+      </marker>
+    </defs>
+    <g id="monde">
+      <ellipse cx="800" cy="500" rx="760" ry="470" fill="url(#sol)" stroke="var(--trait)" stroke-width="2"/>
+      <ellipse cx="800" cy="500" rx="560" ry="330" fill="none" stroke="var(--trait)" stroke-dasharray="4 10"/>
+      <g id="liens"></g>
+      <g id="bureaux"></g>
+    </g>
+  </svg>
+  <div class="zoom">
+    <button data-zoom="1.25" aria-label="Zoomer">+</button>
+    <button data-zoom="0.8" aria-label="Dézoomer">−</button>
+    <button data-vue="hall" aria-label="Vue d'ensemble">⌂</button>
+    <button data-vue="directeur" aria-label="Vue du directeur">◎</button>
+  </div>
+  <div class="legende">
+    <span><i class="pt disponible"></i>disponible</span><span><i class="pt travail"></i>au travail</span>
+    <span><i class="pt attente"></i>file d'attente</span><span><i class="pt erreur"></i>erreur</span>
+    <span><i class="pt construction"></i>en construction</span>
+  </div>
+</main>
+
+<aside id="panneau" hidden>
+  <button class="fermer" id="fermer-panneau" aria-label="Fermer">×</button>
+  <div id="panneau-contenu"></div>
+</aside>
+
+<footer id="journal" aria-live="polite"></footer>
+
+<dialog id="modale"><form method="dialog" class="modale-haut"><h2 id="modale-titre"></h2><button aria-label="Fermer">×</button></form><div id="modale-corps"></div></dialog>
+
+<script src="app.js"></script>
+</body>
+</html>

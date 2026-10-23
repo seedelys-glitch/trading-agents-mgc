@@ -234,6 +234,4 @@ install_log.txt
 salle_des_marches/raccourci_cree.txt
 donnees_ninja/
 salle_des_marches/config_mgc.json.bak
-*.log
-.coverage
 .claude/
