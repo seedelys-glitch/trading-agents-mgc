@@ -24,7 +24,7 @@ def test_chaque_competence_appartient_a_un_agent_qui_la_declare():
 
 def test_agent_sans_competence_reste_en_construction():
     connues = set(competences.TYPES)
-    assert agents.fiche(agents.agent(1), connues)["en_construction"]
+    assert agents.fiche(agents.agent(4), connues)["en_construction"]
     assert not agents.fiche(agents.agent(6), connues)["en_construction"]
 
 

@@ -257,6 +257,7 @@ function champJeu(jeux) {
     : '<span class="doux">Aucun jeu de bougies : importez d\'abord des données (bouton « Données »).</span>';
 }
 
+const COMMUNS = ["jeu", "instant"];
 async function formulaireDemande(typeChoisi, parDirecteur = true) {
   const [jeux] = await Promise.all([api("/api/jeux")]);
   const types = catalogue.filter((c) => !c.interne && c.agent !== 14 || c.type === "synthese_directeur");
@@ -265,6 +266,7 @@ async function formulaireDemande(typeChoisi, parDirecteur = true) {
       `<option value="${esc(c.type)}" ${c.type === typeChoisi ? "selected" : ""}>${esc(c.titre)} — agent ${c.agent}</option>`).join("")}</select></div>
     <div class="champ" data-pour="jeu"><label>Jeu de bougies</label>${champJeu(jeux)}</div>
     <div class="champ" data-pour="instant"><label>Instant analysé (vide = maintenant ; une date passée = replay sans regarder la suite)</label><input type="datetime-local" name="instant"></div>
+    <div data-autres></div>
     <div class="champ"><label>Consigne (facultatif)</label><input name="consigne" maxlength="300" placeholder="ex. regarde la séance de Londres"></div>
     <label class="ligne"><input type="checkbox" name="directeur" ${parDirecteur ? "checked" : ""}> passer par le directeur (il confie la mission au bon agent)</label>
     <p class="ligne" style="margin-top:14px"><button class="principal" data-envoyer>Envoyer</button></p>`);
@@ -272,6 +274,9 @@ async function formulaireDemande(typeChoisi, parDirecteur = true) {
     const t = corps.querySelector("[name=type]").value;
     const besoin = (catalogue.find((c) => c.type === t) || {}).params || {};
     corps.querySelectorAll("[data-pour]").forEach((d) => { d.hidden = !(d.dataset.pour in besoin); });
+    corps.querySelector("[data-autres]").innerHTML = Object.entries(besoin).filter(([k]) => !COMMUNS.includes(k)).map(([k, aide]) =>
+      `<div class="champ"><label>${esc(aide)}</label>${k === "sens" ? '<select data-param="sens"><option value="achat">achat</option><option value="vente">vente</option></select>'
+        : `<input data-param="${esc(k)}" inputmode="decimal" maxlength="200">`}</div>`).join("");
   };
   corps.querySelector("[name=type]").addEventListener("change", maj); maj();
   corps.querySelector("[data-envoyer]").addEventListener("click", async () => {
@@ -281,6 +286,10 @@ async function formulaireDemande(typeChoisi, parDirecteur = true) {
     if ("jeu" in besoin) { if (!jeu) return avis(corps, "Il faut d'abord un jeu de bougies.", false); params.jeu = +jeu.value; }
     const inst = corps.querySelector("[name=instant]").value;
     if ("instant" in besoin && inst) params.instant = new Date(inst).getTime() / 1000;
+    corps.querySelectorAll("[data-param]").forEach((c) => {
+      const v = c.value.trim().replace(",", ".");
+      if (v !== "") params[c.dataset.param] = c.tagName === "SELECT" || isNaN(+v) ? v : +v;
+    });
     try {
       const r = await poster("/api/missions", { type: t, params, consigne: corps.querySelector("[name=consigne]").value,
         par_directeur: corps.querySelector("[name=directeur]").checked });

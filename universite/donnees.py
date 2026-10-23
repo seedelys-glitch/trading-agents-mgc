@@ -205,11 +205,12 @@ def _brutes(base, jeu, unite, instant, limite=None):
 def regrouper(lignes, petite, grande, instant):
     """Regroupe des bougies fermées en une unité plus grande ; seuls les créneaux TERMINÉS à l'instant sont gardés."""
     pas = PERIODES[grande]
-    if pas % PERIODES[petite] or grande == "D1":
+    if pas % PERIODES[petite]:
         raise ErreurDonnees(f"{grande} ne se reconstruit pas à partir de {petite}")
     paquets = {}
     for ts, o, h, l, c, v in lignes:
-        debut = ts - ts % pas
+        # D1 = séance CME (depuis 17 h à Chicago), gardée seulement 24 h après son ouverture (prudent)
+        debut = debut_seance(ts) if grande == "D1" else ts - ts % pas
         p = paquets.get(debut)
         paquets[debut] = (debut, o, h, l, c, v) if p is None else (debut, p[1], max(p[2], h), min(p[3], l), c, p[5] + v)
     return [p for d, p in sorted(paquets.items()) if d + pas <= instant]

@@ -11,12 +11,16 @@ Un deuxième double-clic rouvre simplement la page.
 ## Ce qui marche aujourd'hui (réellement)
 | Agent | Ce qu'il fait |
 |---|---|
+| 1. SMC | Structure en D1, H1 et 15 min : tendance, dernières cassures (BOS / CHoCH), FVG et order blocks proches |
+| 2. Fibonacci | Dernière belle impulsion H1, retracement actuel, zones 0.618 à 0.893 valables seulement avec un FVG (jamais le 0.5) |
+| 3. Ichimoku | Nuage, Tenkan / Kijun, Chikou en D1, H1 et 15 min |
+| 8. Risques | Évalue une idée de trade (sens, entrée, stop, TP1) : contrats MGC, risque net avec frais, ratio, vetos. Calcul seulement, aucun ordre |
 | 6. VWAP & EMA 200 | VWAP de séance (depuis 17 h à Chicago) avec bandes, EMA 200 en 5 min, 15 min et 1 h, à un instant donné (direct ou replay) |
-| 9. Secrétaire / auditeur | Recalcule de son côté les chiffres de l'agent 6 et recompte les replays ; le document passe « vérifié » ou « rejeté » |
+| 9. Secrétaire / auditeur | Recalcule de son côté les chiffres de l'agent 6, recompte les replays et le risque (calcul indépendant) ; pour SMC, Fibonacci et Ichimoku il contrôle que le calcul est reproductible sur les mêmes bougies, sans bougie future. Le document passe « vérifié » ou « rejeté » |
 | 13. Chercheur quantitatif | Contrôle un jeu de bougies (nombre, période, trous) et rejoue ta stratégie V1 (1H / 12H) : entraînement / validation / test, Monte-Carlo, résultats par régime ; moins de 30 trades = aucune conclusion |
 | 14. Directeur | Reçoit les demandes, les confie au bon agent, fait la synthèse de ce qui est vérifié |
 
-Les 10 autres agents sont affichés **« en construction »** : ils ne font rien et le bureau ne fait pas semblant.
+Les 6 autres agents (4, 5, 7, 10, 11, 12) sont affichés **« en construction »** : ils ne font rien et le bureau ne fait pas semblant.
 
 ## Bibliothèque
 Bouton **Bibliothèque** : le secrétaire lit STRATEGIE.md (sans le modifier) et te propose chaque règle mot pour mot,

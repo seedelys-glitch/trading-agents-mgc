@@ -1,6 +1,6 @@
 # MGC AI Trading Desk — état du projet
 
-Dernière mise à jour : 23/10/2026 (fin de l'étape 5 du plan). Ce fichier est la mémoire du projet : on le lit
+Dernière mise à jour : 23/10/2026 (étape 6, vague 1 terminée). Ce fichier est la mémoire du projet : on le lit
 avant de reprendre le travail, on le met à jour après chaque étape.
 
 ## 1. Vision
@@ -38,11 +38,16 @@ Aucun service payant.
 ## 4. Fonctionnalités terminées
 | Agent | Compétence réelle | Vérifiée par |
 |---|---|---|
+| 1. SMC | Structure D1 / H1 / M15 (tendance, BOS / CHoCH, FVG, order blocks) avec `calculs.resume_smc` | agent 9 (reproductibilité) |
+| 2. Fibonacci | Impulsion H1, retracement, zones 0.618–0.893 avec FVG (`calculs.fibo`) | agent 9 (reproductibilité) |
+| 3. Ichimoku | Nuage, Tenkan / Kijun, Chikou D1 / H1 / M15 (`calculs.ichimoku`) | agent 9 (reproductibilité) |
+| 8. Risques | Idée de trade → contrats, risque net, ratio, vetos (`mgc.risque`) ; veto = alerte au directeur | agent 9 (recalcul indépendant en ticks) |
 | 6. VWAP & EMA 200 | VWAP de séance (depuis 17 h Chicago) + bandes, EMA 200 en M5/M15/H1, à un instant donné | agent 9 (recalcul indépendant) |
 | 9. Secrétaire / auditeur | Vérifie les analyses et les replays ; lit STRATEGIE.md et propose les règles ; range les documents dans la bibliothèque | – |
 | 13. Chercheur quantitatif | Contrôle qualité d'un jeu de bougies ; replay de la stratégie V1 (60/20/20, Monte-Carlo, régimes) | agent 9 |
 | 14. Directeur | Confie une demande au bon agent ; synthèse des documents vérifiés | – |
-Les agents 1, 2, 3, 4, 5, 7, 8, 10, 11, 12 sont affichés « en construction » (aucune activité simulée).
+Les agents 4, 5, 7, 10, 11, 12 sont affichés « en construction » (aucune activité simulée).
+D1 est reconstruite par séance CME (17 h Chicago) à partir des petites unités, seulement quand la séance est finie.
 
 Bureau virtuel : hall des 14 agents avec leur état réel (disponible, au travail, file d'attente, erreur, en
 construction), fonctions de soutien allumées seulement pendant leur étape, liens seulement pour de vrais messages,
@@ -50,7 +55,7 @@ panneau par agent (mission, tâches, documents, soutiens, historique), demandes 
 documents, bibliothèque, réglages. Zoom et déplacement. Vérifié sur écran PC et au format téléphone (360 px).
 
 ## 5. En cours / à faire (par priorité)
-1. Étape 6 : agents par vagues (commencer par 8 gestionnaire des risques, 1 SMC, 2 Fibonacci, 5 macro).
+1. Étape 6, vague 2 : 5 macro (calendrier), 12 réactions aux annonces, 7 flux (estimé, dit comme tel).
 2. Étape 7 : TradingView (import des exports CSV déjà possible).
 3. Étape 8 : lien avec Jarvis. Étape 9 : fiabilité et docs.
 4. Ensuite : bureau immersif (espaces, salle de réunion, labo, bibliothèque, bureau du directeur), en
@@ -64,15 +69,18 @@ documents, bibliothèque, réglages. Zoom et déplacement. Vérifié sur écran 
 - Bibliothèque : la clé d'une règle dépend de sa place dans sa section ; insérer un point au milieu d'une section
   de STRATEGIE.md fait proposer de nouvelles versions pour les points suivants (rien n'est perdu, à valider).
 - Recherche « par le sens » seulement si un modèle d'embeddings est choisi dans les réglages (sinon par mots).
+- SMC, Fibonacci, Ichimoku : l'agent 9 contrôle la REPRODUCTIBILITÉ (mêmes bougies, même fonction, aucune
+  bougie future), pas un recalcul indépendant ; c'est écrit sur chaque procès-verbal.
 - Le dossier git du PC n'a pas de lien vers GitHub : la sauvegarde GitHub est une copie (voir 9).
 
 ## 7. Tests (23/10/2026)
-- Conteneur de développement : 179 tests de la Salle + 51 de l'université = **230 réussis**.
+- Conteneur de développement : 179 tests de la Salle + 64 de l'université = **243 réussis** (étape 6, vague 1).
 - Sur le PC de Jabran (Python 3.13.16) : 217 réussis avant l'ajout du replay et de la bibliothèque
-  (les 13 nouveaux tests n'y ont pas encore été lancés).
+  (les tests ajoutés depuis n'y ont pas encore été lancés).
 - Couverture : aucun ordre possible (analyse du code), anti look-ahead (mêmes résultats avec ou sans les bougies
   futures), reprise après arrêt, nouvel essai, délai, budget des boucles, vérification indépendante, rejet d'un
-  chiffre faux, de bout en bout par le serveur.
+  chiffre faux, de bout en bout par le serveur ; SMC / Fibo / Ichimoku identiques avec ou sans bougies
+  futures ; risque recompté et concordant avec le moteur de la Salle ; veto et limite du jour.
 
 ## 8. Décisions techniques
 - L'université est construite dans TradingAgents, à côté de la Salle, car tout le calcul MGC fiable y est déjà

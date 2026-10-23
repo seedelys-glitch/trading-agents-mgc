@@ -52,7 +52,7 @@ def test_page_et_etat_initial(univ):
     code, etat = appel(univ, "/api/etat")
     assert code == 200 and len(etat["agents"]) == 14
     statuts = {a["n"]: a["statut"] for a in etat["agents"]}
-    assert statuts[6] == "disponible" and statuts[1] == "construction"
+    assert statuts[6] == "disponible" and statuts[4] == "construction"
     assert etat["liens"] == [] and etat["compteurs"]["documents"] == 0
 
 

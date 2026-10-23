@@ -101,7 +101,9 @@ dialog::backdrop { background: #000a; }
 .modale-haut h2 { margin: 0; font-size: 18px; }
 .modale-haut button { width: 34px; height: 34px; padding: 0; font-size: 20px; }
 #modale-corps { padding: 14px 16px 18px; overflow-y: auto; }
-.champ { display: grid; gap: 4px; margin-bottom: 12px; }
+.champ { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; margin-bottom: 12px; }
+.champ[hidden] { display: none; }
+.champ select, .champ input { max-width: 100%; min-width: 0; }
 .champ label { font-size: 13px; color: var(--doux); }
 .ligne { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .message { padding: 8px 10px; border-radius: 8px; background: var(--carte2); margin: 8px 0; font-size: 14px; }
