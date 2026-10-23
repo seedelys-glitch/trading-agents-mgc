@@ -1,6 +1,6 @@
 # MGC AI Trading Desk — état du projet
 
-Dernière mise à jour : 23/10/2026 (étape 9 : audit sur le PC, règles du 23/10 appliquées au replay et au risque). Ce fichier est la mémoire du projet : on le lit
+Dernière mise à jour : 23/10/2026 (bureau immersif, étape E1 : plan du bureau en données + API). Ce fichier est la mémoire du projet : on le lit
 avant de reprendre le travail, on le met à jour après chaque étape.
 
 ## 0. Audit du 23/10/2026 (soir, sur le PC de Jabran) : à lire en premier
@@ -81,8 +81,15 @@ d'orchestre (et la caméra du bureau), bouton « lancer », voix / appli / Teleg
 
 ## 5. En cours / à faire (par priorité)
 1. Redémarrer l'université, puis premières missions réelles (calendrier, discours, import TradingView, replay A et B).
-2. Phase suivante : bureau immersif (espaces, salle de réunion, labo, bibliothèque, bureau du directeur), en
-   expliquant d'abord comment il s'intègre à l'architecture.
+2. **Bureau immersif (en cours)**. Explication de l'intégration : document « Bureau immersif de l'université —
+   comment il s'intègre » (https://claude.ai/artifact/Lm3BeP6WvUxnFbYeUvcDK4). Principe : plan en données
+   (`universite/scene.py`, x/y/z en mètres, prêt pour un futur moteur 3D/VR) + état réel de la base + moteur
+   d'affichage isométrique SVG ; l'ancien hall reste.
+   - E1 FAIT : `scene.py` (8 zones, 14 postes, `verifier()`), `/api/scene`, `/api/agent/N/espace` (statut, poste,
+     missions, documents, dernier document, sources, échanges, tâches lançables, graphique = jeu/instant/unité
+     réellement lus), `/api/bougies?jeu&unite&instant&n` (bougies fermées seulement, 1000 max).
+   - À faire : E2 plateau isométrique avec l'état réel · E3 écrans des postes · E4 espace de travail d'un agent ·
+     E5 bibliothèque, réunion, labo, données · E6 bureau du directeur · E7 finitions PC / téléphone, livraison.
 3. Quand NinjaTrader 8 / Bookmap seront installés : temps réel et agent 4 (heatmap).
 
 ## 6. Problèmes connus et limites
@@ -106,7 +113,7 @@ d'orchestre (et la caméra du bureau), bouton « lancer », voix / appli / Teleg
 - Le dossier git du PC n'a pas de lien vers GitHub : la sauvegarde GitHub est une copie (voir 9).
 
 ## 7. Tests (23/10/2026)
-- Conteneur de développement : 179 tests de la Salle + 87 de l'université = **266 réussis** (règles du 23/10),
+- Conteneur de développement : 179 tests de la Salle + 94 de l'université = **273 réussis** (bureau E1),
   avec la commande ci-dessous (les deux dossiers ensemble fonctionnent maintenant).
 - Sur le PC de Jabran (Python 3.13.16) : 217 réussis avant l'ajout du replay et de la bibliothèque
   (les tests ajoutés depuis n'y ont pas encore été lancés).

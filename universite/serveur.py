@@ -16,13 +16,15 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from . import agents, bibliotheque, competences, config, donnees
+from . import agents, bibliotheque, competences, config, donnees, scene
 from .base import Base
 from .ia import IALocale
 from .moteur import Moteur
 
 UI = Path(__file__).resolve().parent / "ui"
 ACTIF_S = 120          # un lien entre deux agents reste affiché 2 min après leur dernier message réel
+BOUGIES_MAX = 1000     # bougies renvoyées au plus par /api/bougies
+UNITES_GRAPHIQUE = ("H1", "M15", "M5", "D1", "M1")   # unité préférée pour le petit graphique d'un poste
 log = logging.getLogger("universite")
 
 
@@ -103,6 +105,47 @@ class Universite:
             " (SELECT MAX(id) FROM etapes WHERE agent=? GROUP BY role)", (a["n"],))}
         return f
 
+    def espace_agent(self, n):
+        """L'espace de travail d'un agent dans le bureau immersif : uniquement ce que la base contient."""
+        a = agents.agent(n)
+        if not a:
+            return None
+        f = agents.fiche(a, set(competences.TYPES))
+        vivant = next(x for x in self.etat()["agents"] if x["n"] == a["n"])
+        documents = self.base.lire("SELECT id, genre, titre, statut, verifie_par, cree, mission, sources FROM documents"
+                                   " WHERE agent=? ORDER BY id DESC LIMIT 10", (a["n"],))
+        dernier = self.base.un("SELECT * FROM documents WHERE agent=? ORDER BY id DESC LIMIT 1", (a["n"],))
+        sources, vues = [], set()
+        for d in documents:
+            for s in d.pop("sources") or []:
+                cle = json_cle(s)
+                if cle not in vues and len(sources) < 20:
+                    vues.add(cle)
+                    sources.append({**s, "document": d["id"]} if isinstance(s, dict) else {"texte": s, "document": d["id"]})
+        return {"agent": {k: f[k] for k in ("n", "cle", "nom", "court", "mission", "outils", "qualite", "escalade",
+                                             "competences_branchees", "en_construction", "soutiens")},
+                "statut": vivant["statut"], "mission_en_cours": vivant["mission"], "file": vivant["file"],
+                "poste": scene.poste(a["n"]),
+                "missions": self.base.lire("SELECT id, type, titre, statut, erreur, cree, debut, fin, demandeur"
+                                           " FROM missions WHERE agent=? ORDER BY id DESC LIMIT 15", (a["n"],)),
+                "documents": documents, "dernier_document": dernier, "graphique": graphique(dernier),
+                "sources": sources,
+                "echanges": self.base.lire("SELECT * FROM messages WHERE de=? OR a=? ORDER BY id DESC LIMIT 20",
+                                           (a["n"], a["n"])),
+                "taches": [c for c in competences.catalogue() if c["agent"] == a["n"] and not c["interne"]]}
+
+    def bougies(self, q):
+        """Vraies bougies FERMÉES d'un jeu à un instant (jamais de bougie future)."""
+        jeu = int(q["jeu"])
+        infos = self.base.un("SELECT id, nom, source, symbole, temps_reel FROM jeux WHERE id=?", (jeu,))
+        if not infos:
+            raise ValueError("jeu de bougies inconnu")
+        instant = float(q.get("instant") or time.time())
+        n = max(1, min(BOUGIES_MAX, int(q.get("n", 200))))
+        f = donnees.fenetre(self.base, jeu, q.get("unite", "H1"), instant, n)
+        return {"jeu": infos, "unite": f["unite"], "instant": instant, "fermees_seulement": True,
+                "reconstruite_depuis": f["reconstruite_depuis"], "bougies": f["bougies"]}
+
     # ------------------------------------------------------------------ actions
     def creer_mission(self, corps):
         genre = corps.get("type", "")
@@ -133,6 +176,22 @@ class Universite:
 
     def arreter(self):
         self.moteur.arreter()
+
+
+def json_cle(obj):
+    return json.dumps(obj, ensure_ascii=False, sort_keys=True, default=str)
+
+
+def graphique(doc):
+    """De quoi tracer le petit graphique d'un document : son jeu, son instant et une unité qu'il a réellement lue."""
+    if not doc or not isinstance(doc.get("donnees"), dict):
+        return None
+    d = doc["donnees"]
+    unites = [s.get("unite") for s in doc.get("sources") or [] if isinstance(s, dict) and s.get("jeu") == d.get("jeu")]
+    unite = next((u for u in UNITES_GRAPHIQUE if u in unites), None)
+    if d.get("jeu") is None or not d.get("instant") or not unite:
+        return None
+    return {"jeu": int(d["jeu"]), "instant": float(d["instant"]), "unite": unite}
 
 
 def _json_bytes(obj):
@@ -178,6 +237,13 @@ def fabriquer_handler(univ):
                 if len(morceaux) == 3 and morceaux[:2] == ["api", "agent"]:
                     f = univ.fiche_agent(morceaux[2])
                     return self._envoyer(200 if f else 404, f or {"erreur": "agent inconnu"})
+                if u.path == "/api/scene":
+                    return self._envoyer(200, scene.scene())
+                if len(morceaux) == 4 and morceaux[:2] == ["api", "agent"] and morceaux[3] == "espace":
+                    e = univ.espace_agent(morceaux[2])
+                    return self._envoyer(200 if e else 404, e or {"erreur": "agent inconnu"})
+                if u.path == "/api/bougies":
+                    return self._envoyer(200, univ.bougies(q))
                 if u.path == "/api/missions":
                     return self._envoyer(200, univ.base.lire("SELECT * FROM missions ORDER BY id DESC LIMIT ?",
                                                              (min(500, int(q.get("n", 100))),)))
