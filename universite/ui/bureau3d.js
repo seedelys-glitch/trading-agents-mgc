@@ -16,6 +16,9 @@ const TEINTES = { directeur: "#3a2a0e", analyse: "#0f1d33", macro: "#24112e", re
   labo: "#0c2626", risque: "#2e0f12", donnees: "#101a2e" };
 const MUR = 9, MEZZ = 4.6;
 const telephone = window.innerWidth < 700;
+// mode caméra (Jarvis) : la vue tourne lentement toute seule, 30 images par seconde suffisent
+const camera3d = document.documentElement.classList.contains("camera");
+let image = 0;
 
 let plan, L, P, renderer, scene, camera, controls, composer, labels, conteneur, pret = false, actif = false;
 const postes = {}, cliquables = [], tetes = {};
@@ -445,6 +448,7 @@ function taille() {
 function boucle(t) {
   requestAnimationFrame(boucle);
   if (!actif || document.hidden) return;
+  if (camera3d && (image++ & 1)) return;
   const s = (t - t0) / 1000;
   if (vol) {
     const k = Math.min(1, (t - vol.t) / vol.duree), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
@@ -472,10 +476,10 @@ function webglPossible() {
 async function demarrer() {
   conteneur = document.getElementById("scene3d");
   if (!conteneur || new URLSearchParams(location.search).get("vue") === "plan" || !webglPossible()) return;
-  plan = await (await fetch("/api/scene")).json();
+  plan = await (await fetch("api/scene")).json();
   L = plan.sol.l; P = plan.sol.p;
   renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, telephone ? 1.75 : 2));
+  renderer.setPixelRatio(camera3d ? 1 : Math.min(window.devicePixelRatio, telephone ? 1.75 : 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.2;
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   conteneur.appendChild(renderer.domElement);
@@ -491,6 +495,12 @@ async function demarrer() {
   controls = new OrbitControls(camera, renderer.domElement);
   controls.target.copy(VUES.ensemble[1]);
   Object.assign(controls, { enableDamping: true, dampingFactor: 0.08, maxPolarAngle: 1.38, minDistance: 4, maxDistance: 85, screenSpacePanning: false });
+  if (camera3d) {   // la caméra tourne seule ; si on la prend en main, elle reprend sa ronde 20 s après
+    let reprise = null;
+    Object.assign(controls, { autoRotate: true, autoRotateSpeed: 0.35 });
+    controls.addEventListener("start", () => { controls.autoRotate = false; clearTimeout(reprise); });
+    controls.addEventListener("end", () => { reprise = setTimeout(() => { controls.autoRotate = true; }, 20000); });
+  }
   composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
   composer.addPass(new UnrealBloomPass(new THREE.Vector2(512, 512), 0.5, 0.45, 0.9));

@@ -12,6 +12,10 @@ const STATUTS = { disponible: "disponible", travail: "au travail", attente: "fil
   annulee: "annulée", a_verifier: "à vérifier", verifie: "vérifié", rejete: "rejeté", brouillon: "brouillon",
   active: "active", pause: "en pause" };
 
+// ?camera=1 : la « caméra » que Jarvis montre (écran du PC, appli) : seulement le bureau 3D, qui tourne lentement.
+const CAMERA = new URLSearchParams(location.search).get("camera") === "1";
+if (CAMERA) document.documentElement.classList.add("camera");
+
 let etat = null, choisi = null, ongletChoisi = "mission", vue = { x: 0, y: 0, w: 1600, h: 1000 }, catalogue = [];
 const pos = {};
 
@@ -23,7 +27,8 @@ const duree = (s) => s < 60 ? `${Math.round(s)} s` : s < 3600 ? `${Math.round(s 
 const etiquette = (s) => `<span class="etiquette ${esc(s)}">${esc(STATUTS[s] || s)}</span>`;
 
 async function api(chemin, options = {}) {
-  const r = await fetch(chemin, { ...options, headers: { "X-Universite": "1", ...(options.headers || {}) } });
+  // adresses relatives : la même page marche en direct (127.0.0.1:8780/) et à travers Jarvis (/universite/…)
+  const r = await fetch(chemin.replace(/^\//, ""), { ...options, headers: { "X-Universite": "1", ...(options.headers || {}) } });
   const corps = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(corps.erreur || `erreur ${r.status}`);
   return corps;
@@ -130,10 +135,20 @@ async function rafraichir() {
     etat = await api("/api/etat");
     if (!$("#bureaux").childNodes.length) { placer(etat.agents); dessinerBureaux(etat.agents); }
     majHall(); majVoyants(); await majJournal();
+    if (CAMERA) majCamera();
     if (choisi && !$("#panneau").hidden) await majPanneau(false);
   } catch (e) {
     $("#voyants").innerHTML = `<span class="voyant ko">Université injoignable : <b>${esc(e.message)}</b></span>`;
   }
+}
+
+// Bandeau de la caméra : uniquement des compteurs réels de /api/etat
+function majCamera() {
+  let b = $("#cam-bandeau");
+  if (!b) { b = document.createElement("div"); b.id = "cam-bandeau"; document.body.appendChild(b); }
+  const n = (s) => etat.agents.filter((a) => a.statut === s).length;
+  const parts = [[n("travail"), "au travail"], [n("attente"), "en attente"], [n("erreur"), "en erreur"]].filter((x) => x[0]);
+  b.innerHTML = `<i class="rec"></i><b>Université MGC</b><span>${parts.length ? parts.map((x) => `${x[0]} ${x[1]}`).join(" · ") : "aucun agent au travail"}</span>`;
 }
 
 // ------------------------------------------------------------------ zoom et déplacement

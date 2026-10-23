@@ -104,6 +104,13 @@ MIGRATIONS = [
     """, """
         DROP TABLE fichiers_importes;
     """),
+    (5, "conversation de Jabran (via Jarvis) avec le directeur", """
+        CREATE TABLE conversation (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, de TEXT NOT NULL, texte TEXT NOT NULL,
+            origine TEXT, mission INTEGER, intention TEXT);
+    """, """
+        DROP TABLE conversation;
+    """),
 ]
 
 CHAMPS_JSON = ("params", "resultat", "donnees", "sources", "etat", "detail", "source")

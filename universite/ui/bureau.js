@@ -225,11 +225,11 @@ function choisirMode(m) {
   if (b) { b.textContent = mode === "bureau" ? "◯" : "▦"; b.setAttribute("aria-label", mode === "bureau" ? "Voir l'ancien hall" : "Voir le bureau"); b.title = b.getAttribute("aria-label"); }
   $("#hall").setAttribute("aria-label", mode === "bureau" ? "Le bureau de l'université : zones et postes des 14 agents" : "Le grand hall de l'université : les 14 agents à leur bureau");
   if (window.basculer3d) window.basculer3d(mode);
-  try { localStorage.setItem("universite-vue", mode); } catch { /* stockage indisponible : sans conséquence */ }
+  if (!CAMERA) try { localStorage.setItem("universite-vue", mode); } catch { /* stockage indisponible : sans conséquence */ }
 }
 
 async function demarrerPlateau() {
-  let voulu = new URLSearchParams(location.search).get("vue");
+  let voulu = CAMERA ? "bureau" : new URLSearchParams(location.search).get("vue");
   if (!voulu) { try { voulu = localStorage.getItem("universite-vue"); } catch { voulu = null; } }
   choisirMode(voulu || "bureau");
   $("#b-mode").addEventListener("click", () => { choisirMode(mode === "bureau" ? "hall" : "bureau"); allerA("hall"); });

@@ -75,9 +75,12 @@ construction), fonctions de soutien allumées seulement pendant leur étape, lie
 panneau par agent (mission, tâches, documents, soutiens, historique), demandes au directeur, données, boucles,
 documents, bibliothèque, réglages. Zoom et déplacement. Vérifié sur écran PC et au format téléphone (360 px).
 
-Lien avec Jarvis (`Documents\Jarvis\universite_lien.py` + `chef.py`) : ligne « Université MGC » dans le chef
-d'orchestre (et la caméra du bureau), bouton « lancer », voix / appli / Telegram « état de l'université » et
-« ouvre l'université ». Jarvis lit seulement l'état (127.0.0.1:8780) ; aucun lien avec `ordres.py`.
+Lien avec Jarvis (`Documents\Jarvis\universite_lien.py` + `chef.py` + `desk_chat.py`) : ligne « Université MGC »
+dans le chef d'orchestre, bouton « lancer », voix / appli / Telegram « état de l'université » et « ouvre
+l'université ». Depuis le 24/10 : **Jarvis parle au directeur** (« directeur, … », puce « Directeur » du chat) via
+`POST /api/directeur` (`universite/directeur_chat.py`, table `conversation`, migration 5), et **la caméra de Jarvis
+montre l'université en 3D** (`?camera=1`, relayée par Jarvis sur `/universite/…`, jeton de 12 h pour l'appli).
+Aucun lien avec `ordres.py`.
 
 ## 5. En cours / à faire (par priorité)
 1. Redémarrer l'université, puis premières missions réelles (calendrier, discours, import TradingView, replay A et B).
@@ -136,7 +139,7 @@ d'orchestre (et la caméra du bureau), bouton « lancer », voix / appli / Teleg
 - Le dossier git du PC n'a pas de lien vers GitHub : la sauvegarde GitHub est une copie (voir 9).
 
 ## 7. Tests (23/10/2026)
-- Conteneur de développement : 182 tests de la Salle + 106 de l'université = **288 réussis** (bureau 3D),
+- Conteneur de développement : 182 tests de la Salle + 117 de l'université = **299 réussis** (directeur via Jarvis),
   avec la commande ci-dessous (les deux dossiers ensemble fonctionnent maintenant).
 - Sur le PC de Jabran (Python 3.13.16) : 217 réussis avant l'ajout du replay et de la bibliothèque
   (les tests ajoutés depuis n'y ont pas encore été lancés).

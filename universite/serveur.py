@@ -19,6 +19,7 @@ from urllib.parse import parse_qs, urlparse
 
 from . import agents, bibliotheque, competences, config, donnees, scene
 from .base import Base
+from .directeur_chat import DirecteurChat
 from .ia import IALocale
 from .moteur import Moteur
 
@@ -38,6 +39,7 @@ class Universite:
         self.base = Base(self.dossier / "universite.sqlite")
         self.ia = IALocale(self.base, self.reglages)
         self.moteur = Moteur(self.base, self.reglages, self.ia)
+        self.directeur = DirecteurChat(self)
         if demarrer_moteur:
             self.moteur.demarrer()
 
@@ -323,6 +325,8 @@ def fabriquer_handler(univ):
                     return self._envoyer(200, univ.base.lire("SELECT * FROM boucles ORDER BY id DESC"))
                 if u.path == "/api/reglages":
                     return self._envoyer(200, univ.reglages)
+                if u.path == "/api/directeur":                  # conversation de Jabran (via Jarvis) avec le directeur
+                    return self._envoyer(200, {"messages": univ.directeur.historique(int(q.get("n", 40)))})
                 if u.path == "/api/regles":
                     statut = q.get("statut")
                     sql = "SELECT * FROM regles" + (" WHERE statut=?" if statut else "") + " ORDER BY theme, cle, version DESC"
@@ -361,6 +365,8 @@ def fabriquer_handler(univ):
                 corps = json.loads(brut.decode("utf-8") or "{}") if brut else {}
                 if u.path == "/api/missions":
                     return self._envoyer(200, {"mission": univ.creer_mission(corps)})
+                if u.path == "/api/directeur":
+                    return self._envoyer(200, univ.directeur.repondre(corps.get("texte", ""), corps.get("origine", "jarvis")))
                 if len(morceaux) == 4 and morceaux[:2] == ["api", "mission"] and morceaux[3] == "annuler":
                     return self._envoyer(200, {"annulee": univ.base.annuler(int(morceaux[2]))})
                 if u.path == "/api/jeux/ninja":

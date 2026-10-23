@@ -47,6 +47,15 @@ sont de vrais messages entre agents.
   règles et extraits, données = jeux et imports, directeur = synthèse, demandes, alertes...).
 - Bouton ◯ : l'ancien hall en cercle (bouton ▦ pour revenir au bureau).
 
+## Parler au directeur depuis Jarvis
+Jarvis est la tête de tous les agents : il parle au **directeur** (agent 14), qui commande l'université.
+À la voix, dans l'appli ou sur Telegram : « directeur, où en est l'université ? », « dis au directeur de lancer une
+analyse Fibonacci », « directeur, fais-moi la synthèse », « où en est la mission ? », « des alertes ? »… ou la puce
+« Directeur » du chat des chefs d'agents. Le directeur répond seulement avec ce que contient la base ; il confie les
+missions à l'agent qui sait les faire (jamais sans bougies importées) ; une réponse de l'IA qui contient un chiffre
+absent de la base est refusée. API : `POST /api/directeur {"texte": …}`, historique `GET /api/directeur`.
+La caméra de Jarvis (écran du PC, appli) montre ce bureau en 3D : `?camera=1` (vue qui tourne lentement).
+
 ## Bibliothèque
 Bouton **Bibliothèque** : le secrétaire lit STRATEGIE.md (sans le modifier) et te propose chaque règle mot pour mot,
 avec sa ligne d'origine. Tu valides, corriges ou rejettes ; chaque version est gardée. Une case permet de chercher.

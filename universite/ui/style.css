@@ -209,3 +209,19 @@ pre.doc.apercu { max-height: 220px; overflow: auto; font-size: 13px; margin: 8px
   text-transform: uppercase; color: #e8c97a; text-shadow: 0 0 10px #000, 0 1px 2px #000; white-space: nowrap; }
 .nom-zone3d:hover { color: #fff1c9; }
 @media (max-width: 700px) { .tag3d { font-size: 10.5px; } .tag3d small { font-size: 9.5px; } .nom-zone3d { font-size: 10.5px; letter-spacing: 1px; } }
+
+/* ------------------------------------------------------------------ mode caméra (?camera=1, montré par Jarvis) */
+.camera body { grid-template-rows: 1fr; }
+.camera .barre, .camera #journal, .camera .zoom, .camera .legende { display: none; }
+#cam-bandeau { position: fixed; left: 10px; top: 8px; z-index: 3; display: flex; align-items: center; gap: 8px;
+  padding: 4px 10px; border-radius: 6px; background: rgba(4, 6, 11, .72); border: 1px solid var(--trait);
+  font-size: 12px; pointer-events: none; }
+#cam-bandeau b { color: var(--or-clair); letter-spacing: .4px; }
+#cam-bandeau span { color: var(--doux); }
+#cam-bandeau .rec { width: 8px; height: 8px; border-radius: 50%; background: #e0393e; animation: rec 1.6s infinite; }
+@keyframes rec { 50% { opacity: .25; } }
+/* petite caméra (encadré de l'écran Jarvis) : seulement les agents, sans le nom des zones */
+@media (max-width: 640px) and (max-height: 420px) {
+  .camera .nom-zone3d { display: none; }
+  .camera #cam-bandeau { font-size: 11px; top: 6px; left: 6px; padding: 2px 8px; }
+}
