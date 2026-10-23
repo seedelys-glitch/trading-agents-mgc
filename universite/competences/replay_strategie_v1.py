@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Agent 13 — laboratoire de replay : la stratégie V1 de Jabran (STRATEGIE.md, 1H / 12H) rejouée bougie par bougie
+Agent 13 — laboratoire de replay : la stratégie de Jabran (STRATEGIE.md, règles du 23/10, 1H / 12H) rejouée bougie par bougie
 sur un jeu de l'université, avec le moteur de backtest de la Salle (mgc/backtest.py : aucune donnée future,
 stop compté avant l'objectif, frais et glissement, moteur de risque).
 
@@ -21,8 +21,9 @@ from .. import config, donnees
 
 TYPE = "replay_strategie_v1"
 AGENT = 13
-TITRE = "Replay de la stratégie V1 (1H / 12H)"
-PARAMS = {"jeu": "numéro du jeu de bougies", "instant": "fin du replay en secondes UTC (vide = tout le jeu)"}
+TITRE = "Replay de la stratégie (règles du 23/10, 1H / 12H)"
+PARAMS = {"jeu": "numéro du jeu de bougies", "instant": "fin du replay en secondes UTC (vide = tout le jeu)",
+          "compte": "A (25 % à chaque objectif, par défaut) ou B (50 / 0 / 25 / 25)"}
 
 DECOUPAGE = (("entrainement", 0.6), ("validation", 0.2), ("test", 0.2))
 TIRAGES = 2000
@@ -109,7 +110,10 @@ def executer(ctx):
         reglages = dict(cfg.DEFAUTS)
     if reglages.get("limite_perte_jour_usd") is None:
         reglages["limite_perte_jour_usd"] = 1000.0
-    res = backtest.simuler(h1, reglages)
+    compte = str(ctx.params.get("compte") or "A").strip().upper()
+    if compte not in backtest.PARTS_COMPTES:
+        raise ValueError("compte inconnu : A ou B")
+    res = backtest.simuler(h1, reglages, compte=compte)
     trades = res["trades"]
     ctx.verifier()
 
@@ -145,7 +149,10 @@ def executer(ctx):
     texte = [f"Données : {infos['source']} — {infos['nom']} ({'temps réel' if infos['temps_reel'] else 'différé / historique'}),"
              f" {len(lignes)} bougies H1 du {_date(debut)} au {_date(lignes[-1][0])}"
              + (f" (reconstruites depuis {f['reconstruite_depuis']})." if f["reconstruite_depuis"] else "."),
-             "Règles : stratégie V1 de STRATEGIE.md, fixées avant le test ; frais et glissement inclus (résultats nets).",
+             f"Règles du 23/10 (STRATEGIE.md), fixées avant le test : objectifs 0 / -0.272 / -1.272 / -2.618, compte {compte} "
+             f"({' / '.join(f'{x:.0%}' for x in backtest.PARTS_COMPTES[compte])}), stop au point d'entrée puis au 0.5 puis "
+             f"au 0, risque {reglages['risque_pct']} % ; frais et glissement inclus (résultats nets).",
+             "Entrée simulée sur la confirmation H1 : la cascade 48 min / 12 min n'est pas rejouée (pas assez de bougies fines).",
              f"Signaux refusés : {res['refus']['risque']} par le risque, {res['refus']['fenetre']} hors fenêtre, "
              f"{res['refus']['rollover']} près du rollover.", "",
              ligne("Ensemble", tout)]
@@ -162,10 +169,10 @@ def executer(ctx):
         texte.append("Monte-Carlo et régimes sont seulement indicatifs : trop peu de trades.")
 
     ctx.etape("connaissances", "Classe le rapport et demande sa vérification", "verification")
-    donnees_doc = {"jeu": jeu, "instant": instant, "h1": len(lignes), "debut": debut, "fin": fin,
+    donnees_doc = {"jeu": jeu, "instant": instant, "compte": compte, "h1": len(lignes), "debut": debut, "fin": fin,
                    "trades": trades, "refus": res["refus"], "tout": tout, "parts": parts, "monte_carlo": mc,
                    "par_regime": par_regime}
-    doc = ctx.document("replay", f"Replay stratégie V1 — {infos['nom']}", "\n".join(texte), donnees=donnees_doc,
+    doc = ctx.document("replay", f"Replay stratégie (compte {compte}) — {infos['nom']}", "\n".join(texte), donnees=donnees_doc,
                        sources=[{"jeu": jeu, "unite": "H1", "n": len(lignes), "debut": lignes[0][0],
                                  "fin": lignes[-1][0], "reconstruite_depuis": f["reconstruite_depuis"]}],
                        role="professeur", statut="a_verifier")

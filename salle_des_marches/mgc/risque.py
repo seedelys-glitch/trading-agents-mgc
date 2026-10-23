@@ -13,7 +13,11 @@ Moteur de risque déterministe, indépendant des IA (droit de veto absolu).
 
 import math
 
-from .instrument import TICK, VALEUR_TICK, arrondi_tick, points_en_ticks, points_en_usd, sur_grille, ticks_en_usd
+from .instrument import TICK, VALEUR_TICK, points_en_ticks, points_en_usd, sur_grille, ticks_en_usd
+
+
+GESTION_STOP = ("stop au point d'entrée dès que la bougie d'entrée clôture en gain, au 0.5 après le -0.272, "
+                "au 0 après le -1.272 (règles du 23/10)")
 
 
 def evaluer(sens, entree, stop, tp1, config, perte_du_jour_usd=0.0):
@@ -54,7 +58,6 @@ def evaluer(sens, entree, stop, tp1, config, perte_du_jour_usd=0.0):
     if coherent and ratio < config["ratio_min"]:
         vetos.append(f"Ratio rendement/risque insuffisant au TP1 : {ratio} (minimum {config['ratio_min']}).")
 
-    break_even = arrondi_tick(entree + config["break_even_pct"] / 100 * (tp1 - entree))
     return {
         "exploitable": not vetos,
         "sens": sens,
@@ -70,7 +73,7 @@ def evaluer(sens, entree, stop, tp1, config, perte_du_jour_usd=0.0):
         "plafonne": plafonne,
         "risque_total_net": round(risque_net * max(contrats, 0), 2),
         "ratio_net_tp1": ratio,
-        "break_even": break_even,
+        "gestion_stop": GESTION_STOP,
         "tick": TICK,
         "vetos": vetos,
     }

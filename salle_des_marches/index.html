@@ -931,7 +931,8 @@ function dessinerPlan(d) {
   $("#plan-alertes").replaceChildren(...alertes);
   // statut « ATTENDRE » : les niveaux calculés par le programme restent affichés (à surveiller)
   const trade = d.decision !== "pas de trade" || (d.statut === "ATTENDRE" && !!d.setup);
-  const cases = [["Zone d'entrée", d.zone], ["Stop", d.sl], ["TP1 (25 %)", d.tp1], ["TP2 (50 %)", d.tp2], ["TP3", d.tp3]];
+  const cases = [["Zone d'entrée", d.zone], ["Stop", d.sl], ["TP1 (0)", d.tp1], ["TP2 (-0.272)", d.tp2], ["TP3 (-1.272)", d.tp3]];
+  if (d.tp4 && d.tp4 !== "–") cases.push(["TP4 (-2.618)", d.tp4]);
   $("#plan").hidden = !trade;
   $("#plan").replaceChildren(...cases.map(([nom, valeur]) => el("div", {}, el("small", {}, nom), el("b", {}, valeur || "–"))));
   $("#plan-confirmation").textContent = d.confirmation || "–";

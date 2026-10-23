@@ -13,7 +13,8 @@ from mgc import config as cfg  # noqa: E402
 
 @pytest.fixture
 def config():
-    """Réglages par défaut, limite du jour fixée à 1000 $ (indépendante du PC)."""
+    """Réglages par défaut, limite du jour fixée à 1000 $ et risque à 1 % (indépendants des réglages de Jabran)."""
     c = dict(cfg.DEFAUTS)
     c["limite_perte_jour_usd"] = 1000.0
+    c["risque_pct"] = 1.0
     return c

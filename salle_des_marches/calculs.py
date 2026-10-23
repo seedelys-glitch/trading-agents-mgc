@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 
 PARIS = "Europe/Paris"
-NIVEAUX_FIBO = [1.0, 0.893, 0.786, 0.705, 0.618, 0.5, 0.0, -0.618, -1.618]
+NIVEAUX_FIBO = [1.0, 0.893, 0.786, 0.705, 0.618, 0.5, 0.0, -0.272, -0.618, -1.272, -1.618, -2.618]  # objectifs : 0, -0.272, -1.272, -2.618
 ZONES_ENTREE = [0.618, 0.705, 0.786, 0.893]  # zones d'entrée de Jabran (jamais le 0.5)
 
 

@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-Configuration de trade calculée par le programme (jamais par l'IA), selon la version 1 de STRATEGIE.md :
+Configuration de trade calculée par le programme (jamais par l'IA), selon STRATEGIE.md (règles du 18/10/2026) :
 
   - entrée sur le 0.618, 0.705, 0.786 ou 0.893 de la dernière belle impulsion H1, seulement avec un FVG dessus ;
     jamais sur le 0.5 (absent par construction) ;
-  - stop au-delà du FVG ET du niveau Fibo suivant (1 tick plus loin) ;
-  - TP1 (25 %) au niveau 0, TP2 (50 %) au -0.618, TP3 au -1.618 ; break-even à 35 % du chemin vers le TP1 ;
-  - confirmation : une bougie 1H dont la mèche dépasse la zone et dont le corps se pose dessus, entrée à la suivante.
+  - stop : bord du FVG + 20 % de sa hauteur (évite les mèches de liquidité) ; si ça ne donne pas un stop
+    au-delà de l'entrée, 20 % de l'écart jusqu'au niveau Fibo suivant ;
+  - objectifs : TP1 au niveau 0, TP2 au -0.272, TP3 au -1.272, TP4 au -2.618 ;
+    compte A : 25 % à chaque objectif ; compte B : 50 % au 0, rien au -0.272, 25 % au -1.272, 25 % au -2.618 ;
+    stop au point d'entrée dès que la bougie qui suit l'entrée clôture en gain, au 0.5 après le -0.272, au 0 après le -1.272 ;
+  - entrée : méthode en cascade Weekly -> 12H -> 48 min -> 12 min (suivie en direct par Jarvis, cascade.py) :
+    le desk ne voit que jusqu'au H1, il donne donc le biais et la zone, l'entrée se prend sur la confirmation 12 min.
 """
 
 from .instrument import TICK, arrondi_tick
@@ -30,20 +34,31 @@ def construire(fibo, sens, prix_actuel):
     niveaux = fibo["niveaux"]
     suivant = niveaux[ORDRE[ORDRE.index(zone["niveau"]) + 1]]
     fvg_bas, fvg_haut = zone["fvg"]
+    entree = arrondi_tick(zone["prix"])
+    marge = 0.2 * (fvg_haut - fvg_bas)   # 20 % de la hauteur du FVG
     if sens == "achat":
-        stop = arrondi_tick(min(fvg_bas, suivant) - TICK, "bas")
+        stop = arrondi_tick(fvg_bas - marge, "bas")
+        if stop >= entree - TICK:  # FVG au-dessus du niveau : 20 % de l'écart jusqu'au niveau suivant
+            stop = arrondi_tick(entree - max(0.2 * abs(entree - suivant), TICK), "bas")
     else:
-        stop = arrondi_tick(max(fvg_haut, suivant) + TICK, "haut")
+        stop = arrondi_tick(fvg_haut + marge, "haut")
+        if stop <= entree + TICK:
+            stop = arrondi_tick(entree + max(0.2 * abs(suivant - entree), TICK), "haut")
+    objectif = lambda cle, ancien: arrondi_tick(niveaux[cle] if cle in niveaux else niveaux[ancien])
     return {
         "sens": sens,
         "niveau": zone["niveau"],
-        "entree": arrondi_tick(zone["prix"]),
+        "entree": entree,
         "fvg": [fvg_bas, fvg_haut],
         "stop": stop,
         "tp1": arrondi_tick(niveaux["0"]),
-        "tp2": arrondi_tick(niveaux["-0.618"]),
-        "tp3": arrondi_tick(niveaux["-1.618"]),
+        "tp2": objectif("-0.272", "-0.618"),
+        "tp3": objectif("-1.272", "-1.618"),
+        "tp4": objectif("-2.618", "-1.618"),
         "invalidation": stop,
-        "confirmation": "une bougie 1H dont la mèche dépasse la zone et dont le corps se pose sur la zone ; "
-                        "entrée à l'ouverture de la bougie suivante",
+        "confirmation": "cascade Weekly → 12H → 48 min → 12 min : entrée sur la bougie de confirmation 12 min "
+                        "sur la zone, entre 15h30 et 20h ; stop au point d'entrée dès que la bougie suivante clôture "
+                        "en gain, au 0.5 après le -0.272, au 0 après le -1.272",
+        "gestion": "compte A : 25 % au 0, au -0.272, au -1.272 et au -2.618 ; "
+                   "compte B : 50 % au 0, 25 % au -1.272, 25 % au -2.618",
     }, ""

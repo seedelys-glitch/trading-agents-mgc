@@ -18,10 +18,13 @@ def b(o, h, l, c):  # noqa: E741
     return {"o": o, "h": h, "l": l, "c": c}
 
 
-def position(sens="achat", contrats=1, couts=3.5):
+def position(sens="achat", contrats=1, couts=3.5, compte="A"):
+    parts = backtest.PARTS_COMPTES[compte]
     if sens == "achat":
-        return backtest.Position("achat", 4200.0, 4195.0, (4230.0, 4261.8, 4361.8), contrats, couts, T0, "0.705", 35)
-    return backtest.Position("vente", 4200.0, 4205.0, (4170.0, 4138.2, 4038.2), contrats, couts, T0, "0.705", 35)
+        return backtest.Position("achat", 4200.0, 4195.0, (4230.0, 4240.0, 4270.0, 4300.0), contrats, couts, T0,
+                                 "0.705", parts, niveau_05=4215.0)
+    return backtest.Position("vente", 4200.0, 4205.0, (4170.0, 4160.0, 4130.0, 4100.0), contrats, couts, T0,
+                             "0.705", parts, niveau_05=4185.0)
 
 
 def jouer(p, bougies):
@@ -51,17 +54,35 @@ def test_biais():
 
 # ------------------------------------------------------------------ gestion de position
 
-def test_tp1_puis_break_even():
+def test_tp1_puis_stop_au_point_d_entree():
+    # bougie d'entrée : TP1 touché et clôture en gain -> stop au point d'entrée à la bougie suivante
     r = jouer(position(), [b(4200, 4231, 4199, 4228), b(4228, 4229, 4199, 4205)])
-    assert r["sorties"] == ["TP1", "break-even"]
+    assert r["sorties"] == ["TP1", "stop au point d'entrée"]
     assert r["R_brut"] == 1.5                     # 25 % x 30 points / 5 points de risque
     assert r["usd_brut"] == 75.0 and r["usd_net"] == 71.5
 
 
-def test_les_trois_objectifs():
-    r = jouer(position(), [b(4200, 4232, 4199, 4230), b(4230, 4262, 4229, 4260), b(4260, 4362, 4259, 4360)])
-    assert r["sorties"] == ["TP1", "TP2", "TP3"]
-    assert r["R_brut"] == pytest.approx((0.25 * 30 + 0.5 * 61.8 + 0.25 * 161.8) / 5, abs=1e-3)
+def test_les_quatre_objectifs_compte_a():
+    r = jouer(position(), [b(4200, 4232, 4199, 4230), b(4230, 4242, 4229, 4240), b(4240, 4271, 4239, 4268),
+                           b(4268, 4301, 4267, 4299)])
+    assert r["sorties"] == ["TP1", "TP2", "TP3", "TP4"]
+    assert r["R_brut"] == pytest.approx(0.25 * (30 + 40 + 70 + 100) / 5, abs=1e-3)
+
+
+def test_compte_b_rien_au_tp2():
+    r = jouer(position(compte="B"), [b(4200, 4232, 4199, 4230), b(4230, 4242, 4229, 4240),
+                                     b(4240, 4271, 4239, 4268), b(4268, 4301, 4267, 4299)])
+    assert r["sorties"] == ["TP1", "TP3", "TP4"]
+    assert r["R_brut"] == pytest.approx((0.5 * 30 + 0.25 * 70 + 0.25 * 100) / 5, abs=1e-3)
+
+
+def test_stop_au_05_apres_le_tp2_puis_au_0_apres_le_tp3():
+    r = jouer(position(), [b(4200, 4241, 4199, 4235), b(4235, 4236, 4210, 4220)])
+    assert r["sorties"] == ["TP1", "TP2", "stop au 0.5"]
+    assert r["R_brut"] == pytest.approx((0.25 * 30 + 0.25 * 40 + 0.5 * 15) / 5, abs=1e-3)
+    r = jouer(position(), [b(4200, 4241, 4199, 4235), b(4235, 4272, 4230, 4265), b(4265, 4266, 4225, 4228)])
+    assert r["sorties"] == ["TP1", "TP2", "TP3", "stop au 0"]
+    assert r["R_brut"] == pytest.approx((0.25 * 30 + 0.25 * 40 + 0.25 * 70 + 0.25 * 30) / 5, abs=1e-3)
 
 
 def test_stop_avant_objectif_dans_la_meme_bougie():
@@ -69,13 +90,16 @@ def test_stop_avant_objectif_dans_la_meme_bougie():
     assert r["sorties"] == ["stop"] and r["R_brut"] == -1.0
 
 
-def test_break_even_seulement_a_la_bougie_suivante():
-    # seuil du break-even (4210,5) et stop touchés dans la même bougie : c'est le stop initial qui compte
+def test_stop_deplace_seulement_a_la_bougie_suivante():
+    # bougie d'entrée qui touche le stop : c'est le stop initial qui compte
     r = jouer(position(), [b(4200, 4211, 4194, 4201)])
     assert r["sorties"] == ["stop"] and r["R_brut"] == -1.0
-    # seuil atteint, puis retour sous l'entrée à la bougie suivante : sortie à l'entrée (0 R brut)
+    # bougie d'entrée en gain, puis retour sous l'entrée : sortie à l'entrée (0 R brut)
     r = jouer(position(), [b(4200, 4211, 4196, 4201), b(4201, 4202, 4194, 4195)])
-    assert r["sorties"] == ["break-even"] and r["R_brut"] == 0.0 and r["usd_net"] == -3.5
+    assert r["sorties"] == ["stop au point d'entrée"] and r["R_brut"] == 0.0 and r["usd_net"] == -3.5
+    # bougie d'entrée qui clôture en perte : le stop reste à sa place
+    r = jouer(position(), [b(4200, 4211, 4196, 4198), b(4198, 4199, 4194, 4195)])
+    assert r["sorties"] == ["stop"] and r["R_brut"] == -1.0
 
 
 def test_ouverture_au_dela_du_stop():

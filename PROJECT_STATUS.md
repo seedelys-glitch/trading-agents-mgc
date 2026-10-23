@@ -1,7 +1,22 @@
 # MGC AI Trading Desk — état du projet
 
-Dernière mise à jour : 23/10/2026 (étape 8 terminée : lien avec Jarvis). Ce fichier est la mémoire du projet : on le lit
+Dernière mise à jour : 23/10/2026 (étape 9 : audit sur le PC, règles du 23/10 appliquées au replay et au risque). Ce fichier est la mémoire du projet : on le lit
 avant de reprendre le travail, on le met à jour après chaque étape.
+
+## 0. Audit du 23/10/2026 (soir, sur le PC de Jabran) : à lire en premier
+- Tests sur le PC : **263 réussis, 0 échec** (`pytest -q salle_des_marches\tests universite\tests`, 65 s).
+- Testé en réel sur le PC (et non plus seulement avec de faux flux) : calendrier Forex Factory (86 annonces) et
+  flux des discours de la Fed (15 discours). Le lexique faucon / colombe fonctionne sur un discours de politique
+  monétaire (Waller, 08/10/2026 : 2 + 2 expressions, 4 citations exactes) ; rien sur un discours de réglementation
+  bancaire, ce qui est normal.
+- Jarvis voit l'université. L'université qui tournait avait été lancée AVANT la mise à jour (4 agents prêts sur 14) :
+  **à redémarrer par Jabran** (fermer, puis double-clic sur « Universite MGC.bat »).
+- FAIT : tout est enregistré dans le git du PC (commit 8e9d179 « avant : règles du 23/10 (salle) + université MGC +
+  PROJECT_STATUS ») et copié sur GitHub (trading-agents-mgc).
+- FAIT : `mgc/backtest.py` et `mgc/risque.py` suivent les règles du 23/10 (4 objectifs 0 / -0.272 / -1.272 / -2.618,
+  comptes A 25/25/25/25 et B 50/0/25/25, stop au point d'entrée si la bougie d'entrée clôture en gain, au 0.5 après
+  le -0.272, au 0 après le -1.272 ; plus de break-even à 35 %). Le replay de l'agent 13 prend le compte A ou B.
+  Limite écrite : l'entrée est simulée sur la confirmation H1, la cascade 48 min / 12 min n'est pas rejouée.
 
 ## 1. Vision
 Un bureau de recherche sur le Micro Gold (MGC) : 14 agents spécialisés (le directeur est le n° 14), chacun avec
@@ -65,7 +80,8 @@ d'orchestre (et la caméra du bureau), bouton « lancer », voix / appli / Teleg
 « ouvre l'université ». Jarvis lit seulement l'état (127.0.0.1:8780) ; aucun lien avec `ordres.py`.
 
 ## 5. En cours / à faire (par priorité)
-1. Étape 9 : fiabilité et docs (lancer les tests sur le PC, essai réel du calendrier et des discours de la Fed).
+1. Redémarrer l'université, puis premières missions réelles (calendrier, discours, import TradingView, replay A et B).
+2. Phase suivante : bureau immersif (expliquer d'abord comment il s'intègre).
    L'agent 4 (heatmap) attend Bookmap.
 2. Étape 7 : TradingView (import des exports CSV déjà possible).
 3. Étape 8 : lien avec Jarvis. Étape 9 : fiabilité et docs.
@@ -93,7 +109,7 @@ d'orchestre (et la caméra du bureau), bouton « lancer », voix / appli / Teleg
 - Le dossier git du PC n'a pas de lien vers GitHub : la sauvegarde GitHub est une copie (voir 9).
 
 ## 7. Tests (23/10/2026)
-- Conteneur de développement : 179 tests de la Salle + 83 de l'université = **262 réussis** (fin de l'étape 7),
+- Conteneur de développement : 179 tests de la Salle + 87 de l'université = **266 réussis** (règles du 23/10),
   avec la commande ci-dessous (les deux dossiers ensemble fonctionnent maintenant).
 - Sur le PC de Jabran (Python 3.13.16) : 217 réussis avant l'ajout du replay et de la bibliothèque
   (les tests ajoutés depuis n'y ont pas encore été lancés).

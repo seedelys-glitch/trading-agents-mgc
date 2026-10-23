@@ -19,13 +19,12 @@ REGLES_JARVIS = Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Documen
 DEFAUTS = {
     "prop_firm": "Topstep",
     "capital_usd": 50_000,
-    "risque_pct": 1.0,                  # décision de Jabran du 17/10 : 1 % = 500 $ par trade
+    "risque_pct": 0.25,                 # décision de Jabran du 23/10 pour Topstep : 0,25 % = 125 $ par trade (avant : 1 %)
     "limite_perte_jour_usd": None,      # None = lue dans prop-firm.txt de Jarvis (repli : 1000)
     "frais_aller_retour_usd": 1.50,     # ESTIMATION par contrat (commission + frais CME) : à confirmer sur un relevé
     "glissement_ticks_par_cote": 1,     # hypothèse : 1 tick à l'entrée + 1 tick à la sortie
     "ratio_min": 1.5,                   # rendement / risque minimal (net, sur le TP1)
     "max_contrats": 50,                 # plafond de sécurité ; à aligner sur la taille max du compte Topstep
-    "break_even_pct": 35,               # break-even à 35 % du chemin vers le TP1 (STRATEGIE.md)
     "fenetre_paris": ["15:30", "20:00"],  # décision de Jabran du 17/10
     "rollover_jours_restriction": 5,    # jours ouvrés avant la bascule pendant lesquels rien n'est exploitable
     "bascule_jours_avant_avis": 2,      # bascule de liquidité estimée N jours ouvrés avant le premier jour d'avis

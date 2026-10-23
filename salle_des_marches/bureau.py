@@ -67,12 +67,16 @@ SPECIALISTES = [
 ]
 
 REGLES_JABRAN = """Règles de trading de Jabran (à respecter strictement) :
+- Méthode en cascade : un setup Fibo + FVG en Weekly, puis on cherche le suivant en 12H, puis en 48 min, puis l'entrée en 12 min.
+  On ne descend d'un étage que si l'étage du dessus a donné un setup. Le desk ne voit que D1, H12, H4, H1 et M15 :
+  il donne le biais et la zone ; l'entrée se prend sur la bougie de confirmation 12 min (suivie par Jarvis).
 - Biais : tendance de fond donnée par les BOS en 12H et en 1H, plus la direction de l'EMA 200.
 - Entrée uniquement sur une zone de Fibo 0.618, 0.705, 0.786 ou 0.893 de la dernière belle impulsion, et seulement s'il y a un FVG sur la zone.
 - Jamais d'entrée sur le niveau 0.5 (pour lui ce n'est qu'un range avant une manipulation).
-- Confirmation : une bougie 1H dont la mèche dépasse la zone et dont le corps se pose sur la zone ; entrée à la bougie suivante.
-- Stop : au-delà du FVG et de la zone de Fibo suivante.
-- Objectifs : TP1 (25 %) au niveau 0 du Fibo, TP2 (50 %) à l'extension -0.618, TP3 à l'extension 1.618 (niveau -1.618). Break-even à 35 % du chemin vers le TP1.
+- Le marché connaît déjà la news : avant son vrai mouvement il va chercher la liquidité (plus hauts/bas des sessions Asie et Londres, zone 0.893, order blocks).
+- Stop : bord du FVG de la zone d'entrée + 20 % de la hauteur du FVG (évite les mèches de liquidité) ; sans FVG, 20 % de l'écart jusqu'à la zone Fibo suivante.
+- Objectifs : niveau 0, puis -0.272, -1.272 et -2.618. Compte A : 25 % à chaque objectif. Compte B : 50 % au 0, 25 % au -1.272, 25 % au -2.618.
+- Gestion : stop au point d'entrée dès que la bougie qui suit l'entrée clôture en gain ; stop au 0.5 après le -0.272, au 0 après le -1.272.
 - Prop firm : Topstep. Règle personnelle : pas de trade un jour de réunion du FOMC ; discours du président de la Fed : rien 30 min avant et après ; annonce USD forte : rien 90 min avant et 30 min après.
 - Fenêtre de trading : 15h30-20h heure de Paris. Risque : 1 % du capital par trade, calculé par le programme."""
 
@@ -92,9 +96,10 @@ FORMAT_CHEF = """Réponds en français, uniquement avec ces lignes :
 DECISION: long ou short ou pas de trade
 ZONE: la zone d'entrée (prix), ou « aucune »
 SL: le prix du stop, ou « aucun »
-TP1: prix
-TP2: prix
-TP3: prix
+TP1: prix (niveau 0)
+TP2: prix (-0.272)
+TP3: prix (-1.272)
+TP4: prix (-2.618)
 CONFIRMATION: ce qu'il faut voir sur le graphique avant d'entrer
 RAISON: 2 ou 3 phrases
 DESACCORD: le désaccord principal entre les spécialistes, en une phrase"""
@@ -221,7 +226,7 @@ def chef(llm, avis, debat, calculs_faits, compteur):
         f"Données Fibo calculées :\n{json.dumps(calculs_faits['fibo'], ensure_ascii=False, default=str)}\n"
         f"Calendrier : {json.dumps(calculs_faits['calendrier'], ensure_ascii=False, default=str)}\n\n{FORMAT_CHEF}"
     )
-    cles = ["DECISION", "ZONE", "SL", "TP1", "TP2", "TP3", "CONFIRMATION", "RAISON", "DESACCORD"]
+    cles = ["DECISION", "ZONE", "SL", "TP1", "TP2", "TP3", "TP4", "CONFIRMATION", "RAISON", "DESACCORD"]
     lignes = lire_lignes(appeler(llm, consigne, "chef", compteur), cles)
     resultat = {k.lower(): " ".join(v) for k, v in lignes.items()}
     resultat["decision"] = normaliser_decision(resultat.get("decision"))
@@ -281,7 +286,7 @@ def controler(decision, calculs_faits):
     prix, tolerance = float(marche["prix"]), max(float(marche["prix"]) * 0.0004, float(marche.get("atr_H1") or 0) * 0.05)
     catalogue = tous_les_prix(calculs_faits)
     douteux = set()
-    for champ in ("zone", "sl", "tp1", "tp2", "tp3"):
+    for champ in ("zone", "sl", "tp1", "tp2", "tp3", "tp4"):
         for p in prix_cites(decision.get(champ)):
             if 0.5 * prix <= p <= 1.5 * prix and not any(abs(p - c) <= tolerance for c in catalogue):
                 douteux.add(p)
@@ -416,10 +421,10 @@ def finaliser_mgc(decision, avis, debat, calculs_faits, informatifs, config, per
     if config_trade:
         decision.update(zone=f"{config_trade['entree']} (Fibo {config_trade['niveau']}, FVG {config_trade['fvg'][0]}-"
                              f"{config_trade['fvg'][1]})", sl=str(config_trade["stop"]), tp1=str(config_trade["tp1"]),
-                        tp2=str(config_trade["tp2"]), tp3=str(config_trade["tp3"]),
+                        tp2=str(config_trade["tp2"]), tp3=str(config_trade["tp3"]), tp4=str(config_trade.get("tp4", "–")),
                         confirmation=config_trade["confirmation"])
     else:
-        decision.update(zone="aucune", sl="aucun", tp1="–", tp2="–", tp3="–")
+        decision.update(zone="aucune", sl="aucun", tp1="–", tp2="–", tp3="–", tp4="–")
     return decision
 
 
@@ -438,7 +443,7 @@ def bloquer(calculs_faits, bloquants, informatifs):
     """Décision immédiate quand un veto tombe avant l'analyse : aucune IA n'est appelée."""
     return {
         "statut": "ANALYSE BLOQUÉE", "decision": "pas de trade", "zone": "aucune", "sl": "aucun",
-        "tp1": "–", "tp2": "–", "tp3": "–", "votes": {}, "vetos": bloquants, "vetos_informatifs": informatifs,
+        "tp1": "–", "tp2": "–", "tp3": "–", "tp4": "–", "votes": {}, "vetos": bloquants, "vetos_informatifs": informatifs,
         "blocages": bloquants + informatifs, "regle_appliquee": "", "prix_non_verifies": [],
         "raison": "Veto avant l'analyse : aucune IA n'a été appelée.",
         "contrat": (calculs_faits.get("marche") or {}).get("ticker"), "regime": calculs_faits.get("regime"),

@@ -93,3 +93,14 @@ def test_le_futur_ne_change_pas_le_passe(moteur, base):
     pareils = [{k: v for k, v in t.items() if k != "regime"} for t in avant]
     assert pareils == [{k: v for k, v in t.items() if k != "regime"} for t in trades[1][:len(avant)]]
     assert [t["regime"] for t in avant] == [t["regime"] for t in trades[1][:len(avant)]]
+
+
+def test_replay_compte_b(moteur, base):
+    """Compte B (50 / 0 / 25 / 25) : jamais de sortie au TP2, rapport vérifié, règles du 23/10 écrites."""
+    j = _jeu(base)
+    m = base.nouvelle_mission(13, "replay_strategie_v1", "replay", {"jeu": j, "instant": FIN, "compte": "b"})
+    executer_tout(moteur)
+    doc = base.un("SELECT * FROM documents WHERE id=?", (base.mission(m)["resultat"]["document"],))
+    assert doc["statut"] == "verifie" and doc["donnees"]["compte"] == "B"
+    assert all("TP2" not in t["sorties"] for t in doc["donnees"]["trades"])
+    assert "Règles du 23/10" in doc["contenu"] and "cascade 48 min / 12 min n'est pas rejouée" in doc["contenu"]

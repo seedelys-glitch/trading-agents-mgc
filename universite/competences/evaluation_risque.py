@@ -10,7 +10,7 @@ TITRE = "Évaluer le risque d'une idée de trade"
 PARAMS = {"sens": "achat ou vente", "entree": "prix d'entrée", "stop": "prix du stop", "tp1": "premier objectif",
           "perte_du_jour": "perte déjà subie aujourd'hui en $ (0 par défaut)"}
 CLES_REGLAGES = ("capital_usd", "risque_pct", "limite_perte_jour_usd", "frais_aller_retour_usd",
-                 "glissement_ticks_par_cote", "ratio_min", "max_contrats", "break_even_pct")
+                 "glissement_ticks_par_cote", "ratio_min", "max_contrats")
 
 
 def executer(ctx):
@@ -44,8 +44,8 @@ def executer(ctx):
                    f"glissement (estimés) = {r['risque_net_par_contrat']} $.",
                    f"Budget : {r['risque_autorise']} $ par trade, reste {r['reste_limite_jour']} $ avant la limite du jour.",
                    f"Contrats : {r['contrats']}" + (" (plafonné)" if r["plafonne"] else "")
-                   + f" ; risque total {r['risque_total_net']} $ ; ratio net au TP1 {r['ratio_net_tp1']} ; "
-                   f"break-even à {r['break_even']}."]
+                   + f" ; risque total {r['risque_total_net']} $ ; ratio net au TP1 {r['ratio_net_tp1']}.",
+                   f"Gestion du stop : {r['gestion_stop']}."]
     lignes += [f"VETO : {v}" for v in r.get("vetos", [])]
     lignes.append("Avis : " + ("exploitable selon les règles." if r["exploitable"] else "REFUSÉ par les règles de risque."))
     lignes.append("Calcul seulement : aucun ordre n'est envoyé, ni maintenant ni plus tard.")

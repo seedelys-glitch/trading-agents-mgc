@@ -46,13 +46,24 @@ def decision_chef():
 def test_setup_achat():
     s, motif = setup.construire(fibo(), "achat", 4140.0)
     assert motif == ""
-    assert (s["niveau"], s["entree"], s["stop"]) == ("0.705", 4129.5, 4121.3)  # sous le FVG et sous le 0.786
-    assert (s["tp1"], s["tp2"], s["tp3"]) == (4200.0, 4261.8, 4361.8)
+    assert (s["niveau"], s["entree"], s["stop"]) == ("0.705", 4129.5, 4126.0)  # bas du FVG - 20 % de sa hauteur
+    assert (s["tp1"], s["tp2"], s["tp3"], s["tp4"]) == (4200.0, 4227.2, 4327.2, 4461.8)
+
+
+def test_setup_stop_sans_place_sous_le_fvg():
+    """FVG au-dessus du niveau d'entrée : stop à 20 % de l'écart jusqu'au niveau Fibo suivant."""
+    f = fibo()
+    for z in f["zones_entree"]:
+        if z["niveau"] == "0.705":
+            z["fvg"] = [4130.5, 4131.0]
+    s, _ = setup.construire(f, "achat", 4140.0)
+    assert s["stop"] == 4127.8 and s["stop"] < s["entree"]  # 4129.5 - 0.2 x (4129.5 - 4121.4), arrondi vers le bas
 
 
 def test_setup_vente():
     s, _ = setup.construire(fibo("baissière"), "vente", 4160.0)
-    assert (s["entree"], s["stop"], s["tp1"]) == (4170.5, 4178.7, 4100.0)
+    assert (s["entree"], s["stop"], s["tp1"]) == (4170.5, 4174.0, 4100.0)  # haut du FVG + 20 % de sa hauteur
+    assert (s["tp2"], s["tp3"], s["tp4"]) == (4072.8, 3972.8, 3838.2)
 
 
 def test_setup_refuse():
@@ -82,9 +93,9 @@ def test_achat_envisageable(config):
     d = bureau.finaliser_mgc(decision_chef(), avis, debat, faits(), [], config)
     assert d["statut"] == "ACHAT ENVISAGEABLE"
     assert d["decision"] == "long"
-    assert d["risque"]["contrats"] == 5           # 8,2 points : 85,50 $ net par contrat, budget 500 $
-    assert d["risque"]["ratio_net_tp1"] == 8.2
-    assert d["sl"] == "4121.3"
+    assert d["risque"]["contrats"] == 12          # 3,5 points : 38,50 $ net par contrat, budget 500 $
+    assert d["risque"]["ratio_net_tp1"] == 18.22
+    assert d["sl"] == "4126.0" and d["tp4"] == "4461.8"
     assert d["biais"]["accord"] == "5/6"
 
 

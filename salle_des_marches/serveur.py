@@ -553,12 +553,15 @@ def resume_mgc(a, d):
     if s:
         titre = "Niveaux à surveiller" if d["statut"] != f"{'ACHAT' if s['sens'] == 'achat' else 'VENTE'} ENVISAGEABLE" else "Configuration"
         lignes.append(f"{titre} ({s['sens']}) : entrée {s['entree']} (Fibo {s['niveau']}, FVG {s['fvg'][0]}-{s['fvg'][1]}), "
-                      f"stop {s['stop']}, TP1 {s['tp1']} (25 %), TP2 {s['tp2']} (50 %), TP3 {s['tp3']}.")
+                      f"stop {s['stop']}, objectifs {s['tp1']} (0) / {s['tp2']} (-0.272) / {s['tp3']} (-1.272)"
+                      + (f" / {s['tp4']} (-2.618)" if s.get("tp4") else "") + ".")
         lignes.append(f"Confirmation : {s['confirmation']}. Invalidation : {s['invalidation']}.")
+        if s.get("gestion"):
+            lignes.append(f"Gestion : {s['gestion']}.")
     if rq and rq.get("risque_net_par_contrat") is not None:
         lignes.append(f"Risque par contrat : {rq['risque_brut_par_contrat']:.2f} $ brut, {rq['risque_net_par_contrat']:.2f} $ net "
                       f"(frais + glissement). Contrats : {rq['contrats']} (calculés : {rq.get('contrats_calcules', 0)}). "
-                      f"Ratio net TP1 : {rq['ratio_net_tp1']}. Break-even : {rq['break_even']}.")
+                      f"Ratio net TP1 : {rq['ratio_net_tp1']}.")
     if d.get("vetos"):
         lignes.append("Vetos : " + " ".join(d["vetos"]))
     if d.get("vetos_informatifs"):
@@ -596,7 +599,8 @@ def resume_texte(analyse):
         ]
         if d.get("decision") != "pas de trade":
             lignes.append(f"Zone : {d.get('zone', '–')} | Stop : {d.get('sl', '–')}")
-            lignes.append(f"TP1 : {d.get('tp1', '–')} | TP2 : {d.get('tp2', '–')} | TP3 : {d.get('tp3', '–')}")
+            lignes.append(f"TP1 : {d.get('tp1', '–')} | TP2 : {d.get('tp2', '–')} | TP3 : {d.get('tp3', '–')}"
+                          + (f" | TP4 : {d['tp4']}" if d.get("tp4") and d.get("tp4") != "–" else ""))
             if d.get("confirmation"):
                 lignes.append(f"À attendre : {d['confirmation']}")
         if d.get("regle_appliquee"):

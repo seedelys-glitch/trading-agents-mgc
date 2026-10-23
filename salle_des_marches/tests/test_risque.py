@@ -12,7 +12,7 @@ def test_achat_exemple_complet(config):
     assert r["contrats"] == 9                       # 500 / 53,5 = 9,3 -> 9 (jamais au-dessus)
     assert r["risque_total_net"] == 481.5
     assert r["ratio_net_tp1"] == 5.54               # (300 - 3,5) / 53,5
-    assert r["break_even"] == 4210.5                # 35 % de 30 points
+    assert "bougie d'entrée clôture en gain" in r["gestion_stop"]   # règles du 23/10 (plus de break-even à 35 %)
     assert r["exploitable"] is True
     assert r["vetos"] == []
 
@@ -20,7 +20,6 @@ def test_achat_exemple_complet(config):
 def test_vente_symetrique(config):
     r = risque.evaluer("vente", 4200.0, 4205.0, 4170.0, config)
     assert r["contrats"] == 9
-    assert r["break_even"] == 4189.5
     assert r["exploitable"] is True
 
 

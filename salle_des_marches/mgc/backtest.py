@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Backtest de la stratégie V1 de Jabran (STRATEGIE.md, 1H / 12H), sur bougies H1. Aucune IA.
+Backtest de la stratégie de Jabran (STRATEGIE.md, règles du 23/10/2026), sur bougies H1. Aucune IA.
 
 Règles appliquées (fixées AVANT le test, aucun paramètre réglé sur les résultats) :
   - biais : structure (BOS) H12 ET H1 dans le même sens ET EMA 200 H1 dans ce sens ;
@@ -8,15 +8,19 @@ Règles appliquées (fixées AVANT le test, aucun paramètre réglé sur les ré
   - confirmation : bougie H1 dont la mèche dépasse la zone et dont la clôture se pose dans la zone ;
   - entrée à l'OUVERTURE de la bougie suivante, si elle est dans la fenêtre de Paris et la séance ouverte ;
   - moteur de risque (risque.py) : contrats, ratio minimal, stop cohérent — sinon trade refusé ;
-  - sorties : 25 % au TP1, 50 % au TP2, 25 % au TP3 ; break-even à 35 % du chemin vers le TP1 ;
+  - objectifs : TP1 au 0, TP2 au -0.272, TP3 au -1.272, TP4 au -2.618 (setup.construire) ;
+    compte A : 25 % à chaque objectif ; compte B : 50 % au 0, rien au -0.272, 25 % au -1.272, 25 % au -2.618 ;
+  - stop suiveur : au point d'entrée dès que la bougie d'entrée clôture en gain, au 0.5 après le -0.272,
+    au 0 après le -1.272 (jamais reculé) ;
   - sortie forcée à 15h00 (Chicago), avant la limite de Topstep (15h10, à vérifier) ; rien près du rollover.
 
 Prudence (biais contrôlés) :
   - aucune donnée future : à la bougie i, seules les bougies 0..i sont lues (pivots confirmés 3 bougies plus tard) ;
-  - bougie qui touche le stop ET un objectif : le stop est compté en premier ; le break-even ne joue qu'à la
+  - bougie qui touche le stop ET un objectif : le stop est compté en premier ; un stop déplacé ne joue qu'à la
     bougie suivante ; une ouverture au-delà du stop sort au prix d'ouverture ;
   - tous les signaux sont pris (pas de sélection) ; une même impulsion ne sert qu'une fois.
-Limites : pas de calendrier d'annonces historique (FOMC, NFP... non filtrés) ; contrat continu Yahoo (sauts de
+Limites : l'entrée est simulée sur la confirmation H1 (la cascade 48 min / 12 min de Jarvis n'est pas rejouée :
+il faudrait des bougies 12 min sur toute la période) ; pas de calendrier d'annonces historique (FOMC, NFP... non filtrés) ; contrat continu Yahoo (sauts de
 rollover) ; sorties partielles en fractions de contrat ; frais et glissement estimés.
 """
 
@@ -29,7 +33,8 @@ from . import qualite, risque, setup
 from .contrats import ContractManager
 from .instrument import VALEUR_POINT, arrondi_tick
 
-PARTS = (0.25, 0.50, 0.25)
+PARTS_COMPTES = {"A": (0.25, 0.25, 0.25, 0.25), "B": (0.50, 0.0, 0.25, 0.25)}   # règles du 23/10
+PARTS = PARTS_COMPTES["A"]
 FENETRE_FIBO = 500
 SORTIE_FORCEE_CHICAGO = 15  # heure de début de la dernière bougie H1 interdite (15h-16h)
 
@@ -43,17 +48,23 @@ def confirmation(bougie, zone, sens):
 
 
 class Position:
-    def __init__(self, sens, entree, stop, cibles, contrats, couts, ouverture, niveau, be_pct):
+    def __init__(self, sens, entree, stop, cibles, contrats, couts, ouverture, niveau, parts=PARTS, niveau_05=None):
         self.sens, self.entree, self.stop, self.cibles = sens, entree, stop, list(cibles)
         self.contrats, self.couts, self.ouverture, self.niveau = contrats, couts, ouverture, niveau
         self.risque_pts, self.stop_initial = abs(entree - stop), stop
-        self.seuil_be = entree + be_pct / 100 * (cibles[0] - entree)
-        self.restant, self.be, self.sorties = 1.0, False, []
+        self.parts, self.niveau_05 = tuple(parts), niveau_05
+        self.restant, self.sorties, self.bougies, self.atteints = 1.0, [], 0, 0
         self.signe = 1 if sens == "achat" else -1
+        self.motif_stop = "stop"
 
     def _sortir(self, part, prix, quand, motif):
         self.sorties.append({"part": part, "prix": prix, "quand": quand, "motif": motif})
         self.restant = round(self.restant - part, 6)
+
+    def _monter_stop(self, prix, motif):
+        """Stop déplacé seulement dans le sens favorable (jamais reculé)."""
+        if prix is not None and self.signe * (prix - self.stop) > 0:
+            self.stop, self.motif_stop = prix, motif
 
     def avancer(self, t, b, forcer=False):
         """Traite une bougie ; True quand la position est entièrement fermée."""
@@ -62,19 +73,28 @@ class Position:
             self._sortir(self.restant, b["o"], t, "sortie forcée (fin de séance)")
             return True
         if s * (b["o"] - self.stop) <= 0:  # ouverture déjà au-delà du stop
-            self._sortir(self.restant, b["o"], t, "stop (ouverture au-delà)")
+            self._sortir(self.restant, b["o"], t, self.motif_stop + " (ouverture au-delà)")
             return True
         extreme_contre, extreme_pour = (b["l"], b["h"]) if s == 1 else (b["h"], b["l"])
         if s * (extreme_contre - self.stop) <= 0:  # prudence : le stop passe avant les objectifs
-            self._sortir(self.restant, self.stop, t, "break-even" if self.be else "stop")
+            self._sortir(self.restant, self.stop, t, self.motif_stop)
             return True
         while self.cibles and s * (extreme_pour - self.cibles[0]) >= 0:
-            rang = 3 - len(self.cibles)
-            self._sortir(min(PARTS[rang], self.restant), self.cibles.pop(0), t, f"TP{rang + 1}")
+            rang = len(self.parts) - len(self.cibles)
+            prix = self.cibles.pop(0)
+            if self.parts[rang] > 0:
+                self._sortir(min(self.parts[rang], self.restant), prix, t, f"TP{rang + 1}")
+            self.atteints = rang + 1
         if self.restant <= 1e-9:
             return True
-        if not self.be and s * (extreme_pour - self.seuil_be) >= 0:
-            self.stop, self.be = self.entree, True  # effectif à partir de la bougie suivante
+        # nouveaux stops, effectifs à partir de la bougie suivante
+        if self.bougies == 0 and s * (b["c"] - self.entree) > 0:
+            self._monter_stop(self.entree, "stop au point d'entrée")
+        if self.atteints >= 2:
+            self._monter_stop(self.niveau_05, "stop au 0.5")
+        if self.atteints >= 3:
+            self._monter_stop(self.sorties[0]["prix"] if self.sorties else None, "stop au 0")
+        self.bougies += 1
         return False
 
     def bilan(self):
@@ -100,12 +120,14 @@ def biais(h12_tendance, h1_tendance, ema_montante):
     return None
 
 
-def simuler(h1, config, journal=None, trace=None):
+def simuler(h1, config, journal=None, trace=None, compte="A"):
     """Rejoue la stratégie bougie par bougie. h1 : index UTC (début de bougie), colonnes o, h, l, c, v.
+    compte : « A » (25 % à chaque objectif) ou « B » (50 / 0 / 25 / 25).
 
     trace (liste, facultatif) : la décision de CHAQUE bougie (biais, zone) pour vérifier qu'aucune donnée future
     n'est lue (les tests comparent un historique coupé et l'historique complet).
     """
+    parts = PARTS_COMPTES[compte]
     h1 = h1.sort_index()
     index, n = h1.index, len(h1)
     ema = calculs.ema(h1["c"], 200)
@@ -160,13 +182,13 @@ def simuler(h1, config, journal=None, trace=None):
             refus["risque"] += 1
             continue
         deja_vues.add(cle)
-        position = Position(sens, entree, conf["stop"], (conf["tp1"], conf["tp2"], conf["tp3"]),
+        position = Position(sens, entree, conf["stop"], (conf["tp1"], conf["tp2"], conf["tp3"], conf["tp4"]),
                             evaluation["contrats"], evaluation["couts_par_contrat"], suivante_t, conf["niveau"],
-                            config["break_even_pct"])
+                            parts, arrondi_tick(fibo["niveaux"]["0.5"]))
         if journal is not None:
             journal.append((t, sens, conf))
     return {"trades": trades, "refus": refus, "debut": index[0].isoformat(), "fin": index[-1].isoformat(),
-            "bougies": n}
+            "bougies": n, "compte": compte}
 
 
 def _resume(trades, net):

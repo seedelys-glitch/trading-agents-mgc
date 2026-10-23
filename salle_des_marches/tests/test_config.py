@@ -17,7 +17,7 @@ def test_charger_defauts_et_fichier_perso(tmp_path):
     regles = tmp_path / "prop-firm.txt"
     regles.write_text("LIMITE_PERTE_JOUR=750\n", encoding="utf-8")
     c = cfg.charger(tmp_path / "absent.json", regles)
-    assert c["risque_pct"] == 1.0
+    assert c["risque_pct"] == 0.25
     assert c["limite_perte_jour_usd"] == 750.0
     perso = tmp_path / "config_mgc.json"
     perso.write_text(json.dumps({"risque_pct": 0.5, "inconnu": 1}), encoding="utf-8")
