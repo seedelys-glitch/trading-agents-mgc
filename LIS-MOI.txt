@@ -1,0 +1,98 @@
+﻿LE DESK DES SPÉCIALISTES (dans la Salle des marchés, premier bouton)
+=====================================================================
+
+   6 spécialistes, chacun sa méthode : SMC/ICT, Fibonacci (tes règles :
+   0.618 à 0.893 avec FVG, jamais le 0.5), Ichimoku, Tendance (EMA 200 H1,
+   VWAP, Heikin Ashi), Order flow (estimé, pas un vrai footprint ATAS) et
+   Macro & calendrier (dollar, taux 10 ans, annonces, FOMC).
+
+   1. Chacun donne son avis sur SES chiffres.
+   2. Débat : chacun lit les autres et répond (garde ou change d'avis).
+   3. Le chef de desk décide : LONG, SHORT ou PAS DE TRADE, avec zone,
+      stop, TP1/TP2/TP3 et la confirmation à attendre.
+
+   Les niveaux sont calculés par le programme, pas par l'IA.
+   Le programme impose lui-même « pas de trade » si : jour de FOMC,
+   annonce USD forte dans moins de 90 minutes, moins de 4 spécialistes
+   sur 6 d'accord, aucune zone Fibo avec FVG, ou entrée sur le 0.5.
+   Si le chef cite un prix qui ne vient pas des calculs, la page l'affiche
+   en rouge : vérifie-le sur ton graphique.
+
+   13 appels par desk : gratuit avec LM Studio, Gemini ou Groq.
+   Conseil : le desk tourne bien en local (LM Studio). La « Firme complète »
+   est très lente en local (plus d'une heure) : préfère Gemini ou Groq pour elle.
+
+
+LA SALLE DES MARCHÉS (la version jolie, plusieurs IA comparées)
+=====================================================================
+
+OUVRIR
+   Double-clique sur « Salle des marches.bat » dans ce dossier.
+   La page s'ouvre dans ton navigateur, et un raccourci « Salle des marches »
+   avec son icône apparaît sur ton Bureau (à utiliser les fois suivantes).
+
+LES 3 IA
+   - LM Studio : gratuit, tourne sur ton PC (modèle conseillé : qwen3.5-9b).
+     La salle démarre LM Studio et charge le modèle toute seule, puis le
+     décharge à la fin pour rendre la mémoire à ta carte graphique.
+   - Gemini : gratuit avec ton compte Google, mais limité en nombre d'appels
+     par jour. Si le quota est atteint, la ligne Gemini l'affiche.
+   - DeepSeek : PAS gratuit (plus de version gratuite depuis 2026), mais
+     quelques centimes par analyse après une recharge de 2 $.
+
+LES CLÉS
+   En bas de la page : « Mes clés API » explique où les créer.
+   Tu les colles toi-même dans le fichier .env (bouton « Ouvrir le fichier
+   des clés »), après GOOGLE_API_KEY= et DEEPSEEK_API_KEY=, puis Ctrl + S.
+
+CE QUE TU VOIS
+   Le tableau : une ligne par IA, les 5 étages de la firme qui se remplissent,
+   le nombre d'appels, la durée, et le verdict qui tombe à la fin.
+   Puis : ce que chaque IA en pense, une comparaison (points communs,
+   divergences, chiffres à vérifier), et tous les rapports côte à côte.
+   Chaque analyse est ajoutée au journal Excel et à l'historique de la page.
+
+ÉTEINDRE
+   Lien « Éteindre la salle » en bas de la page.
+
+
+TRADINGAGENTS — MODE D'EMPLOI (préparé par Claude d'après le guide)
+=====================================================================
+
+1) INSTALLATION (une seule fois)
+   Double-clique sur « 1 - INSTALLER.bat ». Compte 5 à 15 minutes.
+   Tout s'installe dans ce dossier, dans une bulle Python isolée.
+   À la fin, 2 raccourcis apparaissent sur ton Bureau.
+
+2) PREMIER LANCEMENT : raccourci « TradingAgents »
+   Si ta clé API manque, l'outil te la demande en saisie masquée
+   et la range lui-même dans le fichier .env (jamais dans une conversation).
+
+   Ce qu'il te demande, et quoi répondre pour un premier test :
+   - Ticker ............ NVDA, ou MC.PA pour LVMH (ajoute .PA pour Paris)
+   - Date .............. la date du jour (Entrée)
+   - Langue ............ déjà réglée sur French
+   - Analystes ......... les quatre, pour voir la firme complète une fois
+   - Profondeur ........ Shallow (1 tour de débat = moins cher)
+   - Fournisseur ....... celui dont tu as mis la clé
+   - Modèles ........... les plus légers de la liste (quick ET deep)
+   - Effort ............ le niveau le plus bas
+   À la fin : réponds oui à « Save report? » puis à la page HTML.
+
+3) TEST DE CONSENSUS : raccourci « TradingAgents - 3 analyses »
+   Reprend tes choix du dernier lancement, force 1 tour de débat,
+   t'annonce le nombre d'appels estimé et attend que tu tapes OUI.
+   Résultat : tableau des 3 verdicts + argument baissier, rapports
+   dans le dossier « rapports », et une ligne ajoutée au journal.
+   Ferme le journal Excel avant de lancer.
+
+4) JOURNAL : « Journal paper trading.xlsx »
+   Tu remplis plus tard l'évolution à 5 séances, à 1 mois, et « Bon call ? ».
+
+À GARDER EN TÊTE
+   - Deux runs identiques peuvent donner deux verdicts différents :
+     seul l'accord entre plusieurs runs a de la valeur.
+   - Chaque run = beaucoup d'appels payants. Regarde ta page de
+     consommation après le premier run avant d'en lancer d'autres.
+   - Lis l'argument baissier en premier, vérifie chaque chiffre à la source.
+   - Outil de recherche, pas un conseil financier. Paper trading pendant des mois.

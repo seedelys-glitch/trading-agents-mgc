@@ -1,0 +1,1059 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salle des marchés</title>
+<link rel="icon" href="/favicon.ico">
+<script src="/static/marked.min.js"></script>
+<style>
+/* Polices et moteur de texte inclus dans le dossier : la page marche même sans internet */
+@font-face { font-family: "Barlow"; font-weight: 400; font-style: normal; font-display: swap; src: url("/static/barlow-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 500; font-style: normal; font-display: swap; src: url("/static/barlow-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 600; font-style: normal; font-display: swap; src: url("/static/barlow-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 500; font-style: normal; font-display: swap; src: url("/static/barlow-condensed-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 600; font-style: normal; font-display: swap; src: url("/static/barlow-condensed-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 700; font-style: normal; font-display: swap; src: url("/static/barlow-condensed-latin-700-normal.woff2") format("woff2"); }
+:root {
+  --page: #E4E8EE;
+  --panneau: #F3F5F8;
+  --encre: #16203A;
+  --encre-2: #4B5772;
+  --trait: #C3CBD8;
+  --tableau: #18202E;
+  --case: #232D3F;
+  --case-haut: #2A3549;
+  --case-bord: #10161F;
+  --lettre: #F3E3A6;
+  --lettre-faible: #6F7A90;
+  --jaune: #F2C94C;
+  --vert: #47C08A;
+  --ambre: #E8AE2E;
+  --rouge: #EE6159;
+  --lm: #A194FF;
+  --gemini: #74A2FF;
+  --deepseek: #43C9B7;
+  --groq: #F59E62;
+  --nvidia: #76B900;
+  --rayon: 6px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #0F141D;
+    --panneau: #161D2A;
+    --encre: #E4E8EE;
+    --encre-2: #A3ADC2;
+    --trait: #2A3447;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--encre);
+  font: 16px/1.55 "Barlow", system-ui, sans-serif;
+}
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--jaune); outline-offset: 2px; }
+a { color: inherit; }
+.page { max-width: 1240px; margin: 0 auto; padding: 28px 24px 64px; }
+h1, h2, h3 { font-family: "Barlow Condensed", "Barlow", sans-serif; font-weight: 600; line-height: 1.1; margin: 0; }
+h2 { font-size: 30px; margin-bottom: 14px; }
+h3 { font-size: 21px; }
+.discret { color: var(--encre-2); }
+.petit { font-size: 14px; }
+
+/* ---------- en-tête ---------- */
+.entete { display: flex; gap: 32px; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; margin-bottom: 26px; }
+.entete h1 { font-size: clamp(44px, 6vw, 68px); letter-spacing: .5px; }
+.entete p { margin: 6px 0 0; max-width: 56ch; color: var(--encre-2); }
+.etats { display: flex; gap: 10px; flex-wrap: wrap; }
+.etat-ia {
+  display: grid; grid-template-columns: 10px auto; column-gap: 9px; align-items: center;
+  padding: 8px 14px 9px 12px; border: 1px solid var(--trait); border-radius: var(--rayon); background: var(--panneau);
+  min-width: 150px;
+}
+.etat-ia b { font-family: "Barlow Condensed"; font-size: 19px; font-weight: 600; }
+.etat-ia span { grid-column: 2; font-size: 13px; color: var(--encre-2); }
+.pastille { width: 10px; height: 10px; border-radius: 50%; background: var(--lettre-faible); }
+.pastille.ok { background: var(--vert); }
+.pastille.ko { background: var(--rouge); }
+
+/* ---------- formulaire ---------- */
+.lancement {
+  display: grid; grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.5fr); gap: 28px 40px;
+  background: var(--panneau); border: 1px solid var(--trait); border-radius: 10px; padding: 24px;
+}
+.champ-ticker label { display: block; font-weight: 600; margin-bottom: 6px; }
+.champ-ticker input {
+  width: 100%; padding: 6px 14px; border-radius: var(--rayon);
+  background: var(--tableau); color: var(--lettre); border: 2px solid var(--case-bord);
+  font-family: "Barlow Condensed"; font-weight: 600; font-size: 46px; letter-spacing: 6px; text-transform: uppercase;
+}
+.champ-ticker input::placeholder { color: var(--lettre-faible); }
+.raccourcis { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.raccourcis button {
+  border: 1px solid var(--trait); background: transparent; border-radius: 20px; padding: 3px 12px; cursor: pointer; font-size: 14px;
+}
+.raccourcis button:hover { border-color: var(--encre-2); }
+fieldset { border: 0; padding: 0; margin: 0 0 18px; }
+legend { font-weight: 600; margin-bottom: 8px; padding: 0; }
+.choix-ia { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.choix { position: relative; display: block; cursor: pointer; }
+.choix input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.choix .carte {
+  display: block; height: 100%; padding: 10px 12px 11px 16px; border-radius: var(--rayon);
+  border: 1px solid var(--trait); background: var(--page); position: relative; overflow: hidden;
+}
+.choix .carte::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--couleur); opacity: .35; }
+.choix input:checked + .carte { border-color: var(--encre); }
+.choix input:checked + .carte::before { opacity: 1; }
+.choix input:focus-visible + .carte { outline: 3px solid var(--jaune); outline-offset: 2px; }
+.choix input:disabled + .carte { opacity: .5; }
+.carte b { display: block; font-family: "Barlow Condensed"; font-size: 20px; font-weight: 600; }
+.carte span { font-size: 13px; color: var(--encre-2); }
+.choix-modele { margin-top: 8px; display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.choix-modele select { padding: 3px 6px; border-radius: 4px; border: 1px solid var(--trait); background: var(--page); }
+.analystes { display: flex; flex-wrap: wrap; gap: 8px; }
+.analystes .carte { padding: 6px 14px; }
+.analystes .carte::before { display: none; }
+.analystes input:checked + .carte { background: var(--encre); color: var(--page); }
+.actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.bouton {
+  border: 0; border-radius: var(--rayon); padding: 12px 26px; cursor: pointer;
+  background: var(--jaune); color: #16203A; font-family: "Barlow Condensed"; font-weight: 700; font-size: 22px; letter-spacing: .3px;
+}
+.bouton:disabled { opacity: .5; cursor: not-allowed; }
+.bouton.second { background: transparent; color: var(--encre); border: 1px solid var(--trait); font-size: 18px; padding: 8px 16px; font-weight: 600; }
+.lien { background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer; color: var(--encre-2); font-size: 14px; }
+.message-erreur { color: var(--rouge); font-weight: 600; }
+
+/* ---------- le tableau ---------- */
+.tableau {
+  margin-top: 30px; background: var(--tableau); color: var(--lettre); border-radius: 12px; padding: 22px 22px 18px;
+  box-shadow: inset 0 0 0 1px #2B364A, 0 18px 40px -24px rgba(10, 16, 28, .55);
+}
+.tableau-haut { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.tableau-haut .infos { color: var(--lettre-faible); font-size: 15px; }
+.tableau-haut .infos b { color: var(--lettre); font-weight: 500; }
+.volets { display: inline-flex; gap: 3px; }
+.volet {
+  position: relative; width: 1.05em; height: 1.45em; display: inline-grid; place-items: center;
+  background: linear-gradient(var(--case-haut) 0 50%, var(--case) 50% 100%);
+  border-radius: 3px; box-shadow: inset 0 0 0 1px var(--case-bord);
+  font-family: "Barlow Condensed"; font-weight: 600; color: var(--lettre); line-height: 1;
+}
+.volet::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--case-bord); }
+.volet.tourne { animation: tourne .09s linear; }
+@keyframes tourne { 0% { transform: scaleY(1); } 50% { transform: scaleY(.15); } 100% { transform: scaleY(1); } }
+.volets.grand { font-size: 50px; }
+.volets.moyen { font-size: 28px; }
+.volets.vert .volet { color: var(--vert); }
+.volets.ambre .volet { color: var(--ambre); }
+.volets.rouge .volet { color: var(--rouge); }
+.volets.eteint .volet { color: var(--lettre-faible); }
+
+.lignes { display: grid; gap: 2px; }
+.ligne {
+  display: grid; grid-template-columns: 6px minmax(150px, 1.1fr) minmax(250px, 2fr) 70px 70px auto;
+  align-items: center; gap: 18px; padding: 14px 6px 14px 0; border-top: 1px solid #2A3447;
+}
+.ligne .bande { align-self: stretch; border-radius: 3px; background: var(--couleur); }
+.ligne .nom b { display: block; font-family: "Barlow Condensed"; font-size: 24px; font-weight: 600; color: #F4F6FA; }
+.ligne .nom span { font-size: 13px; color: var(--lettre-faible); }
+.chiffre { font-family: "Barlow Condensed"; font-size: 24px; font-weight: 500; font-variant-numeric: tabular-nums; color: #F4F6FA; }
+.chiffre small { display: block; font-family: "Barlow"; font-size: 12px; color: var(--lettre-faible); font-weight: 400; }
+.etages { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.etage i { display: block; height: 8px; border-radius: 2px; background: #2C3749; }
+.etage.fait i { background: var(--lettre); }
+.etage.actif i { background: linear-gradient(90deg, var(--lettre) var(--part, 35%), #2C3749 var(--part, 35%)); }
+.en-cours .etage.actif i { animation: respire 1.6s ease-in-out infinite; }
+@keyframes respire { 50% { opacity: .55; } }
+.etage span { display: block; margin-top: 5px; font-size: 12px; color: var(--lettre-faible); }
+.etage.fait span, .etage.actif span { color: #D7DCE6; }
+.ligne .note { grid-column: 2 / -1; margin-top: -6px; font-size: 14px; color: var(--rouge); }
+.ligne .note.info { color: var(--lettre-faible); }
+.consensus { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; border-top: 2px solid #3A465D; padding-top: 16px; margin-top: 4px; }
+.consensus h3 { color: #F4F6FA; font-size: 26px; }
+.consensus p { margin: 2px 0 0; color: var(--lettre-faible); font-size: 14px; }
+.vide { padding: 34px 0 20px; color: var(--lettre-faible); }
+.vide p { margin: 14px 0 0; }
+
+/* ---------- résultats ---------- */
+section.bloc { margin-top: 40px; }
+.colonnes { display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: 16px; }
+.avis { border-top: 4px solid var(--couleur); padding: 14px 4px 0; }
+.avis header { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.etiquette { font-family: "Barlow Condensed"; font-weight: 700; font-size: 18px; padding: 1px 9px; border-radius: 4px; color: #16203A; white-space: nowrap; }
+.etiquette.vert { background: var(--vert); }
+.etiquette.ambre { background: var(--ambre); }
+.etiquette.rouge { background: var(--rouge); }
+.etiquette.gris { background: var(--trait); }
+.avis dl { margin: 0; }
+.avis dt { font-weight: 600; font-size: 14px; margin-top: 10px; }
+.avis dd { margin: 2px 0 0; }
+.avis .liens { margin-top: 12px; font-size: 14px; }
+
+.synthese { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.synthese ul { margin: 8px 0 0; padding-left: 18px; }
+.synthese li { margin-bottom: 6px; }
+.cle-baissiere {
+  margin-top: 22px; padding: 16px 20px; border-left: 5px solid var(--rouge); background: var(--panneau); border-radius: 0 var(--rayon) var(--rayon) 0;
+  font-size: 18px; max-width: 80ch;
+}
+.cle-baissiere b { display: block; font-family: "Barlow Condensed"; font-size: 19px; margin-bottom: 2px; }
+
+.onglets { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--trait); margin-bottom: 16px; }
+.onglets button {
+  border: 0; background: none; padding: 8px 12px; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px; color: var(--encre-2); font-weight: 500;
+}
+.onglets button[aria-selected="true"] { color: var(--encre); border-bottom-color: var(--encre); font-weight: 600; }
+.texte-ia { max-height: 560px; overflow: auto; padding-right: 8px; font-size: 15px; }
+.texte-ia h4 { font-family: "Barlow Condensed"; font-size: 22px; margin: 0 0 8px; padding-bottom: 6px; border-bottom: 3px solid var(--couleur); position: sticky; top: 0; background: var(--page); }
+.texte-ia h1, .texte-ia h2, .texte-ia h3 { font-family: "Barlow"; font-size: 16px; font-weight: 600; margin: 14px 0 4px; }
+.texte-ia table { border-collapse: collapse; font-size: 13px; margin: 8px 0; display: block; overflow-x: auto; }
+.texte-ia td, .texte-ia th { border: 1px solid var(--trait); padding: 3px 6px; text-align: left; }
+.texte-ia p { margin: 6px 0; }
+.texte-ia pre { white-space: pre-wrap; font: inherit; }
+
+.historique { width: 100%; border-collapse: collapse; }
+.historique th { text-align: left; font-size: 14px; color: var(--encre-2); font-weight: 500; padding: 6px 10px; border-bottom: 1px solid var(--trait); }
+.historique td { padding: 9px 10px; border-bottom: 1px solid var(--trait); vertical-align: middle; }
+.historique tbody tr { cursor: pointer; }
+.historique tbody tr:hover { background: var(--panneau); }
+.historique .t { font-family: "Barlow Condensed"; font-size: 20px; font-weight: 600; }
+.puces { display: flex; gap: 5px; flex-wrap: wrap; }
+
+footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--trait); display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--encre-2); }
+footer .boutons { display: flex; gap: 14px; }
+
+dialog { border: 1px solid var(--trait); border-radius: 10px; padding: 26px; max-width: 560px; background: var(--panneau); color: var(--encre); }
+dialog::backdrop { background: rgba(10, 15, 25, .55); }
+dialog ol { padding-left: 20px; }
+dialog li { margin-bottom: 10px; }
+code { font-family: Consolas, monospace; background: var(--page); padding: 1px 5px; border-radius: 3px; font-size: 14px; }
+
+/* ---------- modes et desk ---------- */
+.modes { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mode {
+  text-align: left; border: 1px solid var(--trait); background: var(--page); border-radius: var(--rayon);
+  padding: 12px 16px; cursor: pointer;
+}
+.mode b { display: block; font-family: "Barlow Condensed"; font-size: 23px; font-weight: 600; }
+.mode span { font-size: 14px; color: var(--encre-2); }
+.mode[aria-pressed="true"] { background: var(--encre); color: var(--page); border-color: var(--encre); }
+.mode[aria-pressed="true"] span { color: inherit; opacity: .78; }
+.etages.deux { grid-template-columns: repeat(2, 1fr); }
+.plan { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; background: var(--trait); border: 1px solid var(--trait); border-radius: var(--rayon); overflow: hidden; }
+.plan div { background: var(--panneau); padding: 12px 14px; }
+.plan small { display: block; color: var(--encre-2); font-size: 13px; }
+.plan b { font-family: "Barlow Condensed"; font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.texte-plan { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 18px; max-width: 1000px; }
+.texte-plan p { margin: 4px 0 0; }
+.debat { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px 18px; }
+.debat .avis dd.reponse { border-left: 3px solid var(--trait); padding-left: 10px; }
+.changement { font-size: 13px; color: var(--encre-2); }
+details.chiffres { border-top: 1px solid var(--trait); padding: 10px 0; }
+details.chiffres summary { cursor: pointer; font-family: "Barlow Condensed"; font-size: 21px; font-weight: 600; }
+details.chiffres dl { display: grid; grid-template-columns: minmax(150px, max-content) 1fr; gap: 4px 16px; margin: 10px 0 0; font-size: 14px; }
+details.chiffres dt { color: var(--encre-2); }
+details.chiffres dd { margin: 0; font-variant-numeric: tabular-nums; }
+details.chiffres table { border-collapse: collapse; font-size: 13px; }
+details.chiffres td, details.chiffres th { border: 1px solid var(--trait); padding: 3px 7px; text-align: left; font-weight: 400; }
+details.chiffres th { color: var(--encre-2); }
+details.chiffres td .element + .element { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--trait); }
+
+.chiffre.mot { font-size: 18px; }
+.alerte { margin: 0 0 14px; padding: 12px 16px; border-left: 5px solid var(--ambre); background: var(--panneau); border-radius: 0 var(--rayon) var(--rayon) 0; max-width: 80ch; }
+.alerte.rouge { border-left-color: var(--rouge); }
+.alerte b { display: block; font-family: "Barlow Condensed"; font-size: 19px; }
+
+[hidden] { display: none !important; }
+
+@media (max-width: 900px) {
+  .lancement { grid-template-columns: 1fr; }
+  .choix-ia { grid-template-columns: 1fr; }
+  .ligne { grid-template-columns: 6px 1fr; row-gap: 10px; }
+  .ligne .bande { grid-row: 1 / span 3; }
+  .ligne .etages { grid-column: 2; grid-row: 2; }
+  .ligne .chiffre { display: none; }
+  .ligne .volets { grid-column: 2; grid-row: 3; }
+  .ligne .note { grid-column: 2; margin-top: 0; }
+  .volets.moyen { font-size: 20px; }
+  .volets.grand { font-size: 26px; }
+  .colonnes, .synthese, .debat, .texte-plan { grid-template-columns: 1fr; }
+  .plan { grid-template-columns: 1fr 1fr; }
+  .modes { grid-template-columns: 1fr; }
+  .page { padding: 20px 16px 48px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .volet.tourne, .en-cours .etage.actif i { animation: none; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="entete">
+    <div>
+      <h1>Salle des marchés</h1>
+      <p>Un desk de spécialistes qui débattent, ou plusieurs IA qui font tourner une firme complète. Quand ils tombent d'accord, c'est une info. Quand ils divergent, c'est un signal de prudence.</p>
+    </div>
+    <div class="etats" id="etats" aria-live="polite"></div>
+  </header>
+
+  <form class="lancement" id="formulaire" autocomplete="off">
+    <div class="modes" role="group" aria-label="Type d'analyse">
+      <button type="button" class="mode" data-mode="bureau" aria-pressed="true"><b>Desk des spécialistes</b><span>SMC, Fibo, Ichimoku, tendance, order flow et macro débattent, puis le chef de desk tranche.</span></button>
+      <button type="button" class="mode" data-mode="firme" aria-pressed="false"><b>Firme complète</b><span>TradingAgents : analystes, débat haussier contre baissier, gérant, avec plusieurs IA comparées.</span></button>
+    </div>
+    <div class="champ-ticker">
+      <label for="ticker">Action à analyser</label>
+      <input id="ticker" name="ticker" placeholder="NVDA" maxlength="16" spellcheck="false" required>
+      <div class="raccourcis" id="raccourcis">
+        <button type="button" data-t="NVDA">NVDA</button>
+        <button type="button" data-t="AAPL">AAPL</button>
+        <button type="button" data-t="MC.PA">LVMH (MC.PA)</button>
+        <button type="button" data-t="XAUUSD">Or (XAUUSD)</button>
+        <button type="button" data-t="BTC-USD">Bitcoin</button>
+      </div>
+      <p class="discret petit">Pour une action de Paris, ajoute .PA à la fin.</p>
+    </div>
+
+    <div>
+      <fieldset>
+        <legend id="legende-ia">Qui analyse ?</legend>
+        <div class="choix-ia">
+          <label class="choix" style="--couleur: var(--lm)">
+            <input type="checkbox" name="moteur" value="lmstudio" checked>
+            <span class="carte"><b>LM Studio</b><span id="desc-lmstudio">Gratuit, tourne sur ton PC</span></span>
+          </label>
+          <label class="choix" style="--couleur: var(--gemini)">
+            <input type="checkbox" name="moteur" value="gemini" checked>
+            <span class="carte"><b>Gemini</b><span id="desc-gemini">Gratuit, avec un quota par jour</span></span>
+          </label>
+          <label class="choix" style="--couleur: var(--groq)">
+            <input type="checkbox" name="moteur" value="groq">
+            <span class="carte"><b>Groq</b><span id="desc-groq">Gratuit, très rapide</span></span>
+          </label>
+          <label class="choix" style="--couleur: var(--nvidia)">
+            <input type="checkbox" name="moteur" value="nvidia">
+            <span class="carte"><b>NVIDIA</b><span id="desc-nvidia">Gratuit, environ 1 000 appels</span></span>
+          </label>
+          <label class="choix" style="--couleur: var(--deepseek)">
+            <input type="checkbox" name="moteur" value="deepseek">
+            <span class="carte"><b>DeepSeek</b><span id="desc-deepseek">Payant, quelques centimes</span></span>
+          </label>
+        </div>
+        <div class="choix-modele">
+          <label for="modele">Modèle LM Studio :</label>
+          <select id="modele"></select>
+        </div>
+      </fieldset>
+      <fieldset id="bloc-analystes">
+        <legend>Analystes</legend>
+        <div class="analystes">
+          <label class="choix"><input type="checkbox" name="analyste" value="market" checked><span class="carte">Technique</span></label>
+          <label class="choix"><input type="checkbox" name="analyste" value="social" checked><span class="carte">Sentiment</span></label>
+          <label class="choix"><input type="checkbox" name="analyste" value="news" checked><span class="carte">News</span></label>
+          <label class="choix"><input type="checkbox" name="analyste" value="fundamentals" checked><span class="carte">Fondamental</span></label>
+        </div>
+      </fieldset>
+    </div>
+
+    <div class="actions">
+      <button class="bouton" id="lancer" type="submit">Lancer l'analyse</button>
+      <button class="bouton second" id="arreter" type="button" hidden>Arrêter</button>
+      <span class="discret petit" id="estimation"></span>
+      <span class="message-erreur" id="erreur-formulaire" role="alert"></span>
+    </div>
+  </form>
+
+  <section class="tableau" id="tableau" aria-live="polite">
+    <div class="tableau-haut">
+      <div class="volets grand" id="volet-ticker"></div>
+      <div class="infos" id="infos-tableau"></div>
+    </div>
+    <div id="contenu-tableau"></div>
+  </section>
+
+  <section class="bloc" id="bloc-plan" hidden>
+    <h2>Le plan du chef de desk</h2>
+    <div id="plan-alertes"></div>
+    <div class="plan" id="plan"></div>
+    <div class="texte-plan">
+      <div><h3>À attendre avant d'entrer</h3><p id="plan-confirmation"></p></div>
+      <div><h3>Pourquoi</h3><p id="plan-raison"></p></div>
+    </div>
+    <div class="cle-baissiere" id="plan-desaccord" hidden><b>Le désaccord principal</b><span></span></div>
+  </section>
+
+  <section class="bloc" id="bloc-debat" hidden>
+    <h2>Le débat</h2>
+    <div class="debat" id="debat"></div>
+  </section>
+
+  <section class="bloc" id="bloc-chiffres" hidden>
+    <h2>Les chiffres calculés</h2>
+    <p class="discret petit" id="chiffres-intro"></p>
+    <div id="chiffres"></div>
+  </section>
+
+  <section class="bloc" id="bloc-avis" hidden>
+    <h2>Ce qu'elles en pensent</h2>
+    <div class="colonnes" id="avis"></div>
+  </section>
+
+  <section class="bloc" id="bloc-synthese" hidden>
+    <h2>La comparaison</h2>
+    <p class="discret petit" id="synthese-par"></p>
+    <div class="synthese">
+      <div><h3>Points communs</h3><ul id="communs"></ul></div>
+      <div><h3>Divergences</h3><ul id="divergences"></ul></div>
+      <div><h3>À vérifier à la source</h3><ul id="verifier"></ul></div>
+    </div>
+    <div class="cle-baissiere" id="cle-baissiere" hidden><b>L'argument baissier à lire en premier</b><span></span></div>
+  </section>
+
+  <section class="bloc" id="bloc-detail" hidden>
+    <h2>Comparer en détail</h2>
+    <div class="onglets" role="tablist" id="onglets"></div>
+    <div class="colonnes" id="detail"></div>
+  </section>
+
+  <section class="bloc" id="bloc-historique" hidden>
+    <h2>Analyses précédentes</h2>
+    <table class="historique">
+      <thead><tr><th>Date</th><th>Action</th><th>Verdicts</th><th>Consensus</th></tr></thead>
+      <tbody id="historique"></tbody>
+    </table>
+  </section>
+
+  <footer>
+    <span>Outil de recherche, pas un conseil financier. Vérifie les chiffres et reste en paper trading.</span>
+    <span class="boutons">
+      <button class="lien" type="button" id="btn-cles">Mes clés API</button>
+      <button class="lien" type="button" id="btn-dossier">Ouvrir le dossier</button>
+      <button class="lien" type="button" id="btn-eteindre">Éteindre la salle</button>
+    </span>
+  </footer>
+</div>
+
+<dialog id="dialogue-cles">
+  <h2>Brancher Gemini, Groq, NVIDIA et DeepSeek</h2>
+  <p>Les clés restent dans un fichier sur ton PC. Tu les colles toi-même, elles ne passent jamais par une conversation.</p>
+  <ol>
+    <li><b>Gemini (gratuit)</b> : crée une clé sur <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> avec ton compte Google.</li>
+    <li><b>Groq (gratuit, très rapide)</b> : crée une clé sur <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a>, sans carte bancaire.</li>
+    <li><b>NVIDIA (gratuit, environ 1 000 appels)</b> : crée une clé sur <a href="https://build.nvidia.com/settings/api-keys" target="_blank" rel="noopener">build.nvidia.com</a> avec un compte développeur gratuit, sans carte bancaire.</li>
+    <li><b>DeepSeek (payant, quelques centimes)</b> : crée une clé sur <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">platform.deepseek.com</a> et recharge 2 $.</li>
+    <li>Clique sur « Ouvrir le fichier des clés ». Colle chaque clé juste après son nom, sans espace : <code>GOOGLE_API_KEY=</code> pour Gemini, <code>GROQ_API_KEY=</code> pour Groq, <code>NVIDIA_API_KEY=</code> pour NVIDIA,<code>DEEPSEEK_API_KEY=</code> pour DeepSeek.</li>
+    <li>Enregistre avec Ctrl + S, ferme le Bloc-notes, puis clique sur « J'ai collé mes clés ».</li>
+  </ol>
+  <div class="actions" style="margin-top: 18px">
+    <button class="bouton" type="button" id="btn-ouvrir-cles">Ouvrir le fichier des clés</button>
+    <button class="bouton second" type="button" id="btn-cles-ok">J'ai collé mes clés</button>
+  </div>
+</dialog>
+
+<script>
+"use strict";
+const MOTEURS = {
+  lmstudio: { nom: "LM Studio", couleur: "var(--lm)" },
+  gemini: { nom: "Gemini", couleur: "var(--gemini)" },
+  groq: { nom: "Groq", couleur: "var(--groq)" },
+  nvidia: { nom: "NVIDIA", couleur: "var(--nvidia)" },
+  deepseek: { nom: "DeepSeek", couleur: "var(--deepseek)" },
+};
+// Le desk des spécialistes : clé, nom, spécialité, couleur
+const SPECIALISTES = [
+  ["smc", "SMC / ICT", "Structure, FVG, order blocks, liquidité", "#F2A65A"],
+  ["fibo", "Fibonacci", "Zones 0.618 à 0.893 avec FVG", "#F2C94C"],
+  ["ichimoku", "Ichimoku", "Nuage, Tenkan, Kijun, Chikou", "#74A2FF"],
+  ["tendance", "Tendance", "EMA 200, VWAP, Heikin Ashi", "#47C08A"],
+  ["orderflow", "Order flow", "Volume et delta (estimés)", "#43C9B7"],
+  ["calendrier", "Macro & calendrier", "Dollar, taux, annonces", "#C792EA"],
+];
+const BIAIS = { haussier: ["HAUSSIER", "vert"], baissier: ["BAISSIER", "rouge"], neutre: ["NEUTRE", "ambre"] };
+const DECISIONS = { long: ["LONG", "vert"], short: ["SHORT", "rouge"], "pas de trade": ["PAS DE TRADE", "ambre"] };
+const ETAGES = [["analystes", "Analystes"], ["debat", "Débat"], ["trader", "Trader"], ["risque", "Risque"], ["gerant", "Gérant"]];
+const VERDICTS = {
+  Buy: ["ACHETER", "vert"], Overweight: ["RENFORCER", "vert"], Hold: ["CONSERVER", "ambre"],
+  Underweight: ["ALLÉGER", "rouge"], Sell: ["VENDRE", "rouge"],
+};
+const SECTIONS = [
+  ["technique", "Technique"], ["sentiment", "Sentiment"], ["news", "News"], ["fondamental", "Fondamental"],
+  ["haussier", "Haussier"], ["baissier", "Baissier"], ["arbitre", "Arbitre"], ["trader", "Trader"],
+  ["risque", "Risque"], ["decision", "Décision finale"],
+];
+const LARGEUR_VERDICT = 9;
+const MOINS_DE_MOUVEMENT = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (s) => document.querySelector(s);
+const el = (tag, attrs = {}, ...enfants) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") n.className = v;
+    else if (k === "style") n.style.cssText = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v);
+  }
+  for (const e of enfants.flat()) if (e != null) n.append(e instanceof Node ? e : document.createTextNode(e));
+  return n;
+};
+
+let etatServeur = null;
+let analyseId = null;
+let analyse = null;
+let minuteur = null;
+let ongletActif = "baissier";
+let mode = "bureau"; // « bureau » = desk des spécialistes, « firme » = TradingAgents
+const cacheSections = {};
+
+/* ---------- volets (le tableau à palettes) ---------- */
+const LETTRES = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+function volets(conteneur, texte, largeur, classe = "") {
+  texte = (texte || "").toUpperCase().slice(0, largeur).padEnd(largeur, " ");
+  if (conteneur.dataset.texte === texte && conteneur.dataset.classe === classe) return;
+  const anime = conteneur.dataset.texte !== undefined && !MOINS_DE_MOUVEMENT;
+  conteneur.dataset.texte = texte;
+  conteneur.dataset.classe = classe;
+  conteneur.className = "volets " + (conteneur.dataset.taille || "moyen") + " " + classe;
+  while (conteneur.children.length < largeur) {
+    // on retire la classe après l'animation, sinon elle rejoue à chaque rafraîchissement
+    conteneur.append(el("span", { class: "volet", onanimationend: (e) => e.target.classList.remove("tourne") }));
+  }
+  while (conteneur.children.length > largeur) conteneur.lastChild.remove();
+  [...conteneur.children].forEach((caseVolet, i) => {
+    const cible = texte[i];
+    if (!anime || caseVolet.textContent === cible) { caseVolet.textContent = cible; return; }
+    let tours = 4 + i * 2;
+    const tic = () => {
+      caseVolet.classList.remove("tourne"); void caseVolet.offsetWidth; caseVolet.classList.add("tourne");
+      if (tours-- <= 0) { caseVolet.textContent = cible; return; }
+      caseVolet.textContent = cible === " " && tours < 2 ? " " : LETTRES[Math.floor(Math.random() * LETTRES.length)];
+      setTimeout(tic, 55);
+    };
+    tic();
+  });
+}
+
+/* ---------- appels au serveur ---------- */
+async function api(chemin, corps) {
+  const options = corps === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corps) };
+  const r = await fetch(chemin, options);
+  const donnees = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(donnees.erreur || "Le serveur ne répond pas.");
+  return donnees;
+}
+
+/* ---------- état des IA ---------- */
+async function rafraichirEtat() {
+  try { etatServeur = await api("/api/etat"); } catch { return; }
+  const e = etatServeur;
+  const lignes = [
+    ["lmstudio", e.lmstudio.serveur || e.lmstudio.outil, e.lmstudio.serveur ? "Prêt, gratuit" : e.lmstudio.outil ? "Démarre tout seul" : "LM Studio introuvable"],
+    ["gemini", e.gemini.cle, e.gemini.cle ? "Clé en place" : "Clé à coller"],
+    ["groq", e.groq?.cle, e.groq?.cle ? "Clé en place" : "Clé à coller"],
+    ["nvidia", e.nvidia?.cle, e.nvidia?.cle ? "Clé en place" : "Clé à coller"],
+    ["deepseek", e.deepseek.cle, e.deepseek.cle ? "Clé en place" : "Clé à coller"],
+  ];
+  $("#etats").replaceChildren(...lignes.map(([k, ok, texte]) =>
+    el("div", { class: "etat-ia" }, el("i", { class: "pastille " + (ok ? "ok" : "ko") }), el("b", {}, MOTEURS[k].nom), el("span", {}, texte))));
+  for (const [k, ok] of lignes) {
+    const case_ = document.querySelector(`input[name=moteur][value=${k}]`);
+    if (!ok && k !== "lmstudio") { case_.checked = false; case_.disabled = true; }
+    else case_.disabled = false;
+  }
+  majDescriptions();
+  if (mode === "bureau" && !choisis("moteur").length) {
+    const libre = [...document.querySelectorAll("input[name=moteur]")].find((i) => !i.disabled);
+    if (libre) libre.checked = true;
+  }
+  const select = $("#modele");
+  const modeles = e.lmstudio.modeles.length ? e.lmstudio.modeles : ["qwen3.5-9b"];
+  if (select.options.length !== modeles.length) {
+    const avant = select.value || localStorageLire("modele") || "qwen3.5-9b";
+    select.replaceChildren(...modeles.map((m) => el("option", { value: m }, m + (m === "qwen3.5-9b" ? " (conseillé)" : ""))));
+    select.value = modeles.includes(avant) ? avant : modeles[0];
+  }
+  if (e.en_cours && !analyseId) suivre(e.en_cours);
+  majEstimation();
+  tableauVide();
+}
+function localStorageLire(k) { try { return localStorage.getItem("salle-" + k); } catch { return null; } }
+function localStorageEcrire(k, v) { try { localStorage.setItem("salle-" + k, v); } catch {} }
+
+function choisis(nom) { return [...document.querySelectorAll(`input[name=${nom}]:checked`)].map((i) => i.value); }
+function majEstimation() {
+  if (mode === "bureau") {
+    const payant = choisis("moteur").includes("deepseek");
+    $("#estimation").textContent = `13 appels (6 avis, 6 réponses au débat, 1 décision). Arrêt automatique à 30 minutes. ${payant ? "DeepSeek coûte quelques centimes." : "Gratuit."}`;
+    return;
+  }
+  const n = choisis("analyste").length, ia = choisis("moteur").length;
+  if (!ia) { $("#estimation").textContent = ""; return; }
+  const bas = n * 2 + 9, haut = n * 5 + 9;
+  const payant = choisis("moteur").includes("deepseek");
+  $("#estimation").textContent = `Environ ${bas} à ${haut} appels par IA. Arrêt automatique à 30 minutes. ${payant ? "DeepSeek coûte quelques centimes, le reste est gratuit." : "Tout est gratuit."}`;
+}
+
+/* ---------- lancement ---------- */
+$("#formulaire").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  $("#erreur-formulaire").textContent = "";
+  const demande = mode === "bureau"
+    ? { mode: "bureau", ticker: $("#ticker").value.trim(), moteur: choisis("moteur")[0], modele_local: $("#modele").value }
+    : { ticker: $("#ticker").value.trim(), moteurs: choisis("moteur"), analystes: choisis("analyste"), modele_local: $("#modele").value };
+  localStorageEcrire("modele", demande.modele_local);
+  $("#lancer").disabled = true;
+  try {
+    const { id } = await api("/api/lancer", demande);
+    for (const k of Object.keys(cacheSections)) delete cacheSections[k];
+    suivre(id);
+  } catch (err) {
+    $("#erreur-formulaire").textContent = err.message;
+    $("#lancer").disabled = false;
+  }
+});
+$("#arreter").addEventListener("click", async () => { await api("/api/arreter-analyse", {}); });
+$("#raccourcis").addEventListener("click", (ev) => {
+  const t = ev.target.closest("button")?.dataset.t;
+  if (t) { $("#ticker").value = t; $("#ticker").focus(); tableauVide(); }
+});
+document.querySelectorAll("input[name=analyste], input[name=moteur]").forEach((i) => i.addEventListener("change", () => {
+  // Le desk ne parle qu'avec une seule IA : cocher l'une décoche les autres
+  if (mode === "bureau" && i.name === "moteur") {
+    if (i.checked) document.querySelectorAll("input[name=moteur]").forEach((j) => { if (j !== i) j.checked = false; });
+    else if (!choisis("moteur").length) i.checked = true; // comme un bouton radio : on ne peut pas tout décocher
+  }
+  majEstimation(); tableauVide();
+}));
+
+/* ---------- choix du mode ---------- */
+function majDescriptions() {
+  // Durées réalistes et limites de chaque IA, selon le mode
+  const e = etatServeur || { gemini: {}, groq: {}, nvidia: {}, deepseek: {} };
+  const bureau = mode === "bureau";
+  $("#desc-lmstudio").textContent = bureau ? "Gratuit, sur ton PC : 3 à 8 min" : "Gratuit mais lent : 15 à 30 min";
+  $("#desc-gemini").textContent = !e.gemini?.cle ? "Clé à coller (gratuite)" : bureau ? "Gratuit : 2 à 5 min" : "Gratuit, conseillé : 5 à 15 min";
+  $("#desc-groq").textContent = !e.groq?.cle ? "Clé à coller (gratuite)" : bureau ? "Gratuit, très rapide : 2 à 6 min" : "Desk seulement (limite gratuite trop petite)";
+  $("#desc-nvidia").textContent = !e.nvidia?.cle ? "Clé à coller (gratuite)" : bureau ? "Gratuit : 3 à 8 min" : "Gratuit (environ 1 000 appels) : 10 à 25 min";
+  $("#desc-deepseek").textContent = e.deepseek?.cle ? "Payant, quelques centimes" : "Clé à coller";
+  const groq = document.querySelector("input[name=moteur][value=groq]");
+  if (groq) {
+    groq.disabled = !e.groq?.cle || !bureau;
+    if (groq.disabled) groq.checked = false;
+  }
+}
+function appliquerMode() {
+  document.querySelectorAll(".mode").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
+  const bureau = mode === "bureau";
+  $("#bloc-analystes").hidden = bureau;
+  $("#legende-ia").textContent = bureau ? "Quelle IA fait parler le desk ?" : "Qui analyse ?";
+  $("#lancer").textContent = bureau ? "Réunir le desk" : "Lancer l'analyse";
+  majDescriptions();
+  if (bureau) {
+    const premier = choisis("moteur")[0];
+    document.querySelectorAll("input[name=moteur]").forEach((i) => { i.checked = i.value === premier; });
+  }
+  majEstimation();
+  tableauVide();
+}
+document.querySelectorAll(".mode").forEach((b) => b.addEventListener("click", () => {
+  mode = b.dataset.mode;
+  localStorageEcrire("mode", mode);
+  if (analyse && analyse.etat === "fini") { analyseId = null; analyse = null; masquerResultats(); }
+  appliquerMode();
+}));
+function masquerResultats() {
+  for (const id of ["#bloc-plan", "#bloc-debat", "#bloc-chiffres", "#bloc-avis", "#bloc-synthese", "#bloc-detail"]) $(id).hidden = true;
+}
+$("#ticker").addEventListener("input", tableauVide);
+
+function suivre(id) {
+  analyseId = id;
+  clearInterval(minuteur);
+  const tour = async () => {
+    try { analyse = await api("/api/analyse/" + encodeURIComponent(id)); } catch { return; }
+    dessiner();
+    if (analyse.etat === "fini") {
+      clearInterval(minuteur);
+      $("#lancer").disabled = false;
+      $("#arreter").hidden = true;
+      chargerHistorique();
+    } else {
+      $("#lancer").disabled = true;
+      $("#arreter").hidden = false;
+    }
+  };
+  tour();
+  minuteur = setInterval(tour, 1500);
+}
+
+/* ---------- le tableau ---------- */
+function resteAvantArret(a) {
+  if (!a?.limite || a.etat === "fini") return "";
+  const s = Math.max(0, Math.round(a.limite - Date.now() / 1000));
+  return ` Arrêt automatique dans ${Math.floor(s / 60)} min.`;
+}
+function duree(m) {
+  if (!m.debut) return "–";
+  const s = Math.max(0, Math.round((m.fin || Date.now() / 1000) - m.debut));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+function verdictAffiche(m) {
+  if (m.etat === "fini") return VERDICTS[m.verdict] || ["A REVOIR", "eteint"];
+  if (m.etat === "erreur") return ["ERREUR", "rouge"];
+  if (m.etat === "attente") return ["", "eteint"];
+  return ["EN COURS", "eteint"];
+}
+function ligneMoteur(cle, m) {
+  const faits = new Set(m.faits || []);
+  const actif = ETAGES.find(([k]) => !faits.has(k))?.[0];
+  const nbAnalystes = (analyse?.analystes || []).length || 4;
+  const etages = el("div", { class: "etages" }, ETAGES.map(([k, nom]) => {
+    let classe = "etage";
+    let etiquette = nom;
+    if (faits.has(k)) classe += " fait";
+    else if (k === actif && m.etat === "en_cours") {
+      classe += " actif";
+      if (k === "analystes") etiquette = `Analystes ${(m.rapports || []).length}/${nbAnalystes}`;
+    }
+    const part = k === "analystes" ? Math.max(12, ((m.rapports || []).length / nbAnalystes) * 100) : 40;
+    return el("div", { class: classe, style: `--part:${part}%` }, el("i"), el("span", {}, etiquette));
+  }));
+  const [texte, couleur] = verdictAffiche(m);
+  let zone = document.getElementById("volet-" + cle);
+  if (!zone) { zone = el("div", { class: "volets moyen", id: "volet-" + cle }); zone.dataset.taille = "moyen"; }
+  volets(zone, texte, LARGEUR_VERDICT, couleur);
+  const sousTitre = m.etape_texte || m.modele || (m.etat === "attente" ? "En attente" : "");
+  const ligne = el("div", { class: "ligne" + (m.etat === "en_cours" ? " en-cours" : ""), style: `--couleur:${MOTEURS[cle].couleur}` },
+    el("span", { class: "bande" }),
+    el("div", { class: "nom" }, el("b", {}, MOTEURS[cle].nom), el("span", {}, sousTitre)),
+    etages,
+    el("div", { class: "chiffre" }, String(m.llm_calls || 0), el("small", {}, "appels")),
+    el("div", { class: "chiffre" }, duree(m), el("small", {}, "durée")),
+    zone,
+  );
+  if (m.erreur) ligne.append(el("div", { class: "note" }, m.erreur));
+  else if (m.avertissement) ligne.append(el("div", { class: "note info" }, m.avertissement));
+  return ligne;
+}
+function dessiner() {
+  if (analyse.type === "bureau") return dessinerBureau();
+  for (const id of ["#bloc-plan", "#bloc-debat", "#bloc-chiffres"]) $(id).hidden = true;
+  const a = analyse;
+  volets($("#volet-ticker"), a.ticker, Math.max(4, a.ticker.length), "");
+  const fini = Object.values(a.moteurs).filter((m) => m.etat === "fini").length;
+  $("#infos-tableau").replaceChildren(
+    "Analyse du ", el("b", {}, new Date(a.date + "T12:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })),
+    `, ${fini} IA sur ${Object.keys(a.moteurs).length} terminées`,
+    a.etat === "synthese" ? ", comparaison en cours…" : "",
+    resteAvantArret(a),
+  );
+  const lignes = el("div", { class: "lignes" }, Object.entries(a.moteurs).map(([k, m]) => ligneMoteur(k, m)));
+  const c = a.consensus;
+  let texteConsensus = "", classeConsensus = "eteint", explication = "Le consensus s'affiche quand toutes les IA ont fini.";
+  if (c) {
+    if (c.verdict) {
+      [texteConsensus, classeConsensus] = VERDICTS[c.verdict] || [c.verdict, "eteint"];
+      explication = `${c.accord} IA sur ${c.total} donnent ce verdict.`;
+    } else if ((c.reussies ?? c.accord) >= 2) {
+      texteConsensus = "DESACCORD"; classeConsensus = "ambre";
+      explication = "Les IA ne sont pas d'accord : pas de signal exploitable aujourd'hui.";
+    } else if ((c.reussies ?? c.accord) === 1) {
+      texteConsensus = "INCOMPLET"; classeConsensus = "eteint";
+      explication = "Une seule IA a abouti : il en faut au moins deux pour parler de consensus.";
+    } else {
+      texteConsensus = "AUCUNE"; classeConsensus = "rouge";
+      explication = "Aucune IA n'a abouti. Regarde les messages sous chaque ligne.";
+    }
+  }
+  let zoneConsensus = document.getElementById("volet-consensus");
+  if (!zoneConsensus) { zoneConsensus = el("div", { class: "volets moyen", id: "volet-consensus" }); zoneConsensus.dataset.taille = "moyen"; }
+  volets(zoneConsensus, texteConsensus, LARGEUR_VERDICT + 1, classeConsensus);
+  const consensus = el("div", { class: "consensus" }, el("div", {}, el("h3", {}, "Consensus"), el("p", {}, explication)), zoneConsensus);
+  $("#contenu-tableau").replaceChildren(lignes, consensus);
+  dessinerResultats();
+}
+function tableauVide() {
+  if (analyseId) return;
+  const saisi = $("#ticker").value.trim();
+  volets($("#volet-ticker"), saisi || "PRÊT", Math.max(4, saisi.length), "eteint");
+  if (mode === "bureau") {
+    $("#infos-tableau").textContent = "Chaque spécialiste donne son avis, débat, puis le chef de desk tranche.";
+    $("#contenu-tableau").replaceChildren(
+      el("div", { class: "lignes" }, SPECIALISTES.map((sp) => ligneSpecialiste(sp, null, false))),
+      ligneChef(null, false));
+    return;
+  }
+  $("#infos-tableau").textContent = "Les verdicts tombent ici dès que chaque IA a fini.";
+  const lignes = el("div", { class: "lignes" }, choisis("moteur").map((k) => ligneMoteur(k, { etat: "attente", faits: [] })));
+  $("#contenu-tableau").replaceChildren(lignes.children.length ? lignes
+    : el("div", { class: "vide" }, el("p", {}, "Choisis au moins une IA au-dessus.")));
+}
+
+/* ---------- résultats ---------- */
+function etiquette(verdict) {
+  const [texte, couleur] = VERDICTS[verdict] || [verdict ? "À revoir" : "Erreur", "gris"];
+  return el("span", { class: "etiquette " + couleur }, texte.charAt(0) + texte.slice(1).toLowerCase());
+}
+function dessinerResultats() {
+  const a = analyse;
+  const finis = Object.entries(a.moteurs).filter(([, m]) => m.etat === "fini");
+  $("#bloc-avis").hidden = !finis.length;
+  $("#avis").style.setProperty("--n", Math.max(1, finis.length));
+  $("#avis").replaceChildren(...finis.map(([k, m]) => el("article", { class: "avis", style: `--couleur:${MOTEURS[k].couleur}` },
+    el("header", {}, el("h3", {}, MOTEURS[k].nom), etiquette(m.verdict)),
+    el("dl", {},
+      el("dt", {}, "Pour"), el("dd", {}, m.resume?.haussier || "–"),
+      el("dt", {}, "Contre"), el("dd", {}, m.resume?.baissier || "–"),
+      el("dt", {}, "Pourquoi cette décision"), el("dd", {}, m.resume?.raison || "–")),
+    el("div", { class: "liens" }, el("a", { href: m.rapport, target: "_blank", rel: "noopener" }, "Ouvrir le rapport complet")),
+  )));
+
+  const s = a.synthese;
+  $("#bloc-synthese").hidden = !s || s.etat === "erreur";
+  if (s) {
+    const liste = (id, items) => $(id).replaceChildren(...(items?.length ? items : ["–"]).map((t) => el("li", {}, t)));
+    if (s.etat === "en_cours") {
+      $("#synthese-par").textContent = `${s.par} compare les analyses…`;
+      liste("#communs", []); liste("#divergences", []); liste("#verifier", []);
+    } else if (s.etat === "fini") {
+      $("#synthese-par").textContent = `Comparaison rédigée par ${s.par}.`;
+      liste("#communs", s.communs); liste("#divergences", s.divergences); liste("#verifier", s.a_verifier);
+    }
+    $("#cle-baissiere").hidden = !s.baissier_cle;
+    $("#cle-baissiere span").textContent = s.baissier_cle || "";
+  }
+
+  $("#bloc-detail").hidden = !finis.length;
+  if (finis.length) dessinerDetail(finis);
+}
+async function dessinerDetail(finis) {
+  $("#onglets").replaceChildren(...SECTIONS.map(([k, nom]) => el("button", {
+    type: "button", role: "tab", "aria-selected": String(k === ongletActif),
+    onclick: () => { ongletActif = k; dessinerDetail(finis); },
+  }, nom)));
+  const colonnes = await Promise.all(finis.map(async ([k, m]) => {
+    if (!cacheSections[m.sections]) {
+      try { cacheSections[m.sections] = await (await fetch(m.sections)).json(); } catch { cacheSections[m.sections] = {}; }
+    }
+    const texte = cacheSections[m.sections][ongletActif] || "";
+    const corps = el("div");
+    if (!texte) corps.append(el("p", { class: "discret" }, "Rien pour cette partie."));
+    else if (window.marked) corps.innerHTML = marked.parse(texte.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"));
+    else corps.append(el("pre", {}, texte));
+    return el("div", { class: "texte-ia", style: `--couleur:${MOTEURS[k].couleur}` }, el("h4", {}, MOTEURS[k].nom), corps);
+  }));
+  $("#detail").style.setProperty("--n", Math.max(1, finis.length));
+  $("#detail").replaceChildren(...colonnes);
+}
+
+/* ---------- le desk des spécialistes ---------- */
+function etiquetteBiais(biais) {
+  const [texte, couleur] = BIAIS[biais] || BIAIS.neutre;
+  return el("span", { class: "etiquette " + couleur }, texte.charAt(0) + texte.slice(1).toLowerCase());
+}
+function zoneVolets(id, texte, largeur, couleur) {
+  let zone = document.getElementById(id);
+  if (!zone) { zone = el("div", { class: "volets moyen", id }); zone.dataset.taille = "moyen"; }
+  volets(zone, texte, largeur, couleur);
+  return zone;
+}
+function ligneSpecialiste([cle, nom, role, couleur], s, enCours) {
+  s = s || { etat: "attente" };
+  const t1 = s.tour1, t2 = s.tour2, final = t2 || t1;
+  const classeEtape = (fait, actif) => "etage" + (fait ? " fait" : actif ? " actif" : "");
+  const etapes = el("div", { class: "etages deux" },
+    el("div", { class: classeEtape(t1, enCours && !t1 && s.etat !== "erreur"), style: "--part:40%" }, el("i"), el("span", {}, "Avis")),
+    el("div", { class: classeEtape(t2, enCours && t1 && !t2 && s.etat !== "erreur"), style: "--part:40%" }, el("i"), el("span", {}, "Débat")));
+  let [texte, teinte] = ["", "eteint"];
+  if (s.etat === "erreur") [texte, teinte] = ["ERREUR", "rouge"];
+  else if (final) [texte, teinte] = BIAIS[final.biais] || BIAIS.neutre;
+  else if (enCours) texte = "...";
+  const premierTour = t1 ? (BIAIS[t1.biais] || BIAIS.neutre)[0].toLowerCase() : "–";
+  const ligne = el("div", { class: "ligne" + (enCours && !t2 && s.etat !== "erreur" ? " en-cours" : ""), style: `--couleur:${couleur}` },
+    el("span", { class: "bande" }),
+    el("div", { class: "nom" }, el("b", {}, nom), el("span", {}, role)),
+    etapes,
+    el("div", { class: "chiffre" }, final ? `${final.confiance}/5` : "–", el("small", {}, "confiance")),
+    el("div", { class: "chiffre mot" }, premierTour, el("small", {}, "1er tour")),
+    zoneVolets("volet-sp-" + cle, texte, LARGEUR_VERDICT, teinte));
+  if (s.erreur) ligne.append(el("div", { class: "note" }, s.erreur));
+  else if (t1 && t2 && t1.biais !== t2.biais) ligne.append(el("div", { class: "note info" }, `A changé d'avis pendant le débat (était ${t1.biais}).`));
+  return ligne;
+}
+function ligneChef(d, enCours) {
+  let texte = "", teinte = "eteint", explication = "Le chef décide après le débat, avec tes règles.";
+  if (d) {
+    [texte, teinte] = DECISIONS[d.decision] || DECISIONS["pas de trade"];
+    const v = d.votes || {};
+    explication = `Vote après débat : ${v.haussier || 0} haussier(s), ${v.baissier || 0} baissier(s), ${v.neutre || 0} neutre(s).`;
+    if (d.statut) explication = `${d.statut}${d.contrat ? " · " + d.contrat : ""}. ${explication}`;
+  } else if (enCours) texte = "...";
+  return el("div", { class: "consensus" },
+    el("div", {}, el("h3", {}, "Chef de desk"), el("p", {}, explication)),
+    zoneVolets("volet-chef", texte, 12, teinte));
+}
+function dessinerBureau() {
+  const a = analyse;
+  for (const id of ["#bloc-avis", "#bloc-synthese", "#bloc-detail"]) $(id).hidden = true;
+  volets($("#volet-ticker"), a.ticker, Math.max(4, a.ticker.length), "");
+  const enCours = a.etat !== "fini";
+  const s = Math.max(0, Math.round((a.fin || Date.now() / 1000) - a.debut));
+  $("#infos-tableau").replaceChildren(
+    "Desk du ", el("b", {}, new Date(a.date + "T12:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long" })),
+    ` avec ${MOTEURS[a.moteur]?.nom || a.moteur}, ${a.appels || 0} appels, ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`,
+    enCours && a.etape ? `. ${a.etape}…` : "", resteAvantArret(a));
+  const lignes = el("div", { class: "lignes" }, SPECIALISTES.map((sp) => ligneSpecialiste(sp, a.specialistes?.[sp[0]], enCours)));
+  const contenu = [lignes, ligneChef(a.decision, enCours)];
+  if (a.erreur) contenu.unshift(el("p", { class: "note", style: "color: var(--rouge); margin: 0 0 10px" }, a.erreur));
+  else if (a.avertissement) contenu.unshift(el("p", { class: "note info", style: "margin: 0 0 10px" }, a.avertissement));
+  $("#contenu-tableau").replaceChildren(...contenu);
+  dessinerPlan(a.decision);
+  dessinerDebat(a);
+  dessinerChiffres(a.donnees);
+}
+function dessinerPlan(d) {
+  $("#bloc-plan").hidden = !d;
+  if (!d) return;
+  const alertes = [];
+  if (d.regle_appliquee) alertes.push(el("div", { class: "alerte" }, el("b", {}, "Règle appliquée par le programme"), d.regle_appliquee));
+  else if (d.decision === "pas de trade" && d.blocages?.length) alertes.push(el("div", { class: "alerte" }, el("b", {}, "Pourquoi pas de trade"), d.blocages.join(" ")));
+  if (d.prix_non_verifies?.length) {
+    alertes.push(el("div", { class: "alerte rouge" }, el("b", {}, "Prix à vérifier"),
+      `Le chef a cité ${d.prix_non_verifies.join(", ")} : ces prix ne viennent pas des calculs. Vérifie-les sur ton graphique avant de t'en servir.`));
+  }
+  $("#plan-alertes").replaceChildren(...alertes);
+  // statut « ATTENDRE » : les niveaux calculés par le programme restent affichés (à surveiller)
+  const trade = d.decision !== "pas de trade" || (d.statut === "ATTENDRE" && !!d.setup);
+  const cases = [["Zone d'entrée", d.zone], ["Stop", d.sl], ["TP1 (25 %)", d.tp1], ["TP2 (50 %)", d.tp2], ["TP3", d.tp3]];
+  $("#plan").hidden = !trade;
+  $("#plan").replaceChildren(...cases.map(([nom, valeur]) => el("div", {}, el("small", {}, nom), el("b", {}, valeur || "–"))));
+  $("#plan-confirmation").textContent = d.confirmation || "–";
+  $("#plan-raison").textContent = d.raison || "–";
+  $("#plan-desaccord").hidden = !d.desaccord;
+  $("#plan-desaccord span").textContent = d.desaccord || "";
+}
+function dessinerDebat(a) {
+  const presents = SPECIALISTES.filter(([cle]) => a.specialistes?.[cle]?.tour1 || a.specialistes?.[cle]?.erreur);
+  $("#bloc-debat").hidden = !presents.length;
+  $("#debat").replaceChildren(...presents.map(([cle, nom, , couleur]) => {
+    const s = a.specialistes[cle], t1 = s.tour1, t2 = s.tour2;
+    const final = t2 || t1;
+    const lignes = [];
+    if (t1) {
+      lignes.push(el("dt", {}, "Son avis"), el("dd", {}, t1.argument || "–"));
+      if (t1.niveaux) lignes.push(el("dt", {}, "Niveaux clés"), el("dd", {}, t1.niveaux));
+      if (t1.invalidation) lignes.push(el("dt", {}, "Invalidation"), el("dd", {}, t1.invalidation));
+    }
+    if (t2?.reponse) lignes.push(el("dt", {}, "Au débat"), el("dd", { class: "reponse" }, t2.reponse));
+    if (s.erreur) lignes.push(el("dt", {}, "Erreur"), el("dd", {}, s.erreur));
+    return el("article", { class: "avis", style: `--couleur:${couleur}` },
+      el("header", {}, el("h3", {}, nom), final ? etiquetteBiais(final.biais) : null),
+      t1 && t2 && t1.biais !== t2.biais ? el("p", { class: "changement" }, `Était ${t1.biais} au premier tour.`) : null,
+      el("dl", {}, lignes));
+  }));
+}
+const TITRES_CHIFFRES = [
+  ["marche", "Le marché"], ["smc", "SMC / ICT"], ["fibo", "Fibonacci"], ["ichimoku", "Ichimoku"],
+  ["tendance", "Tendance"], ["orderflow", "Order flow (estimé)"], ["calendrier", "Calendrier"], ["macro", "Macro"],
+];
+function joli(cle) { return String(cle).replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase()); }
+function texteSimple(v) {
+  if (v === null || v === undefined) return "–";
+  if (typeof v === "boolean") return v ? "oui" : "non";
+  if (Array.isArray(v)) return v.length ? v.map(texteSimple).join(" – ") : "aucun";
+  if (typeof v === "object") return Object.entries(v).map(([k, x]) => `${joli(k)} : ${texteSimple(x)}`).join(", ");
+  return String(v);
+}
+function cellule(v) {
+  // une ligne par élément quand la case contient une liste (ex. plusieurs FVG)
+  if (Array.isArray(v) && v.some((x) => x && typeof x === "object")) return el("div", {}, v.map((x) => el("div", { class: "element" }, texteSimple(x))));
+  return texteSimple(v);
+}
+function rendu(v) {
+  if (Array.isArray(v) && v.length && v.every((x) => x && typeof x === "object" && !Array.isArray(x))) {
+    const colonnes = [...new Set(v.flatMap((x) => Object.keys(x)))];
+    return el("table", {}, el("tr", {}, colonnes.map((c) => el("th", {}, joli(c)))),
+      v.map((x) => el("tr", {}, colonnes.map((c) => el("td", {}, cellule(x[c]))))));
+  }
+  if (v && typeof v === "object" && !Array.isArray(v)) {
+    return el("dl", {}, Object.entries(v).flatMap(([k, x]) => [el("dt", {}, joli(k)), el("dd", {}, rendu(x))]));
+  }
+  return texteSimple(v);
+}
+function dessinerChiffres(donnees) {
+  $("#bloc-chiffres").hidden = !donnees;
+  if (!donnees) return;
+  $("#chiffres-intro").textContent = `Calculés par le programme à partir des bougies Yahoo (${donnees.marche?.ticker || ""}), pas par l'IA. ${donnees.marche?.note || ""}`;
+  const ouverts = new Set([...document.querySelectorAll("#chiffres details[open]")].map((d) => d.dataset.cle));
+  $("#chiffres").replaceChildren(...TITRES_CHIFFRES.filter(([k]) => donnees[k]).map(([k, titre]) => {
+    const d = el("details", { class: "chiffres" }, el("summary", {}, titre), rendu(donnees[k]));
+    d.dataset.cle = k;
+    if (ouverts.has(k)) d.open = true;
+    return d;
+  }));
+}
+
+/* ---------- historique ---------- */
+async function chargerHistorique(auDemarrage = false) {
+  let liste = [];
+  try { liste = await api("/api/historique"); } catch {}
+  if (auDemarrage && liste.length && !analyseId) suivre(liste[0].id); // affiche la dernière analyse
+  $("#bloc-historique").hidden = !liste.length;
+  $("#historique").replaceChildren(...liste.slice(0, 40).map((h) => {
+    if (h.type === "bureau") {
+      const v = h.votes || {};
+      const [texte, couleur] = DECISIONS[h.decision] || ["?", "gris"];
+      return el("tr", { tabindex: "0", onclick: () => ouvrir(h.id), onkeydown: (e) => { if (e.key === "Enter") ouvrir(h.id); } },
+        el("td", {}, `${new Date(h.date + "T12:00").toLocaleDateString("fr-FR")} ${h.heure || ""}`),
+        el("td", { class: "t" }, h.ticker),
+        el("td", {}, el("span", { class: "discret" }, `Desk (${MOTEURS[h.moteur]?.nom || h.moteur}) : ${v.haussier || 0} haussier(s), ${v.baissier || 0} baissier(s), ${v.neutre || 0} neutre(s)`)),
+        el("td", {}, el("span", { class: "etiquette " + couleur }, texte.charAt(0) + texte.slice(1).toLowerCase())));
+    }
+    const c = h.consensus || {};
+    return el("tr", { tabindex: "0", onclick: () => ouvrir(h.id), onkeydown: (e) => { if (e.key === "Enter") ouvrir(h.id); } },
+      el("td", {}, `${new Date(h.date + "T12:00").toLocaleDateString("fr-FR")} ${h.heure || ""}`),
+      el("td", { class: "t" }, h.ticker),
+      el("td", {}, el("div", { class: "puces" }, Object.entries(h.verdicts || {}).map(([k, v]) =>
+        el("span", { title: MOTEURS[k]?.nom }, el("small", { class: "discret" }, (MOTEURS[k]?.nom || k) + " "), etiquette(v))))),
+      el("td", {}, c.verdict ? etiquette(c.verdict)
+        : el("span", { class: "discret" }, (c.reussies ?? c.accord) >= 2 ? "Désaccord" : "Incomplet")));
+  }));
+}
+function ouvrir(id) {
+  for (const k of Object.keys(cacheSections)) delete cacheSections[k];
+  suivre(id);
+  $("#tableau").scrollIntoView({ behavior: MOINS_DE_MOUVEMENT ? "auto" : "smooth" });
+}
+
+/* ---------- pied de page et clés ---------- */
+$("#btn-cles").addEventListener("click", () => $("#dialogue-cles").showModal());
+$("#btn-ouvrir-cles").addEventListener("click", () => api("/api/ouvrir-cles", {}));
+$("#btn-cles-ok").addEventListener("click", async () => { await rafraichirEtat(); $("#dialogue-cles").close(); });
+$("#btn-dossier").addEventListener("click", () => api("/api/ouvrir-dossier", {}));
+$("#btn-eteindre").addEventListener("click", async () => {
+  await api("/api/eteindre", {}).catch(() => {});
+  document.body.replaceChildren(el("div", { class: "page" }, el("h1", {}, "Salle fermée"), el("p", { class: "discret" }, "Tu peux fermer cet onglet. Le raccourci du Bureau la rouvre.")));
+});
+
+/* ---------- démarrage ---------- */
+mode = localStorageLire("mode") || "bureau";
+appliquerMode();
+rafraichirEtat().then(() => {
+  // Première visite sans aucune clé : on explique comment brancher Gemini, Groq, NVIDIA et DeepSeek
+  if (etatServeur && !etatServeur.gemini.cle && !etatServeur.groq?.cle && !etatServeur.nvidia?.cle && !etatServeur.deepseek.cle && !localStorageLire("cles-vues")) {
+    localStorageEcrire("cles-vues", "1");
+    $("#dialogue-cles").showModal();
+  }
+  return chargerHistorique(true);
+});
+setInterval(rafraichirEtat, 15000);
+</script>
+</body>
+</html>
