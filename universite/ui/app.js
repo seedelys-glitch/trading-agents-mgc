@@ -365,7 +365,8 @@ async function fenetreReglages() {
   const r = await api("/api/reglages");
   const champs = [["concurrence", "Missions en même temps", "number"], ["concurrence_ia", "Appels IA en même temps", "number"],
     ["delai_mission_s", "Délai maximal d'une mission (s)", "number"], ["tentatives_max", "Nouveaux essais après une erreur passagère", "number"],
-    ["ia_appels_max_jour", "Budget d'appels IA par jour", "number"], ["ia_modele", "Modèle LM Studio (vide = celui qui est chargé)", "text"]];
+    ["ia_appels_max_jour", "Budget d'appels IA par jour", "number"], ["ia_modele", "Modèle LM Studio (vide = celui qui est chargé)", "text"],
+    ["ia_embeddings", "Modèle d'embeddings LM Studio pour la recherche par le sens (vide = recherche par mots)", "text"]];
   const corps = modale("Réglages", `${champs.map(([k, t, ty]) => `<div class="champ"><label>${t}</label><input name="${k}" type="${ty}" value="${esc(r[k])}"></div>`).join("")}
     <label class="ligne"><input type="checkbox" name="ia_commentaires" ${r.ia_commentaires ? "checked" : ""}> commentaires pédagogiques par l'IA locale (sans aucun chiffre)</label>
     <p class="doux">Le nombre de missions en même temps s'applique au prochain démarrage de l'université.</p>
@@ -377,12 +378,64 @@ async function fenetreReglages() {
   });
 }
 
+async function fenetreBibliotheque(recherche = "") {
+  const regles = await api("/api/regles");
+  const proposees = regles.filter((r) => r.statut === "proposee"), validees = regles.filter((r) => r.statut === "validee");
+  const autres = regles.filter((r) => r.statut === "rejetee" || r.statut === "remplacee");
+  const source = (r) => r.source && r.source.fichier ? `${esc(r.source.fichier)}, « ${esc(r.source.section)} », ligne ${r.source.ligne}${r.source.modifiee_par ? " (corrigée par toi)" : ""}` : "";
+  const carte = (r, actions) => `<li>${etiquette(r.statut)} <b>${esc(r.theme)}</b> <span class="doux">v${r.version}</span>
+    <pre class="doc" style="margin:6px 0">${esc(r.texte)}</pre><small class="doux">Source : ${source(r)}</small>
+    ${actions ? `<div class="ligne" style="margin-top:6px"><button data-r="${r.id}" data-a="valider">Valider</button>
+      <button data-r="${r.id}" data-a="corriger">Corriger</button><button data-r="${r.id}" data-a="rejeter">Rejeter</button></div>` : ""}</li>`;
+  const corps = modale("Bibliothèque de connaissances", `
+    <div class="ligne"><input name="q" placeholder="Chercher dans la bibliothèque (ex. stop FVG)" value="${esc(recherche)}" style="flex:1">
+      <button data-chercher>Chercher</button></div>
+    <div data-resultats></div>
+    <div class="ligne" style="margin:12px 0"><button data-mission="extraction_regles">Lire STRATEGIE.md et proposer les règles</button>
+      <button data-mission="indexation_bibliotheque">Ranger les documents vérifiés</button></div>
+    <h3>À valider (${proposees.length})</h3>
+    ${proposees.length ? `<ul class="liste">${proposees.map((r) => carte(r, true)).join("")}</ul>` : '<p class="doux">Rien à valider.</p>'}
+    <h3>Règles validées (${validees.length})</h3>
+    ${validees.length ? `<ul class="liste">${validees.map((r) => carte(r, false)).join("")}</ul>` : '<p class="doux">Aucune règle validée pour l\'instant.</p>'}
+    ${autres.length ? `<details><summary>Historique : versions remplacées et règles rejetées (${autres.length})</summary><ul class="liste">${autres.map((r) => carte(r, false)).join("")}</ul></details>` : ""}`);
+  const chercher = async () => {
+    const q = corps.querySelector("[name=q]").value, zone = corps.querySelector("[data-resultats]");
+    if (!q.trim()) { zone.innerHTML = ""; return; }
+    const r = await api(`/api/recherche?q=${encodeURIComponent(q)}`);
+    zone.innerHTML = `<p class="doux">${r.resultats.length} résultat(s) — recherche ${r.sens ? "par mots et par le sens" : "par mots"}</p>
+      <ul class="liste">${r.resultats.map((x) => `<li><b>${esc(x.titre)}</b> ${x.statut ? etiquette(x.statut) : `<span class="doux">${esc(x.origine)}</span>`}<br><small>${esc(x.texte)}</small></li>`).join("")}</ul>`;
+  };
+  corps.querySelector("[data-chercher]").addEventListener("click", chercher);
+  corps.querySelector("[name=q]").addEventListener("keydown", (e) => { if (e.key === "Enter") chercher(); });
+  if (recherche) chercher();
+  corps.querySelectorAll("[data-mission]").forEach((b) => b.addEventListener("click", async () => {
+    try { const r = await poster("/api/missions", { type: b.dataset.mission, params: {} }); avis(corps, `Mission n° ${r.mission} confiée au secrétaire-auditeur. Rouvrez la bibliothèque dans un instant.`, true); rafraichir(); }
+    catch (e) { avis(corps, e.message, false); }
+  }));
+  corps.querySelectorAll("[data-r]").forEach((b) => b.addEventListener("click", async () => {
+    const li = b.closest("li");
+    if (b.dataset.a === "corriger") {
+      const texte = li.querySelector("pre").textContent;
+      li.insertAdjacentHTML("beforeend", `<div class="champ" style="margin-top:8px"><textarea rows="5">${esc(texte)}</textarea>
+        <button data-enregistrer>Proposer cette version</button></div>`);
+      li.querySelector("[data-enregistrer]").addEventListener("click", async () => {
+        try { await poster(`/api/regle/${b.dataset.r}/modifier`, { texte: li.querySelector("textarea").value }); fenetreBibliotheque(); }
+        catch (e) { avis(corps, e.message, false); }
+      });
+      return;
+    }
+    try { await poster(`/api/regle/${b.dataset.r}/${b.dataset.a}`); fenetreBibliotheque(corps.querySelector("[name=q]").value); }
+    catch (e) { avis(corps, e.message, false); }
+  }));
+}
+
 // ------------------------------------------------------------------ démarrage
 $("#b-demander").addEventListener("click", () => formulaireDemande("analyse_vwap_ema", true));
 $("#b-donnees").addEventListener("click", fenetreDonnees);
 $("#b-boucles").addEventListener("click", fenetreBoucles);
 $("#b-documents").addEventListener("click", fenetreDocuments);
 $("#b-reglages").addEventListener("click", fenetreReglages);
+$("#b-bibliotheque").addEventListener("click", () => fenetreBibliotheque());
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#modale").open) { $("#panneau").hidden = true; choisi = null; } });
 
 (async () => {

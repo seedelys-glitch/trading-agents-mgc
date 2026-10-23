@@ -18,6 +18,10 @@ Un deuxième double-clic rouvre simplement la page.
 
 Les 10 autres agents sont affichés **« en construction »** : ils ne font rien et le bureau ne fait pas semblant.
 
+## Bibliothèque
+Bouton **Bibliothèque** : le secrétaire lit STRATEGIE.md (sans le modifier) et te propose chaque règle mot pour mot,
+avec sa ligne d'origine. Tu valides, corriges ou rejettes ; chaque version est gardée. Une case permet de chercher.
+
 ## Données
 Bouton **Données** : import d'un fichier CSV exporté de TradingView, des fichiers de l'indicateur NinjaTrader
 (temps réel), ou de Yahoo (différé, signalé comme tel). Aucune donnée n'est jamais inventée.

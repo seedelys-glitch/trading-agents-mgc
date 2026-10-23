@@ -29,6 +29,7 @@ DEFAUTS = {
     "ia_commentaires": True,      # commentaire pédagogique sous les rapports, si LM Studio répond
     "ia_appels_max_jour": 200,    # budget d'appels IA par jour
     "ia_delai_s": 90,
+    "ia_embeddings": "",          # modèle d'embeddings LM Studio (ex. nomic-embed), vide = recherche par mots seulement
 }
 
 _verrou = threading.Lock()

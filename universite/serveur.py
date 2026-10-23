@@ -16,7 +16,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from . import agents, competences, config, donnees
+from . import agents, bibliotheque, competences, config, donnees
 from .base import Base
 from .ia import IALocale
 from .moteur import Moteur
@@ -119,6 +119,18 @@ class Universite:
                                           corps.get("consigne", ""), priorite=int(corps.get("priorite", 5)),
                                           tentatives_max=self.reglages["tentatives_max"])
 
+    def rechercher(self, question):
+        question = str(question).strip()[:300]
+        if not question:
+            return {"resultats": [], "sens": False}
+        vecteur = None
+        if self.reglages.get("ia_embeddings"):
+            try:
+                vecteur = bibliotheque.embeddings(self.reglages["ia_url"], self.reglages["ia_embeddings"], [question], 15)[0]
+            except (OSError, IndexError):
+                vecteur = None
+        return {"resultats": bibliotheque.rechercher(self.base, question, vecteur_question=vecteur), "sens": vecteur is not None}
+
     def arreter(self):
         self.moteur.arreter()
 
@@ -192,6 +204,12 @@ def fabriquer_handler(univ):
                     return self._envoyer(200, univ.base.lire("SELECT * FROM boucles ORDER BY id DESC"))
                 if u.path == "/api/reglages":
                     return self._envoyer(200, univ.reglages)
+                if u.path == "/api/regles":
+                    statut = q.get("statut")
+                    sql = "SELECT * FROM regles" + (" WHERE statut=?" if statut else "") + " ORDER BY theme, cle, version DESC"
+                    return self._envoyer(200, univ.base.lire(sql, (statut,) if statut else ()))
+                if u.path == "/api/recherche":
+                    return self._envoyer(200, univ.rechercher(q.get("q", "")))
                 return self._fichier(u.path)
             except (ValueError, KeyError) as e:
                 return self._envoyer(400, {"erreur": str(e)})
@@ -245,6 +263,12 @@ def fabriquer_handler(univ):
                     return self._envoyer(200, {"boucle": b})
                 if len(morceaux) == 4 and morceaux[:2] == ["api", "boucle"]:
                     return self._envoyer(200, {"ok": univ.moteur.changer_boucle(int(morceaux[2]), morceaux[3])})
+                if len(morceaux) == 4 and morceaux[:2] == ["api", "regle"]:
+                    ident, action = int(morceaux[2]), morceaux[3]
+                    if action == "modifier":
+                        return self._envoyer(200, bibliotheque.modifier(univ.base, ident, corps.get("texte", "")))
+                    decision = {"valider": "validee", "rejeter": "rejetee"}.get(action, "")
+                    return self._envoyer(200, bibliotheque.decider(univ.base, ident, decision, corps.get("note", "")))
                 if u.path == "/api/reglages":
                     univ.reglages.update(config.enregistrer(corps, univ.dossier))
                     return self._envoyer(200, univ.reglages)

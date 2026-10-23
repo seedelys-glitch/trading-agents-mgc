@@ -71,9 +71,25 @@ MIGRATIONS = [
         DROP TABLE ia_appels; DROP TABLE boucles; DROP TABLE bougies; DROP TABLE jeux; DROP TABLE messages;
         DROP TABLE documents; DROP TABLE evenements; DROP TABLE etapes; DROP TABLE missions;
     """),
+    (2, "bibliothèque de connaissances", """
+        CREATE TABLE regles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, cle TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 1,
+            titre TEXT NOT NULL, texte TEXT NOT NULL, theme TEXT NOT NULL DEFAULT '',
+            source TEXT NOT NULL DEFAULT '{}',              -- fichier, section, ligne, ou document
+            statut TEXT NOT NULL DEFAULT 'proposee',        -- proposee, validee, rejetee, remplacee
+            propose_par INTEGER, decide_par TEXT, decision_le REAL, note TEXT NOT NULL DEFAULT '',
+            precedente INTEGER, cree REAL NOT NULL);
+        CREATE INDEX regles_cle ON regles(cle, version);
+        CREATE TABLE extraits (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, origine TEXT NOT NULL, titre TEXT NOT NULL, position INTEGER NOT NULL,
+            texte TEXT NOT NULL, empreinte TEXT NOT NULL, vecteur TEXT, modele TEXT, cree REAL NOT NULL);
+        CREATE INDEX extraits_origine ON extraits(origine, position);
+    """, """
+        DROP TABLE extraits; DROP TABLE regles;
+    """),
 ]
 
-CHAMPS_JSON = ("params", "resultat", "donnees", "sources", "etat", "detail")
+CHAMPS_JSON = ("params", "resultat", "donnees", "sources", "etat", "detail", "source")
 
 
 def _ligne(r):
