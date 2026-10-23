@@ -58,10 +58,10 @@ AGENTS = [
      "competences": []},
     {"n": 5, "cle": "macro", "nom": "Macro / actualités", "court": "Macro", "salle": "calendrier",
      "mission": "Suivre le calendrier économique (CPI, NFP, FOMC...) et le contexte macro du gold.",
-     "outils": ["calculs.calendrier", "calculs.macro", "mgc.annonces"],
+     "outils": ["calendrier Forex Factory (flux public)", "mgc.annonces", "historique des annonces de l'université"],
      "qualite": ["Heure de chaque annonce en heure de Paris.", "Source citée."],
      "escalade": "Annonce majeure dans l'heure -> prévient le gestionnaire des risques.",
-     "competences": []},
+     "competences": ["calendrier_macro"]},
     {"n": 6, "cle": "vwap_ema", "nom": "VWAP & EMA 200", "court": "VWAP", "salle": "tendance",
      "mission": "Calculer le VWAP de séance (depuis 18 h New York) avec ses bandes, et l'EMA 200 sur "
                 "plusieurs unités de temps ; dire où est le prix et dans quel sens va la moyenne.",
@@ -91,6 +91,7 @@ AGENTS = [
      "qualite": ["Recalcul sans réutiliser le code de l'agent vérifié.", "Écarts chiffrés et tolérance écrite."],
      "escalade": "Écart hors tolérance -> rejet + message à l'auteur et au directeur.",
      "competences": ["verification_analyse", "verification_reproductibilite", "verification_risque",
+                     "verification_calendrier", "verification_reactions",
                      "verification_replay", "extraction_regles", "indexation_bibliotheque"]},
     {"n": 10, "cle": "discours", "nom": "Analyse des discours", "court": "Disc", "salle": None,
      "mission": "Analyser le ton des discours (Fed, BCE, Trésor) : faucon, colombe, neutre, et ce qui change.",
@@ -107,10 +108,10 @@ AGENTS = [
     {"n": 12, "cle": "reaction", "nom": "Vérificateur des réactions", "court": "Réac", "salle": None,
      "mission": "Mesurer comment le gold a réellement réagi après une annonce ou un discours "
                 "(avec les bougies de l'époque, sans look-ahead).",
-     "outils": ["fenêtre de replay", "jeux de bougies"],
+     "outils": ["historique des annonces (agent 5)", "fenêtre de replay", "jeux de bougies M1 / M5"],
      "qualite": ["Fenêtre de mesure fixée AVANT de regarder le résultat."],
      "escalade": "Moins de 20 cas -> « échantillon insuffisant ».",
-     "competences": []},
+     "competences": ["reaction_annonces"]},
     {"n": 13, "cle": "quant", "nom": "Chercheur quantitatif", "court": "Quant", "salle": None,
      "mission": "Préparer et contrôler les données, puis tester les règles en replay : coûts réalistes, "
                 "découpage entraînement / validation / test, pas de surapprentissage.",

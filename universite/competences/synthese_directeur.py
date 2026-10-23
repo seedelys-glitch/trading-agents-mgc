@@ -36,10 +36,10 @@ def executer(ctx):
     absents = [a["nom"] for a in agents.AGENTS if a["n"] not in branches]
     lignes += ["", f"En construction (aucune compétence branchée) : {', '.join(absents)}." if absents else "", ""]
     ctx.etape("professeur", "Rédige la synthèse")
-    verifies = [d for d in docs if d["statut"] == "verifie" and d["genre"] == "analyse"]
+    verifies = [d for d in docs if d["statut"] == "verifie" and d["genre"] not in ("verification", "synthese")]
     rejetes = [d for d in docs if d["statut"] == "rejete"]
     attente = [d for d in docs if d["statut"] == "a_verifier"]
-    lignes.append(f"Analyses vérifiées : {len(verifies)} ; rejetées : {len(rejetes)} ; en attente de vérification : {len(attente)}.")
+    lignes.append(f"Travaux vérifiés (analyses, replays, risque, macro, réactions) : {len(verifies)} ; rejetées : {len(rejetes)} ; en attente de vérification : {len(attente)}.")
     lignes += [f"  - n° {d['id']} {d['titre']} (vérifiée)" for d in verifies[:10]]
     lignes += [f"  - n° {d['id']} {d['titre']} (REJETÉE)" for d in rejetes[:10]]
     if not docs:

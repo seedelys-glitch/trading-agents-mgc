@@ -4,7 +4,7 @@
 import threading
 
 import pytest
-from conftest import DEBUT, bougies_m1
+from aides_universite import DEBUT, bougies_m1
 
 from universite import donnees
 from universite.base import MIGRATIONS, Base

@@ -4,7 +4,7 @@
 import json
 import random
 
-from conftest import DEBUT, executer_tout
+from aides_universite import DEBUT, executer_tout
 
 from universite import donnees
 from universite.competences import replay_strategie_v1 as replay

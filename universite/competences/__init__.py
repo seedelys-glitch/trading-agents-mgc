@@ -8,12 +8,14 @@ Ce que les agents savent RÉELLEMENT faire. Chaque module expose :
   executer(ctx) -> résultat (dict), en notant chaque étape avec ctx.etape(role, libellé)
 """
 
-from . import (analyse_fibo, analyse_ichimoku, analyse_smc, analyse_vwap_ema, controle_donnees, demande_directeur,
-               evaluation_risque, extraction_regles, indexation_bibliotheque, replay_strategie_v1, synthese_directeur,
-               verification_analyse, verification_replay, verification_reproductibilite, verification_risque)
+from . import (analyse_fibo, analyse_ichimoku, analyse_smc, analyse_vwap_ema, calendrier_macro, controle_donnees,
+               demande_directeur, evaluation_risque, extraction_regles, indexation_bibliotheque, reaction_annonces,
+               replay_strategie_v1, synthese_directeur, verification_analyse, verification_calendrier,
+               verification_reactions, verification_replay, verification_reproductibilite, verification_risque)
 
-MODULES = [analyse_smc, analyse_fibo, analyse_ichimoku, analyse_vwap_ema, evaluation_risque, verification_analyse,
-           verification_reproductibilite, verification_risque, controle_donnees, replay_strategie_v1,
+MODULES = [analyse_smc, analyse_fibo, analyse_ichimoku, calendrier_macro, analyse_vwap_ema, evaluation_risque,
+           reaction_annonces, verification_analyse, verification_reproductibilite, verification_risque,
+           verification_calendrier, verification_reactions, controle_donnees, replay_strategie_v1,
            verification_replay, extraction_regles, indexation_bibliotheque, synthese_directeur, demande_directeur]
 TYPES = {m.TYPE: m for m in MODULES}
 

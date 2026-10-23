@@ -2,7 +2,7 @@
 """Bibliothèque : règles lues mot pour mot, validation par Jabran, versions gardées, recherche."""
 
 import pytest
-from conftest import executer_tout
+from aides_universite import executer_tout
 
 from universite import bibliotheque
 from universite.base import MIGRATIONS, Base
@@ -90,9 +90,12 @@ def test_indexation_sans_modele_d_embeddings(moteur):
     assert r["extraits_ecrits"] == 1 and r["vecteurs_ajoutes"] == 0 and "désactivée" in r["remarque"]
 
 
-def test_migration_2_reversible(tmp_path):
+def test_migrations_2_et_3_reversibles(tmp_path):
     b = Base(tmp_path / "m.sqlite")
-    assert b.version() == MIGRATIONS[-1][0] == 2
+    assert b.version() == MIGRATIONS[-1][0] == 3
+    b.migrer(2)
+    assert not b.lire("SELECT name FROM sqlite_master WHERE name='annonces'")
+    assert b.lire("SELECT name FROM sqlite_master WHERE name='regles'")
     b.migrer(1)
     assert not b.lire("SELECT name FROM sqlite_master WHERE name='regles'")
-    assert b.migrer() == 2
+    assert b.migrer() == 3

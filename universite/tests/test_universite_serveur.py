@@ -7,7 +7,7 @@ import urllib.error
 import urllib.request
 
 import pytest
-from conftest import DEBUT, bougies_m1
+from aides_universite import DEBUT, bougies_m1
 
 from universite import config
 from universite.serveur import Universite, lancer

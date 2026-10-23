@@ -87,6 +87,16 @@ MIGRATIONS = [
     """, """
         DROP TABLE extraits; DROP TABLE regles;
     """),
+    (3, "calendrier des annonces", """
+        CREATE TABLE annonces (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, quand REAL NOT NULL, titre TEXT NOT NULL, pays TEXT NOT NULL,
+            impact TEXT NOT NULL DEFAULT '', genre TEXT NOT NULL,      -- reunion_fomc, discours_fed, forte, autre
+            prevision TEXT NOT NULL DEFAULT '', precedent TEXT NOT NULL DEFAULT '',
+            source TEXT NOT NULL, recu_le REAL NOT NULL, maj REAL NOT NULL, UNIQUE(quand, titre, pays));
+        CREATE INDEX annonces_quand ON annonces(quand);
+    """, """
+        DROP TABLE annonces;
+    """),
 ]
 
 CHAMPS_JSON = ("params", "resultat", "donnees", "sources", "etat", "detail", "source")

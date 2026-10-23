@@ -4,7 +4,7 @@
 import json
 
 import pytest
-from conftest import DEBUT, executer_tout
+from aides_universite import DEBUT, executer_tout
 
 from universite import agents, competences, donnees
 from universite.competences import analyse_vwap_ema
@@ -63,7 +63,7 @@ def test_un_chiffre_faux_est_rejete(moteur, jeu):
 
 
 def test_analyse_identique_avec_ou_sans_le_futur(moteur, base):
-    from conftest import bougies_m1
+    from aides_universite import bougies_m1
     tout = bougies_m1(4 * 1440)
     instant = DEBUT + 2 * 86400 + 3600 * 3 + 7
     j1 = donnees.creer_jeu(base, "complet", "test", "MGC")

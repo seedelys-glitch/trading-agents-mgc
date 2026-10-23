@@ -4,7 +4,7 @@
 import json
 
 import pytest
-from conftest import DEBUT, bougies_m1, executer_tout
+from aides_universite import DEBUT, bougies_m1, executer_tout
 
 from universite import donnees
 from universite.competences import verification_risque
