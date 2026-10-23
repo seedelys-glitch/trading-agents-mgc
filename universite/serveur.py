@@ -10,6 +10,7 @@ ne peut pas envoyer sans autorisation : un site malveillant ouvert dans le navig
 import json
 import logging
 import mimetypes
+import socket
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -397,9 +398,21 @@ def fabriquer_handler(univ):
     return Handler
 
 
+class ServeurExclusif(ThreadingHTTPServer):
+    """Un seul serveur par port. Sous Windows, SO_REUSEADDR (mis par défaut) laisse une 2e université écouter sur le
+    même port que la première : la page tombait alors au hasard sur l'ancienne version. Ici le port est exclusif,
+    une 2e université reçoit OSError et se contente d'ouvrir la page de celle qui tourne."""
+    allow_reuse_address = not hasattr(socket, "SO_EXCLUSIVEADDRUSE")
+    daemon_threads = True
+
+    def server_bind(self):
+        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
+
 def lancer(univ, port=None, hote="127.0.0.1"):
-    serveur = ThreadingHTTPServer((hote, port if port is not None else univ.reglages["port"]), fabriquer_handler(univ))
-    serveur.daemon_threads = True
+    serveur = ServeurExclusif((hote, port if port is not None else univ.reglages["port"]), fabriquer_handler(univ))
     fil = threading.Thread(target=serveur.serve_forever, name="http", daemon=True)
     fil.start()
     return serveur

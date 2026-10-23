@@ -158,3 +158,9 @@ def test_bureau_du_directeur_montre_sa_vraie_synthese(univ):
     s = univ.base.un("SELECT id, contenu FROM documents WHERE genre='synthese'")
     assert d["derniere_synthese"]["id"] == s["id"] and d["derniere_synthese"]["contenu"] == s["contenu"]
     assert [x["type"] for x in d["demandes"]] == ["synthese_directeur"]
+
+
+def test_une_seule_universite_par_port(univ):
+    port = int(univ.url.rsplit(":", 1)[1])
+    with pytest.raises(OSError):                 # la 2e copie ne peut pas écouter sur le même port
+        lancer(univ, port=port)
