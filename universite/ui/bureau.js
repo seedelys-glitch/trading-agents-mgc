@@ -65,7 +65,10 @@ function construirePlateau() {
   const noms = el("g", { class: "noms-zones" }, g);
   for (const z of plan.zones) {
     const [x, y] = iso(z.x + z.l, z.y + z.p, -0.25);
-    el("text", { class: "nom-zone", x, y: y + 16 }, noms).textContent = z.nom;
+    const t = el("text", { class: "nom-zone", x, y: y + 16, tabindex: 0, role: "button", "data-zone": z.cle }, noms);
+    t.textContent = z.nom;
+    t.addEventListener("click", () => ouvrirZone(z.cle));
+    t.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ouvrirZone(z.cle); } });
   }
   const etiq = el("g", { id: "plateau-etiquettes" }, g);
   for (const p of plan.postes) dessinerEtiquette(etiq, p);
@@ -89,7 +92,7 @@ function dessinerEcran(g, p) {
   el("text", { class: "l3", x: 5, y: 28.5 }, e);
   el("polyline", { class: "courbe", points: "" }, e);
   el("text", { class: "l4", x: 5, y: 54 }, e);
-  e.addEventListener("click", () => ouvrirAgent(p.agent));
+  e.addEventListener("click", () => voirAgent(p.agent));
 }
 
 const couper = (t, n) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
@@ -150,8 +153,8 @@ function dessinerPoste(g, p) {
   postePos[p.agent].tete = [hx, hy];
   const t = el("title", {}, b);
   t.textContent = p.nom;
-  b.addEventListener("click", () => ouvrirAgent(p.agent));
-  b.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ouvrirAgent(p.agent); } });
+  b.addEventListener("click", () => voirAgent(p.agent));
+  b.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); voirAgent(p.agent); } });
 }
 
 function dessinerEtiquette(g, p) {
@@ -165,6 +168,8 @@ function dessinerEtiquette(g, p) {
 
 function majPlateau(etatCourant, choix) {
   if (!plan || !etatCourant) return;
+  if (zoneChoisie && !$("#panneau").hidden && !choix) majZone(false).catch(() => {});
+  document.querySelectorAll(".zone").forEach((z) => z.classList.toggle("choisie", z.dataset.zone === zoneChoisie));
   for (const a of etatCourant.agents) {
     const classes = ["disponible", "travail", "attente", "erreur", "construction"];
     for (const sel of [`.poste[data-n="${a.n}"]`, `.etiquette-poste[data-n="${a.n}"]`]) {
@@ -320,6 +325,93 @@ async function apresEspace(zone, esp) {
   const actuel = zone.querySelector("[data-graphique]");
   if (actuel) actuel.innerHTML = svgBougies(graphiques[cle], esp.jeux[gr.jeu]);
 }
+
+// ------------------------------------------------------------------ zones (bibliothèque, réunion, labo, données...)
+// Le hall capture le pointeur pour le déplacement : une zone s'ouvre donc au relâché, si on n'a pas glissé.
+let zoneChoisie = null, departClic = null;
+$("#hall").addEventListener("pointerdown", (e) => {
+  const z = mode === "bureau" && !e.target.closest(".poste") ? e.target.closest(".zone") : null;
+  departClic = z ? { x: e.clientX, y: e.clientY, cle: z.dataset.zone } : null;
+});
+$("#hall").addEventListener("pointerup", (e) => {
+  const d = departClic;
+  departClic = null;
+  if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 6) ouvrirZone(d.cle);
+});
+
+function voirAgent(n) { zoneChoisie = null; ouvrirAgent(n); }
+
+async function ouvrirZone(cle) {
+  zoneChoisie = cle; choisi = null;
+  $("#panneau").hidden = false;
+  await majZone(true);
+  majHall();
+}
+
+const ligneAgent = (a) => `<li>${etiquette(a.statut)} <a data-agent="${a.n}">${a.n}. ${esc(a.nom)}</a>
+  ${a.mission ? `<br><small class="doux">${esc(a.mission.etape)}</small>` : ""}
+  ${a.dernier_document ? `<br><small class="doux">Dernier document : ${esc(a.dernier_document.titre)} (${esc(STATUTS[a.dernier_document.statut] || a.dernier_document.statut)})</small>` : ""}</li>`;
+const ligneDoc = (d) => `<li>${etiquette(d.statut)} <a data-doc="${d.id}">${esc(d.titre)}</a><br><small class="doux">n° ${d.id} · agent ${d.agent} · ${heure(d.cree)}</small></li>`;
+const liste = (titre, items, rendu, vide) => `<div class="bloc"><h3>${titre}</h3>${items && items.length
+  ? `<ul class="liste">${items.map(rendu).join("")}</ul>` : `<span class="doux">${vide}</span>`}</div>`;
+const STATUTS_REGLE = { proposee: "proposées", validee: "validées", rejetee: "rejetées", remplacee: "remplacées" };
+
+function rendreZone(r) {
+  const z = r.zone;
+  let h = `<h2>${esc(z.nom)}</h2><p class="doux">${esc(z.montre)}.<br><small>Source : ${esc(z.source)}.</small></p>`;
+  if (r.agents.length) h += liste("Qui travaille ici", r.agents, ligneAgent, "");
+  if (z.cle === "directeur") {
+    const c = r.compteurs;
+    h += `<div class="bloc"><h3>File de travail</h3>${c.en_cours} mission(s) en cours, ${c.attente} en attente · ${c.documents} document(s) · ${c.boucles} boucle(s) active(s)
+      <p class="ligne"><button data-lancer="synthese_directeur">Demander une synthèse</button></p></div>`;
+    const ds = r.derniere_synthese;
+    if (ds) h += `<div class="bloc"><h3>Dernière synthèse</h3>${etiquette(ds.statut)} <a data-doc="${ds.id}">${esc(ds.titre)}</a> <small class="doux">${heure(ds.cree)}</small><pre class="doc apercu">${esc(couper(ds.contenu, 900))}</pre></div>`;
+    h += liste("Synthèses", r.syntheses, ligneDoc, "Aucune synthèse pour l'instant.");
+    h += liste("Demandes reçues", r.demandes, (m) => `<li>${etiquette(m.statut)} <a data-mission="${m.id}">${esc(m.titre)}</a><br><small class="doux">n° ${m.id} · ${heure(m.cree)}${m.erreur ? ` · ${esc(m.erreur)}` : ""}</small></li>`, "Aucune demande.");
+    h += liste("Alertes reçues", r.alertes, (m) => `<li>← agent ${m.de} : ${esc(m.contenu)}<br><small class="doux">${heure(m.ts)}</small></li>`, "Aucune alerte.");
+  } else if (z.cle === "reunion") {
+    h += `<div class="bloc"><h3>Ces dernières 24 h</h3>${r.messages_24h} message(s) échangé(s) entre agents.</div>`;
+    h += liste("Derniers échanges", r.messages, (m) => `<li><a data-agent="${m.de}">agent ${m.de}</a> → <a data-agent="${m.a}">agent ${m.a}</a> · ${esc(m.genre)}
+      ${m.document ? ` · <a data-doc="${m.document}">document ${m.document}</a>` : ""}<br>${esc(m.contenu)}<br><small class="doux">${heure(m.ts)}</small></li>`,
+      "Aucun échange pour l'instant : les agents ne se parlent que pendant une vraie mission.");
+  } else if (z.cle === "bibliotheque") {
+    const nb = Object.entries(r.regles);
+    h += `<div class="bloc"><h3>Règles</h3>${nb.length ? nb.map(([k, n]) => `${n} ${STATUTS_REGLE[k] || k}`).join(" · ") : "Aucune règle lue pour l'instant."}
+      <p class="ligne"><button data-fenetre="bibliotheque">Ouvrir la bibliothèque</button></p></div>`;
+    h += liste("Dernières règles", r.regles_recentes, (x) => `<li>${etiquette(x.statut === "validee" ? "verifie" : x.statut === "proposee" ? "a_verifier" : x.statut === "rejetee" ? "rejete" : "brouillon")} ${esc(x.titre)}<br><small class="doux">${esc(x.theme)} · version ${x.version} · ${heure(x.cree)}</small></li>`, "Aucune règle.");
+    h += liste("Extraits gardés", r.extraits, (x) => `<li>${esc(x.genre === "fed" ? "Discours de la Fed" : x.genre)} : ${x.n} extrait(s) de ${x.origines} texte(s)</li>`, "Aucun extrait gardé.");
+    h += liste("Derniers contrôles de l'agent 9", r.verifications, ligneDoc, "Aucun contrôle pour l'instant.");
+  } else if (z.cle === "macro") {
+    h += liste("Annonces des 48 prochaines heures", r.annonces, (x) => `<li><b>${heure(x.quand)}</b> · ${esc(x.pays)} · ${esc(x.titre)}${x.impact ? ` <span class="doux">(${esc(x.impact)})</span>` : ""}<br><small class="doux">${esc(x.source)}</small></li>`,
+      r.annonces_gardees ? "Aucune annonce gardée dans les 48 h." : "Calendrier pas encore téléchargé (agent 5).");
+    h += `<p class="doux">${r.annonces_gardees} annonce(s) gardée(s) au total.</p>`;
+  } else if (z.cle === "donnees") {
+    h += `<div class="bloc"><h3>Jeux de bougies</h3>${r.jeux.length ? `<ul class="liste">${r.jeux.map((j) => `<li><b>${esc(j.nom)}</b> · ${esc(j.source)}${j.temps_reel ? "" : " <span class=\"doux\">(différé ou historique)</span>"}<br><small class="doux">${Object.entries(j.unites).map(([u, x]) => `${u} : ${x.n} bougies, du ${heure(x.debut)} au ${heure(x.fin)}`).join("<br>") || "vide"}</small></li>`).join("")}</ul>`
+      : '<span class="doux">Aucun jeu de bougies.</span>'}<p class="ligne"><button data-fenetre="donnees">Importer ou contrôler des données</button></p></div>`;
+    h += liste("Derniers fichiers TradingView lus", r.fichiers, (f) => `<li>${esc(f.chemin)}<br><small class="doux">${esc(f.unite)} · ${f.lignes} lignes, ${f.ajoutees} ajoutées · jeu ${f.jeu} · ${heure(f.importe_le)}</small></li>`, "Aucun fichier importé.");
+  } else if (z.cle === "labo") {
+    h += `<div class="bloc"><h3>Lancer</h3><button data-lancer="replay_strategie_v1">Rejouer la stratégie V1</button> <button data-lancer="controle_donnees">Contrôler un jeu</button></div>`;
+  }
+  if (r.documents) h += liste("Derniers documents de la zone", r.documents, ligneDoc, "Aucun document pour l'instant.");
+  return h;
+}
+
+async function majZone(premier) {
+  if (!zoneChoisie) return;
+  const r = await api(`/api/zone/${zoneChoisie}`);
+  if (!zoneChoisie || $("#panneau").hidden) return;
+  const defil = $("#panneau").scrollTop;
+  $("#panneau-contenu").innerHTML = rendreZone(r);
+  if (!premier) $("#panneau").scrollTop = defil;
+}
+
+$("#panneau").addEventListener("click", (e) => {
+  const t = e.target;
+  if (t.dataset.agent) voirAgent(+t.dataset.agent);
+  else if (t.dataset.fenetre === "bibliotheque") fenetreBibliotheque();
+  else if (t.dataset.fenetre === "donnees") fenetreDonnees();
+});
+$("#fermer-panneau").addEventListener("click", () => { zoneChoisie = null; });
 
 window.rendreEspace = rendreEspace;
 window.apresEspace = apresEspace;

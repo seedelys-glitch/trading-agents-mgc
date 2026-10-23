@@ -121,3 +121,40 @@ def test_sources_gardent_leur_reference(univ):
     assert e9["sources"][0]["cite_dans"] != doc_analyse                      # cité dans le procès-verbal
     _, e1 = lire(univ, "/api/agent/1/espace")
     assert e1["jeux"][str(univ.jeu)]["nom"] == "test"
+
+
+@pytest.mark.parametrize("cle", [z["cle"] for z in scene.ZONES])
+def test_chaque_zone_repond_sans_rien_inventer(univ, cle):
+    code, z = lire(univ, f"/api/zone/{cle}")
+    assert code == 200 and z["zone"]["cle"] == cle
+    for k, v in z.items():                                 # base vide : listes vides, compteurs à zéro
+        if isinstance(v, list) and k != "agents":
+            assert v == [] or k == "jeux", (k, v)
+    assert lire(univ, "/api/zone/cuisine")[0] == 404
+
+
+def test_zones_avec_du_vrai_travail(univ):
+    univ.base.nouvelle_mission(1, "analyse_smc", "test", {"jeu": univ.jeu, "instant": INSTANT})
+    univ.base.nouvelle_mission(13, "controle_donnees", "test", {"jeu": univ.jeu})
+    executer_tout(univ.moteur)
+    _, r = lire(univ, "/api/zone/reunion")
+    assert r["messages_24h"] == len(r["messages"]) >= 2
+    _, a = lire(univ, "/api/zone/analyse")
+    assert [d["agent"] for d in a["documents"]] == [1] and len(a["agents"]) == 6
+    _, b = lire(univ, "/api/zone/bibliotheque")
+    assert b["verifications"] and b["regles"] == {}
+    _, d = lire(univ, "/api/zone/donnees")
+    assert d["jeux"][0]["unites"]["M1"]["n"] == 4 * 1440
+    _, l = lire(univ, "/api/zone/labo")
+    assert l["documents"][0]["genre"] == "donnees"
+
+
+def test_bureau_du_directeur_montre_sa_vraie_synthese(univ):
+    univ.base.nouvelle_mission(6, "analyse_vwap_ema", "test", {"jeu": univ.jeu, "instant": INSTANT})
+    executer_tout(univ.moteur)
+    univ.base.nouvelle_mission(14, "synthese_directeur", "test", {})
+    executer_tout(univ.moteur)
+    _, d = lire(univ, "/api/zone/directeur")
+    s = univ.base.un("SELECT id, contenu FROM documents WHERE genre='synthese'")
+    assert d["derniere_synthese"]["id"] == s["id"] and d["derniere_synthese"]["contenu"] == s["contenu"]
+    assert [x["type"] for x in d["demandes"]] == ["synthese_directeur"]

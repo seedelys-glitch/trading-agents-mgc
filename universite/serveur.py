@@ -138,6 +138,49 @@ class Universite:
                                            (a["n"], a["n"])),
                 "taches": [c for c in competences.catalogue() if c["agent"] == a["n"] and not c["interne"]]}
 
+    def zone(self, cle):
+        """Ce qu'une zone du bureau montre : seulement des lignes de la base (rien de décoratif)."""
+        z = scene.PAR_CLE.get(cle)
+        if not z:
+            return None
+        e = self.etat()
+        numeros = scene.OCCUPANTS.get(cle, [])
+        r = {"zone": z, "maintenant": e["maintenant"], "agents": [a for a in e["agents"] if a["n"] in numeros]}
+        docs = ("SELECT id, agent, genre, titre, statut, verifie_par, cree FROM documents")
+        if numeros:
+            r["documents"] = self.base.lire(docs + f" WHERE agent IN ({','.join('?' * len(numeros))}) ORDER BY id DESC LIMIT 12",
+                                            tuple(numeros))
+        if cle == "directeur":
+            r["syntheses"] = self.base.lire(docs + " WHERE genre='synthese' ORDER BY id DESC LIMIT 5")
+            r["derniere_synthese"] = self.base.un("SELECT id, titre, statut, cree, contenu FROM documents"
+                                                  " WHERE genre='synthese' ORDER BY id DESC LIMIT 1")
+            r["demandes"] = self.base.lire("SELECT id, type, titre, statut, cree, fin, erreur FROM missions WHERE agent=?"
+                                           " ORDER BY id DESC LIMIT 10", (agents.DIRECTEUR,))
+            r["alertes"] = self.base.lire("SELECT * FROM messages WHERE a=? AND genre='alerte' ORDER BY id DESC LIMIT 10",
+                                          (agents.DIRECTEUR,))
+            r["compteurs"] = e["compteurs"]
+        elif cle == "reunion":
+            r["messages"] = self.base.lire("SELECT id, ts, de, a, genre, substr(contenu, 1, 240) AS contenu, mission, document"
+                                           " FROM messages ORDER BY id DESC LIMIT 30")
+            r["messages_24h"] = self.base.un("SELECT COUNT(*) AS n FROM messages WHERE ts>=?", (e["maintenant"] - 86400,))["n"]
+        elif cle == "bibliotheque":
+            r["regles"] = {x["statut"]: x["n"] for x in self.base.lire("SELECT statut, COUNT(*) AS n FROM regles GROUP BY statut")}
+            r["regles_recentes"] = self.base.lire("SELECT id, titre, statut, version, theme, cree FROM regles"
+                                                  " ORDER BY id DESC LIMIT 6")
+            r["extraits"] = self.base.lire("SELECT CASE WHEN instr(origine, ':') > 0 THEN substr(origine, 1, instr(origine, ':') - 1)"
+                                           " ELSE 'fichier' END AS genre, COUNT(*) AS n, COUNT(DISTINCT origine) AS origines"
+                                           " FROM extraits GROUP BY genre")
+            r["verifications"] = self.base.lire(docs + " WHERE genre='verification' ORDER BY id DESC LIMIT 6")
+        elif cle == "macro":
+            r["annonces"] = self.base.lire("SELECT quand, titre, pays, impact, genre, source FROM annonces WHERE quand>=?"
+                                           " AND quand<=? ORDER BY quand LIMIT 30", (e["maintenant"], e["maintenant"] + 48 * 3600))
+            r["annonces_gardees"] = self.base.un("SELECT COUNT(*) AS n FROM annonces")["n"]
+        elif cle == "donnees":
+            r["jeux"] = donnees.liste_jeux(self.base)
+            r["fichiers"] = self.base.lire("SELECT chemin, jeu, unite, lignes, ajoutees, importe_le FROM fichiers_importes"
+                                           " ORDER BY importe_le DESC LIMIT 10")
+        return r
+
     def bougies(self, q):
         """Vraies bougies FERMÉES d'un jeu à un instant (jamais de bougie future)."""
         jeu = int(q["jeu"])
@@ -246,6 +289,9 @@ def fabriquer_handler(univ):
                 if len(morceaux) == 4 and morceaux[:2] == ["api", "agent"] and morceaux[3] == "espace":
                     e = univ.espace_agent(morceaux[2])
                     return self._envoyer(200 if e else 404, e or {"erreur": "agent inconnu"})
+                if len(morceaux) == 3 and morceaux[:2] == ["api", "zone"]:
+                    z = univ.zone(morceaux[2])
+                    return self._envoyer(200 if z else 404, z or {"erreur": "zone inconnue"})
                 if u.path == "/api/bougies":
                     return self._envoyer(200, univ.bougies(q))
                 if u.path == "/api/missions":

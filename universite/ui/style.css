@@ -181,3 +181,8 @@ pre.doc.apercu { max-height: 220px; overflow: auto; font-size: 13px; margin: 8px
 .bougies .prix { fill: var(--doux); font-size: 10px; text-anchor: end; }
 .bougies .date { fill: var(--doux); font-size: 10px; } .bougies .date.fin { text-anchor: end; }
 .bloc button[data-lancer] { margin: 4px 6px 4px 0; }
+.zone { cursor: pointer; }
+.zone:hover .sol-zone { stroke: var(--or-clair); }
+.zone.choisie .sol-zone { stroke: var(--or-clair); stroke-width: 2.5; }
+.noms-zones .nom-zone { pointer-events: auto; cursor: pointer; }
+.noms-zones .nom-zone:hover, .noms-zones .nom-zone:focus { fill: var(--or-clair); outline: none; }

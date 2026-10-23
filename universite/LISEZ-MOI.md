@@ -30,6 +30,20 @@ Seul l'agent 4 (heatmap Bookmap) reste **« en construction »** : il attend Boo
 Astuce : une boucle « Calendrier » toutes les 6 heures et une boucle « Discours de la Fed » une fois par jour (bouton Boucles) remplit l'historique des annonces semaine après
 semaine ; le site ne donne que la semaine en cours, l'historique commence donc le jour du premier lancement.
 
+## Le bureau
+La page s'ouvre sur le **bureau** vu d'en haut : bureau du directeur au centre, salle d'analyse technique,
+pôle macro et discours, salle de réunion, bibliothèque et vérification, labo quant, contrôle des risques,
+salle des données. Chaque agent est assis à son poste ; sa couleur dit ce qu'il fait **réellement**
+(vert disponible, bleu au travail, orange file d'attente, rouge erreur, gris en construction). Les flèches
+sont de vrais messages entre agents.
+- Molette ou boutons + / − pour s'approcher : un petit écran apparaît au-dessus de chaque poste avec son
+  dernier document (vérifié, à vérifier, rejeté) et la courbe des bougies qu'il a réellement lues.
+- Clic sur un agent : **son espace** (document en cours, graphique des bougies lues avec l'instant analysé,
+  sources citées, « Confier une tâche », missions, échanges).
+- Clic sur une pièce (sol ou nom) : ce qu'elle contient vraiment (réunion = derniers échanges, bibliothèque =
+  règles et extraits, données = jeux et imports, directeur = synthèse, demandes, alertes...).
+- Bouton ◯ : l'ancien hall en cercle (bouton ▦ pour revenir au bureau).
+
 ## Bibliothèque
 Bouton **Bibliothèque** : le secrétaire lit STRATEGIE.md (sans le modifier) et te propose chaque règle mot pour mot,
 avec sa ligne d'origine. Tu valides, corriges ou rejettes ; chaque version est gardée. Une case permet de chercher.
