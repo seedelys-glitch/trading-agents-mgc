@@ -1,6 +1,6 @@
 # MGC AI Trading Desk — état du projet
 
-Dernière mise à jour : 23/10/2026 (étape 7 terminée : TradingView par dossier d'exports). Ce fichier est la mémoire du projet : on le lit
+Dernière mise à jour : 23/10/2026 (étape 8 terminée : lien avec Jarvis). Ce fichier est la mémoire du projet : on le lit
 avant de reprendre le travail, on le met à jour après chaque étape.
 
 ## 1. Vision
@@ -60,8 +60,12 @@ construction), fonctions de soutien allumées seulement pendant leur étape, lie
 panneau par agent (mission, tâches, documents, soutiens, historique), demandes au directeur, données, boucles,
 documents, bibliothèque, réglages. Zoom et déplacement. Vérifié sur écran PC et au format téléphone (360 px).
 
+Lien avec Jarvis (`Documents\Jarvis\universite_lien.py` + `chef.py`) : ligne « Université MGC » dans le chef
+d'orchestre (et la caméra du bureau), bouton « lancer », voix / appli / Telegram « état de l'université » et
+« ouvre l'université ». Jarvis lit seulement l'état (127.0.0.1:8780) ; aucun lien avec `ordres.py`.
+
 ## 5. En cours / à faire (par priorité)
-1. Étape 8 : lien avec Jarvis (alertes TradingView déjà lues par Jarvis, état de l'université à la voix).
+1. Étape 9 : fiabilité et docs (lancer les tests sur le PC, essai réel du calendrier et des discours de la Fed).
    L'agent 4 (heatmap) attend Bookmap.
 2. Étape 7 : TradingView (import des exports CSV déjà possible).
 3. Étape 8 : lien avec Jarvis. Étape 9 : fiabilité et docs.
