@@ -1,6 +1,6 @@
 # MGC AI Trading Desk — état du projet
 
-Dernière mise à jour : 23/10/2026 (étape 6, vagues 1 et 2 terminées). Ce fichier est la mémoire du projet : on le lit
+Dernière mise à jour : 23/10/2026 (étape 6 terminée : 13 agents sur 14 au travail). Ce fichier est la mémoire du projet : on le lit
 avant de reprendre le travail, on le met à jour après chaque étape.
 
 ## 1. Vision
@@ -42,14 +42,17 @@ Aucun service payant.
 | 2. Fibonacci | Impulsion H1, retracement, zones 0.618–0.893 avec FVG (`calculs.fibo`) | agent 9 (reproductibilité) |
 | 3. Ichimoku | Nuage, Tenkan / Kijun, Chikou D1 / H1 / M15 (`calculs.ichimoku`) | agent 9 (reproductibilité) |
 | 5. Macro | Calendrier USD de la semaine (Forex Factory, public), historique des annonces (table `annonces`), 48 h à venir, blocages (`mgc.annonces`) | agent 9 (blocages refaits par un autre code) |
+| 7. Flux (estimé) | Profil de volume, POC, zone de valeur, delta estimé (`calculs.order_flow`), toujours dit « estimation » | agent 9 (reproductibilité) |
 | 8. Risques | Idée de trade → contrats, risque net, ratio, vetos (`mgc.risque`) ; veto = alerte au directeur | agent 9 (recalcul indépendant en ticks) |
 | 6. VWAP & EMA 200 | VWAP de séance (depuis 17 h Chicago) + bandes, EMA 200 en M5/M15/H1, à un instant donné | agent 9 (recalcul indépendant) |
 | 9. Secrétaire / auditeur | Vérifie les analyses et les replays ; lit STRATEGIE.md et propose les règles ; range les documents dans la bibliothèque | – |
 | 13. Chercheur quantitatif | Contrôle qualité d'un jeu de bougies ; replay de la stratégie V1 (60/20/20, Monte-Carlo, régimes) | agent 9 |
 | 14. Directeur | Confie une demande au bon agent ; synthèse des documents vérifiés | – |
+| 10. Discours | Flux officiel federalreserve.gov, texte gardé dans la bibliothèque, lexique « faucon / colombe » fixé à l'avance, citations exactes | agent 9 (recompte mot à mot, citations retrouvées) |
+| 11. Historien | Précédents d'un thème dans les textes gardés et l'historique des annonces, avec date et source | agent 9 (chaque citation existe telle quelle) |
 | 12. Réactions | Mouvement du gold à +5 / +15 / +60 min et excursions sur 1 h après chaque annonce gardée ; < 20 cas = pas de conclusion | agent 9 (requêtes directes sur les bougies) |
 
-Les agents 4, 7, 10, 11 sont affichés « en construction » (aucune activité simulée).
+Seul l'agent 4 (heatmap) est affiché « en construction » : il attend Bookmap (aucune activité simulée).
 D1 est reconstruite par séance CME (17 h Chicago) à partir des petites unités, seulement quand la séance est finie.
 
 Bureau virtuel : hall des 14 agents avec leur état réel (disponible, au travail, file d'attente, erreur, en
@@ -58,8 +61,8 @@ panneau par agent (mission, tâches, documents, soutiens, historique), demandes 
 documents, bibliothèque, réglages. Zoom et déplacement. Vérifié sur écran PC et au format téléphone (360 px).
 
 ## 5. En cours / à faire (par priorité)
-1. Étape 6, vague 3 : 7 flux (estimé depuis les bougies, dit comme tel), 10 discours et 11 historien (il faut une
-   source de textes officiels gratuite : à vérifier) ; 4 heatmap attend Bookmap.
+1. Étape 7 : TradingView (import des exports CSV déjà possible ; étudier un pont plus direct, sans abonnement).
+   L'agent 4 (heatmap) attend Bookmap.
 2. Étape 7 : TradingView (import des exports CSV déjà possible).
 3. Étape 8 : lien avec Jarvis. Étape 9 : fiabilité et docs.
 4. Ensuite : bureau immersif (espaces, salle de réunion, labo, bibliothèque, bureau du directeur), en
@@ -78,10 +81,13 @@ documents, bibliothèque, réglages. Zoom et déplacement. Vérifié sur écran 
 - Calendrier : le flux gratuit ne donne que la semaine en cours et pas le chiffre publié ; l'historique des annonces
   commence au premier lancement de l'agent 5 (boucle conseillée toutes les 6 h). Pas joignable depuis le conteneur
   de développement (testé avec un faux flux), utilisé chaque jour par la Salle sur le PC.
+- Discours de la Fed : le lexique est un simple comptage d'expressions anglaises (une négation n'est pas comprise).
+  Le flux officiel n'est pas joignable depuis le conteneur de développement : testé avec de faux textes, à tester
+  sur le PC (étape 9).
 - Le dossier git du PC n'a pas de lien vers GitHub : la sauvegarde GitHub est une copie (voir 9).
 
 ## 7. Tests (23/10/2026)
-- Conteneur de développement : 179 tests de la Salle + 72 de l'université = **251 réussis** (étape 6, vagues 1 et 2),
+- Conteneur de développement : 179 tests de la Salle + 80 de l'université = **259 réussis** (fin de l'étape 6),
   avec la commande ci-dessous (les deux dossiers ensemble fonctionnent maintenant).
 - Sur le PC de Jabran (Python 3.13.16) : 217 réussis avant l'ajout du replay et de la bibliothèque
   (les tests ajoutés depuis n'y ont pas encore été lancés).
@@ -90,7 +96,8 @@ documents, bibliothèque, réglages. Zoom et déplacement. Vérifié sur écran 
   chiffre faux, de bout en bout par le serveur ; SMC / Fibo / Ichimoku identiques avec ou sans bougies
   futures ; risque recompté et concordant avec le moteur de la Salle ; veto et limite du jour ; calendrier gardé
   sans doublon, blocages FOMC / discours, panne de la source = aucun document ; réactions recomptées, sans look-ahead,
-  trou de données refusé ; migrations 1 → 3 réversibles.
+  trou de données refusé ; migrations 1 → 3 réversibles ; discours : expressions entières seulement, citation inventée
+  rejetée, flux en panne = aucun document ; historien : rien cité de mémoire.
 
 ## 8. Décisions techniques
 - L'université est construite dans TradingAgents, à côté de la Salle, car tout le calcul MGC fiable y est déjà

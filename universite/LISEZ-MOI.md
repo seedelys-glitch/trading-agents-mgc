@@ -14,17 +14,20 @@ Un deuxième double-clic rouvre simplement la page.
 | 1. SMC | Structure en D1, H1 et 15 min : tendance, dernières cassures (BOS / CHoCH), FVG et order blocks proches |
 | 2. Fibonacci | Dernière belle impulsion H1, retracement actuel, zones 0.618 à 0.893 valables seulement avec un FVG (jamais le 0.5) |
 | 3. Ichimoku | Nuage, Tenkan / Kijun, Chikou en D1, H1 et 15 min |
+| 7. Flux (estimé) | Profil de volume, POC, zone de valeur, delta ESTIMÉ et gros volumes, depuis les bougies 5 min ; toujours écrit « estimation » (pas un carnet d'ordres) |
 | 8. Risques | Évalue une idée de trade (sens, entrée, stop, TP1) : contrats MGC, risque net avec frais, ratio, vetos. Calcul seulement, aucun ordre |
 | 5. Macro | Télécharge le calendrier USD de la semaine (Forex Factory, gratuit), garde chaque annonce dans l'historique, liste les 48 h à venir et dit ce qui bloque maintenant (FOMC, discours de la Fed, annonce forte) ; prévient le gestionnaire des risques |
 | 6. VWAP & EMA 200 | VWAP de séance (depuis 17 h à Chicago) avec bandes, EMA 200 en 5 min, 15 min et 1 h, à un instant donné (direct ou replay) |
-| 9. Secrétaire / auditeur | Recalcule de son côté les chiffres de l'agent 6, recompte les replays, le risque, les blocages d'annonces et les réactions (calcul indépendant) ; pour SMC, Fibonacci et Ichimoku il contrôle que le calcul est reproductible sur les mêmes bougies, sans bougie future. Le document passe « vérifié » ou « rejeté » |
+| 9. Secrétaire / auditeur | Recalcule de son côté les chiffres de l'agent 6, recompte les replays, le risque, les blocages d'annonces, les réactions et les discours (calcul indépendant), vérifie chaque citation ; pour SMC, Fibonacci, Ichimoku et le flux il contrôle que le calcul est reproductible sur les mêmes bougies, sans bougie future. Le document passe « vérifié » ou « rejeté » |
+| 10. Discours | Lit les discours officiels de la Fed (federalreserve.gov, gratuit), garde le texte, compte les expressions « faucon » / « colombe » d'un lexique fixé à l'avance et cite les phrases exactes |
+| 11. Historien | Retrouve les précédents d'un thème dans ce qui a été gardé (discours, annonces, bibliothèque), avec date et source ; rien de mémoire |
 | 12. Réactions | Mesure comment le gold a vraiment bougé après chaque annonce gardée (+5, +15, +60 min, plus haut / plus bas de l'heure), sur un jeu de bougies 1 à 5 min ; moins de 20 cas = aucune conclusion |
 | 13. Chercheur quantitatif | Contrôle un jeu de bougies (nombre, période, trous) et rejoue ta stratégie V1 (1H / 12H) : entraînement / validation / test, Monte-Carlo, résultats par régime ; moins de 30 trades = aucune conclusion |
 | 14. Directeur | Reçoit les demandes, les confie au bon agent, fait la synthèse de ce qui est vérifié |
 
-Les 4 autres agents (4, 7, 10, 11) sont affichés **« en construction »** : ils ne font rien et le bureau ne fait pas semblant.
+Seul l'agent 4 (heatmap Bookmap) reste **« en construction »** : il attend Bookmap, et le bureau ne fait pas semblant.
 
-Astuce : une boucle « Calendrier » toutes les 6 heures (bouton Boucles) remplit l'historique des annonces semaine après
+Astuce : une boucle « Calendrier » toutes les 6 heures et une boucle « Discours de la Fed » une fois par jour (bouton Boucles) remplit l'historique des annonces semaine après
 semaine ; le site ne donne que la semaine en cours, l'historique commence donc le jour du premier lancement.
 
 ## Bibliothèque

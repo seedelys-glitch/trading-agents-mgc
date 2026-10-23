@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Vague 1 : SMC (1), Fibonacci (2), Ichimoku (3) contrôlés par reproductibilité, risque (8) recompté par l'agent 9."""
+"""Vague 1 : SMC (1), Fibonacci (2), Ichimoku (3), flux estimé (7) contrôlés par reproductibilité, risque (8) recompté par l'agent 9."""
 
 import json
 
@@ -12,7 +12,8 @@ from universite.competences import verification_risque
 INSTANT = DEBUT + 4 * 86400 - 600       # fin du jeu de test (4 jours de M1)
 
 
-@pytest.mark.parametrize("genre, agent", [("analyse_smc", 1), ("analyse_fibo", 2), ("analyse_ichimoku", 3)])
+@pytest.mark.parametrize("genre, agent", [("analyse_smc", 1), ("analyse_fibo", 2), ("analyse_ichimoku", 3),
+                                         ("analyse_flux", 7)])
 def test_analyse_puis_controle_reproductible(moteur, jeu, genre, agent):
     m = moteur.base.nouvelle_mission(agent, genre, "test", {"jeu": jeu, "instant": INSTANT})
     faites = executer_tout(moteur)
@@ -39,7 +40,7 @@ def test_resultat_trafique_rejete(moteur, jeu):
     assert moteur.base.lire("SELECT a FROM messages WHERE genre='alerte'") == [{"a": 14}]
 
 
-@pytest.mark.parametrize("genre", ["analyse_smc", "analyse_fibo", "analyse_ichimoku"])
+@pytest.mark.parametrize("genre", ["analyse_smc", "analyse_fibo", "analyse_ichimoku", "analyse_flux"])
 def test_bougies_futures_sans_effet(base, moteur, genre):
     """Même analyse avec ou sans 2 jours de bougies après l'instant : résultat identique (pas de look-ahead)."""
     toutes = bougies_m1(6 * 1440)
@@ -117,3 +118,10 @@ def test_d1_par_seance_cme(base, jeu):
     assert [b[0] for b in d1] == [DEBUT + k * 86400 for k in range(3)]     # la 4e séance n'est pas finie
     m1 = donnees.fenetre(base, jeu, "M1", DEBUT + 86400)["bougies"]
     assert d1[0][1:5] == (m1[0][1], max(b[2] for b in m1), min(b[3] for b in m1), m1[-1][4])
+
+
+def test_flux_toujours_dit_estime(moteur, jeu):
+    m = moteur.base.nouvelle_mission(7, "analyse_flux", "test", {"jeu": jeu, "instant": INSTANT})
+    executer_tout(moteur)
+    doc = moteur.base.un("SELECT * FROM documents WHERE id=?", (moteur.base.mission(m)["resultat"]["document"],))
+    assert doc["donnees"]["resultat"]["disponible"] and "ESTIMATION" in doc["contenu"]
