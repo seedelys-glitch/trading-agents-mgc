@@ -31,7 +31,10 @@ Astuce : une boucle « Calendrier » toutes les 6 heures et une boucle « Discou
 semaine ; le site ne donne que la semaine en cours, l'historique commence donc le jour du premier lancement.
 
 ## Le bureau
-La page s'ouvre sur le **bureau** vu d'en haut : bureau du directeur au centre, salle d'analyse technique,
+La page s'ouvre sur le **bureau en 3D** (comme un jeu vidéo : grand hall, marbre, mezzanine, lustres ; souris :
+clic gauche glissé = tourner, molette = avancer, clic droit glissé = se déplacer ; au téléphone : un doigt pour tourner,
+deux pour zoomer). Sans carte graphique compatible, la vue 2,5D s'affiche à la place (`?vue=plan` pour la forcer).
+Comme dans la vue d'en haut : bureau du directeur au centre, salle d'analyse technique,
 pôle macro et discours, salle de réunion, bibliothèque et vérification, labo quant, contrôle des risques,
 salle des données. Chaque agent est assis à son poste ; sa couleur dit ce qu'il fait **réellement**
 (vert disponible, bleu au travail, orange file d'attente, rouge erreur, gris en construction). Les flèches

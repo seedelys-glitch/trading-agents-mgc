@@ -167,6 +167,7 @@ function dessinerEtiquette(g, p) {
 }
 
 function majPlateau(etatCourant, choix) {
+  if (window.maj3d) window.maj3d(etatCourant, choix);
   if (!plan || !etatCourant) return;
   if (zoneChoisie && !$("#panneau").hidden && !choix) majZone(false).catch(() => {});
   document.querySelectorAll(".zone").forEach((z) => z.classList.toggle("choisie", z.dataset.zone === zoneChoisie));
@@ -223,6 +224,7 @@ function choisirMode(m) {
   const b = $("#b-mode");
   if (b) { b.textContent = mode === "bureau" ? "◯" : "▦"; b.setAttribute("aria-label", mode === "bureau" ? "Voir l'ancien hall" : "Voir le bureau"); b.title = b.getAttribute("aria-label"); }
   $("#hall").setAttribute("aria-label", mode === "bureau" ? "Le bureau de l'université : zones et postes des 14 agents" : "Le grand hall de l'université : les 14 agents à leur bureau");
+  if (window.basculer3d) window.basculer3d(mode);
   try { localStorage.setItem("universite-vue", mode); } catch { /* stockage indisponible : sans conséquence */ }
 }
 
@@ -413,6 +415,9 @@ $("#panneau").addEventListener("click", (e) => {
 });
 $("#fermer-panneau").addEventListener("click", () => { zoneChoisie = null; });
 
+window.GENRES_DOC = GENRES;
+window.STATUTS_DOC = STATUTS;
+window.etatCourant = () => etat;
 window.rendreEspace = rendreEspace;
 window.apresEspace = apresEspace;
 window.addEventListener("resize", appliquerVue);

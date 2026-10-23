@@ -1,0 +1,1 @@
+three.js r170 (MIT, voir LICENSE), copie locale : le bureau 3D marche sans Internet.

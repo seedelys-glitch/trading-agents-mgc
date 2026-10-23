@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Université MGC</title>
 <link rel="stylesheet" href="style.css">
+<script type="importmap">{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }</script>
 </head>
 <body>
 <header class="barre">
@@ -38,6 +39,7 @@
     </g>
     <g id="plateau"></g>
   </svg>
+  <div id="scene3d" hidden></div>
   <div class="zoom">
     <button data-zoom="1.25" aria-label="Zoomer">+</button>
     <button data-zoom="0.8" aria-label="Dézoomer">−</button>
@@ -63,5 +65,6 @@
 
 <script src="app.js"></script>
 <script src="bureau.js"></script>
+<script type="module" src="bureau3d.js"></script>
 </body>
 </html>

@@ -24,6 +24,8 @@ from .moteur import Moteur
 
 UI = Path(__file__).resolve().parent / "ui"
 ACTIF_S = 120          # un lien entre deux agents reste affiché 2 min après leur dernier message réel
+TYPES_FORCES = {".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".html": "text/html",
+                ".svg": "image/svg+xml", ".json": "application/json"}
 BOUGIES_MAX = 1000     # bougies renvoyées au plus par /api/bougies
 UNITES_GRAPHIQUE = ("H1", "M15", "M5", "D1", "M1")   # unité préférée pour le petit graphique d'un poste
 log = logging.getLogger("universite")
@@ -337,8 +339,9 @@ def fabriquer_handler(univ):
             f = (UI / chemin.lstrip("/")).resolve()
             if UI.resolve() not in f.parents or not f.is_file():
                 return self._envoyer(404, {"erreur": "introuvable"})
-            type_ = mimetypes.guess_type(f.name)[0] or "application/octet-stream"
-            if type_.startswith("text/") or type_ in ("application/javascript",):
+            # Sous Windows, le registre peut associer .js à text/plain : les modules du bureau 3D seraient refusés
+            type_ = TYPES_FORCES.get(f.suffix.lower()) or mimetypes.guess_type(f.name)[0] or "application/octet-stream"
+            if type_.startswith("text/") or type_ in ("application/javascript", "application/json", "image/svg+xml"):
                 type_ += "; charset=utf-8"
             return self._envoyer(200, f.read_bytes(), type_)
 

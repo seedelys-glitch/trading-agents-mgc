@@ -105,6 +105,12 @@ d'orchestre (et la caméra du bureau), bouton « lancer », voix / appli / Teleg
      les autres = agents de la pièce et leurs derniers documents.
    - E6 FAIT : bureau du directeur = file de travail, dernière synthèse (texte), demandes reçues, alertes reçues,
      bouton « Demander une synthèse ».
+   - 3D (23/10, demande de Jabran « comme un vrai jeu ») : `ui/bureau3d.js` (three.js r170 en copie locale dans
+     `ui/vendor/three`, licence MIT, aucun téléchargement) relit la même scène et le même état : grand hall (marbre,
+     colonnes, fenêtres, mezzanine, lustres), bureaux bois et or, écran de chaque poste = vrai document ou mission en
+     cours, agents (seuls ceux au travail bougent), anneau au sol = état réel, arcs lumineux = vrais messages, ombres et
+     halo lumineux. Clic = espace de l'agent ou pièce. Sans WebGL 2 ou avec `?vue=plan` : vue 2,5D SVG. Le serveur
+     force le type « text/javascript » (sous Windows le registre peut casser les modules).
    - E7 : livrer sur le PC (fichiers de `universite/`), Jabran relance l'université et regarde ; ensuite seulement,
      idées possibles : moteur 3D (Three.js) qui relirait la même scène, VR plus tard.
 3. Quand NinjaTrader 8 / Bookmap seront installés : temps réel et agent 4 (heatmap).
@@ -130,7 +136,7 @@ d'orchestre (et la caméra du bureau), bouton « lancer », voix / appli / Teleg
 - Le dossier git du PC n'a pas de lien vers GitHub : la sauvegarde GitHub est une copie (voir 9).
 
 ## 7. Tests (23/10/2026)
-- Conteneur de développement : 182 tests de la Salle + 104 de l'université = **286 réussis** (bureau E6),
+- Conteneur de développement : 182 tests de la Salle + 106 de l'université = **288 réussis** (bureau 3D),
   avec la commande ci-dessous (les deux dossiers ensemble fonctionnent maintenant).
 - Sur le PC de Jabran (Python 3.13.16) : 217 réussis avant l'ajout du replay et de la bibliothèque
   (les tests ajoutés depuis n'y ont pas encore été lancés).

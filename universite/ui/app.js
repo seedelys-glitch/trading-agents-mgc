@@ -143,11 +143,13 @@ function appliquerVue() {
   $("#hall").classList.toggle("proche", echelle >= 1.2);     // assez près pour lire les écrans des postes
 }
 function zoomer(f, cx = vue.x + vue.w / 2, cy = vue.y + vue.h / 2) {
+  if (window.zoom3d && window.zoom3d(f)) return;
   const w = Math.min(2400, Math.max(300, vue.w / f)), h = (w * 1000) / 1600;
   vue = { x: cx - ((cx - vue.x) * w) / vue.w, y: cy - ((cy - vue.y) * h) / vue.h, w, h };
   appliquerVue();
 }
 function allerA(nom) {
+  if (window.vue3d && window.vue3d(nom)) return;
   const enBureau = window.modePlateau && window.modePlateau() === "bureau";
   const plateau = enBureau ? (nom === "directeur" ? window.cadreDirecteur() : window.cadreEnsemble()) : null;
   vue = plateau || (nom === "directeur" ? { x: 450, y: 260, w: 700, h: 437.5 } : { x: 0, y: 0, w: 1600, h: 1000 });

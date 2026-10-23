@@ -164,3 +164,12 @@ def test_une_seule_universite_par_port(univ):
     port = int(univ.url.rsplit(":", 1)[1])
     with pytest.raises(OSError):                 # la 2e copie ne peut pas écouter sur le même port
         lancer(univ, port=port)
+
+
+def test_bureau_3d_servi_en_javascript(univ):
+    for chemin in ("/bureau3d.js", "/vendor/three/three.module.js", "/vendor/three/addons/controls/OrbitControls.js"):
+        with urllib.request.urlopen(univ.url + chemin, timeout=5) as r:     # un module refusé = bureau 3D vide
+            assert r.status == 200 and r.headers["Content-Type"].startswith("text/javascript"), chemin
+    with urllib.request.urlopen(univ.url + "/", timeout=5) as r:
+        page = r.read().decode()
+    assert '"three": "./vendor/three/three.module.js"' in page and 'id="scene3d"' in page
