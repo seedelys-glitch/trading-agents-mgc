@@ -51,6 +51,9 @@ class Universite:
         derniers = {r["agent"]: r for r in self.base.lire(
             "SELECT agent, MAX(fin) AS fin FROM missions WHERE statut='terminee' GROUP BY agent")}
         docs = {r["agent"]: r["n"] for r in self.base.lire("SELECT agent, COUNT(*) AS n FROM documents GROUP BY agent")}
+        derniers_docs = {r["agent"]: r for r in self.base.lire(
+            "SELECT id, agent, genre, titre, statut, cree FROM documents WHERE id IN"
+            " (SELECT MAX(id) FROM documents GROUP BY agent)")}
         liste = []
         for a in agents.AGENTS:
             fiche = agents.fiche(a, connues)
@@ -67,7 +70,7 @@ class Universite:
                 statut = "disponible"
             liste.append({"n": a["n"], "cle": a["cle"], "nom": a["nom"], "court": a["court"], "statut": statut,
                           "competences": fiche["competences_branchees"], "file": attente.get(a["n"], 0),
-                          "documents": docs.get(a["n"], 0),
+                          "documents": docs.get(a["n"], 0), "dernier_document": derniers_docs.get(a["n"]),
                           "mission": None if not m else {k: m[k] for k in (
                               "id", "titre", "phase", "role", "etape", "etapes_faites", "debut", "battement")}})
         liens = self.base.lire("SELECT de, a, genre, MAX(ts) AS ts, COUNT(*) AS n FROM messages WHERE ts>=?"

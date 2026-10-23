@@ -89,6 +89,7 @@ function majHall() {
     b.querySelector(":scope > title").textContent = `${a.nom} — ${a.mission ? a.mission.etape : STATUTS[a.statut]}`;
     b.querySelectorAll(".soutien").forEach((s) => s.classList.toggle("actif", !!a.mission && a.mission.role === s.dataset.role));
   }
+  if (window.majPlateau) window.majPlateau(etat, choisi);
   const g = $("#liens");
   g.textContent = "";
   for (const l of etat.liens) {
@@ -136,14 +137,20 @@ async function rafraichir() {
 }
 
 // ------------------------------------------------------------------ zoom et déplacement
-function appliquerVue() { $("#hall").setAttribute("viewBox", `${vue.x} ${vue.y} ${vue.w} ${vue.h}`); }
+function appliquerVue() {
+  $("#hall").setAttribute("viewBox", `${vue.x} ${vue.y} ${vue.w} ${vue.h}`);
+  const r = $("#hall").getBoundingClientRect(), echelle = Math.min(r.width / vue.w, r.height / vue.h);
+  $("#hall").classList.toggle("proche", echelle >= 1.2);     // assez près pour lire les écrans des postes
+}
 function zoomer(f, cx = vue.x + vue.w / 2, cy = vue.y + vue.h / 2) {
   const w = Math.min(2400, Math.max(300, vue.w / f)), h = (w * 1000) / 1600;
   vue = { x: cx - ((cx - vue.x) * w) / vue.w, y: cy - ((cy - vue.y) * h) / vue.h, w, h };
   appliquerVue();
 }
 function allerA(nom) {
-  vue = nom === "directeur" ? { x: 450, y: 260, w: 700, h: 437.5 } : { x: 0, y: 0, w: 1600, h: 1000 };
+  const enBureau = window.modePlateau && window.modePlateau() === "bureau";
+  const plateau = enBureau ? (nom === "directeur" ? window.cadreDirecteur() : window.cadreEnsemble()) : null;
+  vue = plateau || (nom === "directeur" ? { x: 450, y: 260, w: 700, h: 437.5 } : { x: 0, y: 0, w: 1600, h: 1000 });
   appliquerVue();
 }
 function pointSvg(e) {
@@ -154,7 +161,7 @@ function brancherZoom() {
   const svg = $("#hall");
   svg.addEventListener("wheel", (e) => { e.preventDefault(); const p = pointSvg(e); zoomer(e.deltaY < 0 ? 1.15 : 0.87, p.x, p.y); }, { passive: false });
   let depart = null;
-  svg.addEventListener("pointerdown", (e) => { if (e.target.closest(".bureau")) return; depart = { e, v: { ...vue }, s: pointSvg(e).s }; svg.classList.add("glisse"); svg.setPointerCapture(e.pointerId); });
+  svg.addEventListener("pointerdown", (e) => { if (e.target.closest(".bureau, .poste")) return; depart = { e, v: { ...vue }, s: pointSvg(e).s }; svg.classList.add("glisse"); svg.setPointerCapture(e.pointerId); });
   svg.addEventListener("pointermove", (e) => { if (!depart) return; vue.x = depart.v.x - (e.clientX - depart.e.clientX) * depart.s; vue.y = depart.v.y - (e.clientY - depart.e.clientY) * depart.s; appliquerVue(); });
   const fin = () => { depart = null; svg.classList.remove("glisse"); };
   svg.addEventListener("pointerup", fin); svg.addEventListener("pointercancel", fin);

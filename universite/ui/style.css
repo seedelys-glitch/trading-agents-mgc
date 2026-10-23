@@ -118,3 +118,58 @@ dialog::backdrop { background: #000a; }
   .soutiens { grid-template-columns: 1fr; }
   .legende { font-size: 11px; }
 }
+
+/* bureau immersif (vue isométrique) */
+.sol-plateau { fill: #111014; stroke: var(--trait); stroke-width: 1.5; }
+.sol-zone { fill: #1a1712; stroke: #3a3122; stroke-width: 1.2; }
+.zone-directeur .sol-zone { fill: #2a2111; stroke: var(--or); }
+.zone-analyse .sol-zone { fill: #141a24; } .zone-macro .sol-zone { fill: #1c1622; }
+.zone-reunion .sol-zone { fill: #1a1d17; } .zone-bibliotheque .sol-zone { fill: #20180f; }
+.zone-labo .sol-zone { fill: #121d1d; } .zone-risque .sol-zone { fill: #221414; } .zone-donnees .sol-zone { fill: #151820; }
+.plinthe { fill: #0c0b0e; stroke: #2b2620; } .plinthe.cote { fill: #09080b; }
+.nom-zone { fill: var(--doux); font-size: 13px; text-anchor: middle; font-weight: 600; letter-spacing: .4px; pointer-events: none; }
+.boite .dessus { fill: #3a3022; stroke: #5a4a30; stroke-width: .8; }
+.boite .face-y { fill: #241e15; stroke: #3a3022; stroke-width: .8; }
+.boite .face-x { fill: #1b160f; stroke: #3a3022; stroke-width: .8; }
+.boite.siege .dessus { fill: #2a2a33; } .boite.siege .face-y { fill: #1e1e25; } .boite.siege .face-x { fill: #17171d; }
+.boite.etagere .dessus { fill: #4a3820; } .boite.etagere .face-y { fill: #3b2c18; stroke: #6a5030; stroke-dasharray: 2 5; }
+.boite.baie .dessus { fill: #232a36; } .boite.baie .face-y { fill: #161b24; stroke: #2f4a6a; stroke-dasharray: 1 6; } .boite.baie .face-x { fill: #11151c; }
+.boite.tableau-blanc .face-y { fill: #cfd4d6; } .boite.tableau-blanc .dessus, .boite.tableau-blanc .face-x { fill: #8a8f92; }
+.poste { cursor: pointer; }
+.poste:focus { outline: none; }
+.poste.directeur .bureau-table .dessus { fill: #4a3816; stroke: var(--or); }
+.ecran-poste { fill: #0e1520; stroke: #2a3a52; stroke-width: 1.2; }
+.poste.travail .ecran-poste { fill: #1d4f86; stroke: var(--bleu); }
+.poste.erreur .ecran-poste { fill: #4a1616; stroke: var(--rouge); }
+.poste.attente .ecran-poste { fill: #3a2a10; stroke: var(--orange); }
+.personne .corps { fill: #2b2b35; stroke: var(--vert); stroke-width: 2; }
+.personne .tete { fill: #3a3a46; stroke: var(--vert); stroke-width: 2; }
+.personne .halo-poste { fill: none; stroke: none; }
+.poste.travail .corps, .poste.travail .tete { stroke: var(--bleu); }
+.poste.travail .halo-poste { stroke: var(--bleu); stroke-width: 2; animation: halo 1.8s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+.poste.attente .corps, .poste.attente .tete { stroke: var(--orange); }
+.poste.erreur .corps, .poste.erreur .tete { stroke: var(--rouge); }
+.poste.construction .personne { display: none; }
+.poste.construction .bureau-table { opacity: .45; } .poste.construction .ecran-poste { fill: #0a0a0c; stroke: #333; stroke-dasharray: 3 3; }
+.poste.choisi .tete, .poste:focus .tete { stroke: var(--or-clair); stroke-width: 3; }
+.etiquette-poste { pointer-events: none; }
+.etiquette-poste .fond { fill: rgba(11,11,13,.86); stroke: var(--trait); }
+.etiquette-poste .court { fill: var(--texte); font-size: 12px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+.etiquette-poste .sous { fill: var(--bleu); font-size: 11px; text-anchor: middle; }
+.etiquette-poste .point { fill: var(--vert); }
+.etiquette-poste.travail .point { fill: var(--bleu); } .etiquette-poste.attente .point { fill: var(--orange); }
+.etiquette-poste.erreur .point { fill: var(--rouge); } .etiquette-poste.construction .point { fill: var(--gris); }
+.etiquette-poste.construction .court { fill: var(--doux); } .etiquette-poste.construction .sous { fill: var(--doux); }
+.etiquette-poste.attente .sous { fill: var(--orange); } .etiquette-poste.erreur .sous { fill: var(--rouge); }
+.etiquette-poste.choisi .fond { stroke: var(--or-clair); }
+@media (prefers-reduced-motion: reduce) { .poste.travail .halo-poste { animation: none; } }
+.ecran-flottant { display: none; cursor: pointer; }
+#hall.proche .ecran-flottant { display: inline; }
+.ecran-flottant .cadre { fill: rgba(9,14,22,.94); stroke: #2a3a52; stroke-width: 1.2; }
+.ecran-flottant.verifie .cadre { stroke: var(--vert); } .ecran-flottant.rejete .cadre { stroke: var(--rouge); }
+.ecran-flottant.a_verifier .cadre { stroke: var(--orange); }
+.ecran-flottant text { font-size: 7.5px; fill: var(--texte); }
+#hall.proche .ecran-flottant.vide { display: none; }
+.ecran-flottant .l1 { font-weight: 700; fill: var(--or-clair); }
+.ecran-flottant .l3, .ecran-flottant .l4 { fill: var(--doux); font-size: 6.8px; }
+.ecran-flottant .courbe { fill: none; stroke: var(--bleu); stroke-width: .9; }

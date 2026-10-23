@@ -92,3 +92,21 @@ def test_bougies_erreurs(univ):
     assert lire(univ, "/api/bougies?jeu=999")[0] == 400
     assert lire(univ, "/api/bougies")[0] == 400
     assert lire(univ, f"/api/bougies?jeu={univ.jeu}&unite=X9")[0] == 400
+
+
+def test_page_charge_le_bureau(univ):
+    with urllib.request.urlopen(univ.url + "/", timeout=5) as r:
+        assert b"bureau.js" in r.read()
+    with urllib.request.urlopen(univ.url + "/bureau.js", timeout=5) as r:
+        assert r.status == 200 and b"/api/scene" in r.read()
+
+
+def test_etat_donne_le_dernier_document_reel(univ):
+    _, e = lire(univ, "/api/etat")
+    assert all(a["dernier_document"] is None for a in e["agents"])
+    univ.base.nouvelle_mission(3, "analyse_ichimoku", "test", {"jeu": univ.jeu, "instant": INSTANT})
+    executer_tout(univ.moteur)
+    _, e = lire(univ, "/api/etat")
+    d = {a["n"]: a["dernier_document"] for a in e["agents"]}
+    assert d[3]["genre"] == "analyse" and d[3]["statut"] == "verifie"
+    assert d[9]["genre"] == "verification" and d[1] is None
