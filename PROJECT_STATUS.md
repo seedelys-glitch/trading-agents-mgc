@@ -81,12 +81,9 @@ d'orchestre (et la caméra du bureau), bouton « lancer », voix / appli / Teleg
 
 ## 5. En cours / à faire (par priorité)
 1. Redémarrer l'université, puis premières missions réelles (calendrier, discours, import TradingView, replay A et B).
-2. Phase suivante : bureau immersif (expliquer d'abord comment il s'intègre).
-   L'agent 4 (heatmap) attend Bookmap.
-2. Étape 7 : TradingView (import des exports CSV déjà possible).
-3. Étape 8 : lien avec Jarvis. Étape 9 : fiabilité et docs.
-4. Ensuite : bureau immersif (espaces, salle de réunion, labo, bibliothèque, bureau du directeur), en
+2. Phase suivante : bureau immersif (espaces, salle de réunion, labo, bibliothèque, bureau du directeur), en
    expliquant d'abord comment il s'intègre à l'architecture.
+3. Quand NinjaTrader 8 / Bookmap seront installés : temps réel et agent 4 (heatmap).
 
 ## 6. Problèmes connus et limites
 - **Pas de données temps réel** : NinjaTrader 8 n'est pas installé (le dossier `donnees_ninja` n'existe pas).
