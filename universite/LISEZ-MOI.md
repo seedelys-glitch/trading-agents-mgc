@@ -12,8 +12,8 @@ Un deuxième double-clic rouvre simplement la page.
 | Agent | Ce qu'il fait |
 |---|---|
 | 6. VWAP & EMA 200 | VWAP de séance (depuis 17 h à Chicago) avec bandes, EMA 200 en 5 min, 15 min et 1 h, à un instant donné (direct ou replay) |
-| 9. Secrétaire / auditeur | Recalcule tous les chiffres de l'agent 6 de son côté ; le document passe « vérifié » ou « rejeté » |
-| 13. Chercheur quantitatif | Contrôle un jeu de bougies : nombre, période, trous, coupures |
+| 9. Secrétaire / auditeur | Recalcule de son côté les chiffres de l'agent 6 et recompte les replays ; le document passe « vérifié » ou « rejeté » |
+| 13. Chercheur quantitatif | Contrôle un jeu de bougies (nombre, période, trous) et rejoue ta stratégie V1 (1H / 12H) : entraînement / validation / test, Monte-Carlo, résultats par régime ; moins de 30 trades = aucune conclusion |
 | 14. Directeur | Reçoit les demandes, les confie au bon agent, fait la synthèse de ce qui est vérifié |
 
 Les 10 autres agents sont affichés **« en construction »** : ils ne font rien et le bureau ne fait pas semblant.

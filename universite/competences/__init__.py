@@ -8,9 +8,11 @@ Ce que les agents savent RÉELLEMENT faire. Chaque module expose :
   executer(ctx) -> résultat (dict), en notant chaque étape avec ctx.etape(role, libellé)
 """
 
-from . import analyse_vwap_ema, controle_donnees, demande_directeur, synthese_directeur, verification_analyse
+from . import (analyse_vwap_ema, controle_donnees, demande_directeur, replay_strategie_v1, synthese_directeur,
+               verification_analyse, verification_replay)
 
-MODULES = [analyse_vwap_ema, verification_analyse, controle_donnees, synthese_directeur, demande_directeur]
+MODULES = [analyse_vwap_ema, verification_analyse, controle_donnees, replay_strategie_v1, verification_replay,
+           synthese_directeur, demande_directeur]
 TYPES = {m.TYPE: m for m in MODULES}
 
 

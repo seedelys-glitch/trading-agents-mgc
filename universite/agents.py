@@ -90,7 +90,7 @@ AGENTS = [
      "outils": ["recalcul indépendant en Python pur", "base de l'université"],
      "qualite": ["Recalcul sans réutiliser le code de l'agent vérifié.", "Écarts chiffrés et tolérance écrite."],
      "escalade": "Écart hors tolérance -> rejet + message à l'auteur et au directeur.",
-     "competences": ["verification_analyse"]},
+     "competences": ["verification_analyse", "verification_replay"]},
     {"n": 10, "cle": "discours", "nom": "Analyse des discours", "court": "Disc", "salle": None,
      "mission": "Analyser le ton des discours (Fed, BCE, Trésor) : faucon, colombe, neutre, et ce qui change.",
      "outils": ["textes officiels (à brancher)"],
@@ -116,7 +116,7 @@ AGENTS = [
      "outils": ["donnees.py (import, contrôle qualité)", "mgc.backtest", "mgc.stats"],
      "qualite": ["Source, période et nombre de bougies toujours affichés.", "Trous et doublons signalés."],
      "escalade": "Données douteuses -> bloque les analyses qui en dépendent.",
-     "competences": ["controle_donnees"]},
+     "competences": ["controle_donnees", "replay_strategie_v1"]},
     {"n": 14, "cle": "directeur", "nom": "Directeur", "court": "Dir", "salle": None,
      "mission": "Interlocuteur principal de Jabran : reçoit les demandes, les confie aux bons agents, "
                 "suit l'avancement et fait la synthèse de ce qui est vérifié.",
