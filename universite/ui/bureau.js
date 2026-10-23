@@ -240,6 +240,89 @@ async function demarrerPlateau() {
   }
 }
 
+// ------------------------------------------------------------------ espace de travail d'un agent (panneau)
+const graphiques = {};
+
+function texteSource(s, jeux) {
+  if (s.jeu !== undefined && s.unite) {
+    const j = jeux[s.jeu];
+    return `${j ? `Jeu « ${esc(j.nom)} » (${esc(j.source)})` : `Jeu n° ${esc(s.jeu)}`} · ${esc(s.unite)}` +
+      (s.n ? ` · ${s.n} bougies` : "") + (s.debut ? ` · du ${heure(s.debut)} au ${heure(s.fin)}` : "");
+  }
+  if (s.document !== undefined) return `<a data-doc="${+s.document}">Document n° ${+s.document}</a>`;
+  if (s.url) return `<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.url)}</a>`;
+  if (s.fichier) return `Fichier : ${esc(s.fichier)}`;
+  if (s.extrait !== undefined) return `Extrait n° ${+s.extrait} (${esc(s.origine || "")})`;
+  if (s.source) return `${esc(s.source)}${s.telecharge ? ` · téléchargé le ${heure(s.telecharge)}` : ""}`;
+  if (s.jeu !== undefined) return jeux[s.jeu] ? `Jeu « ${esc(jeux[s.jeu].nom)} »` : `Jeu n° ${esc(s.jeu)}`;
+  return esc(s.texte || JSON.stringify(s));
+}
+
+function rendreEspace(esp) {
+  const d = esp.dernier_document, ag = esp.agent;
+  const enCours = esp.mission_en_cours;
+  return `
+    ${enCours ? `<div class="bloc"><h3>Au travail en ce moment</h3>${esc(enCours.titre)}<br><span class="doux">${esc(ROLES[enCours.role] || "")} : ${esc(enCours.etape)}</span></div>` : ""}
+    ${esp.file ? `<div class="bloc"><h3>File d'attente</h3>${esp.file} mission(s) attendent leur tour.</div>` : ""}
+    <div class="bloc"><h3>Sur son bureau</h3>${d ? `${etiquette(d.statut)} <a data-doc="${d.id}">${esc(d.titre)}</a>
+      <br><small class="doux">n° ${d.id} · ${esc(GENRES[d.genre] || d.genre)} · ${heure(d.cree)}${d.verifie_par ? ` · contrôlé par l'agent ${d.verifie_par}` : ""}</small>
+      <pre class="doc apercu">${esc(couper(d.contenu, 700))}</pre>`
+      : ag.en_construction ? `<span class="doux">Poste en construction : ${esc(esp.agent.mission)} Aucune donnée, aucune activité simulée.</span>`
+      : '<span class="doux">Aucun document pour l\'instant.</span>'}</div>
+    ${esp.graphique ? `<div class="bloc"><h3>Les bougies qu'il a lues</h3><div data-graphique class="graphique"><span class="doux">Chargement des bougies…</span></div></div>` : ""}
+    <div class="bloc"><h3>Sources citées</h3>${esp.sources.length ? `<ul class="liste">${esp.sources.map((s) =>
+      `<li>${texteSource(s, esp.jeux)}<br><small class="doux">citée dans le document n° ${s.cite_dans}</small></li>`).join("")}</ul>`
+      : '<span class="doux">Aucune source pour l\'instant.</span>'}</div>
+    <div class="bloc"><h3>Confier une tâche</h3>${esp.taches.length ? esp.taches.map((t) =>
+      `<button data-lancer="${esc(t.type)}">${esc(t.titre)}</button>`).join(" ")
+      : `<span class="doux">${ag.en_construction ? "Rien à confier tant que le poste est en construction." : "Cet agent travaille seulement à la demande des autres agents."}</span>`}</div>
+    <div class="bloc"><h3>Dernières missions</h3>${esp.missions.length ? `<ul class="liste">${esp.missions.slice(0, 6).map((m) =>
+      `<li>${etiquette(m.statut)} <a data-mission="${m.id}">${esc(m.titre)}</a><br><small class="doux">n° ${m.id} · ${heure(m.cree)} · demandée par ${esc(m.demandeur)}</small></li>`).join("")}</ul>`
+      : '<span class="doux">Aucune mission.</span>'}</div>
+    <div class="bloc"><h3>Échanges avec les autres agents</h3>${esp.echanges.length ? `<ul class="liste">${esp.echanges.slice(0, 6).map((m) =>
+      `<li>${m.de === ag.n ? `→ agent ${m.a}` : `← agent ${m.de}`} (${esc(m.genre)}) : ${esc(couper(m.contenu, 160))}<br><small class="doux">${heure(m.ts)}</small></li>`).join("")}</ul>`
+      : '<span class="doux">Aucun échange.</span>'}</div>`;
+}
+
+function svgBougies(r, jeu) {
+  const b = r.bougies;
+  if (!b.length) return '<span class="doux">Ces bougies ne sont plus dans la base.</span>';
+  const W = 480, H = 190, g = 34, bas = 22;
+  const hauts = b.map((x) => x[2]), basP = b.map((x) => x[3]);
+  const max = Math.max(...hauts), min = Math.min(...basP), k = (max - min) || 1, pas = (W - g) / b.length;
+  const y = (v) => (4 + ((max - v) * (H - bas - 8)) / k).toFixed(1);
+  const corps = b.map((x, i) => {
+    const cx = (i + 0.5) * pas, hausse = x[4] >= x[1];
+    const haut = Math.max(x[1], x[4]), basC = Math.min(x[1], x[4]);
+    return `<line x1="${cx.toFixed(1)}" x2="${cx.toFixed(1)}" y1="${y(x[2])}" y2="${y(x[3])}" class="meche"/>` +
+      `<rect x="${(cx - pas * 0.35).toFixed(1)}" width="${Math.max(1, pas * 0.7).toFixed(1)}" y="${y(haut)}" height="${Math.max(1, y(basC) - y(haut)).toFixed(1)}" class="${hausse ? "hausse" : "baisse"}"/>`;
+  }).join("");
+  const fin = b[b.length - 1][0];
+  return `<svg viewBox="0 0 ${W} ${H}" class="bougies" role="img" aria-label="${b.length} bougies ${esc(r.unite)} fermées avant l'instant analysé">
+      ${corps}
+      <line x1="${W - g + 2}" x2="${W - g + 2}" y1="0" y2="${H - bas}" class="instant"/>
+      <text x="${W - 2}" y="${(+y(max) + 8).toFixed(1)}" class="prix">${max.toFixed(1)}</text>
+      <text x="${W - 2}" y="${y(min)}" class="prix">${min.toFixed(1)}</text>
+      <text x="2" y="${H - 6}" class="date">${heure(b[0][0])}</text>
+      <text x="${W - g - 2}" y="${H - 6}" class="date fin">${heure(fin)}</text>
+    </svg>
+    <small class="doux">${esc(r.unite)} · ${b.length} bougies fermées du jeu « ${esc(jeu ? jeu.nom : r.jeu.nom)} » (${esc(r.jeu.source)}${r.jeu.temps_reel ? "" : ", différées ou historiques"})${r.reconstruite_depuis ? `, reconstruites depuis ${esc(r.reconstruite_depuis)}` : ""} ; trait vertical = instant analysé (${heure(r.instant)}), rien après.</small>`;
+}
+
+async function apresEspace(zone, esp) {
+  const place = zone.querySelector("[data-graphique]");
+  if (!place || !esp.graphique) return;
+  const gr = esp.graphique, cle = `${gr.jeu}|${gr.unite}|${gr.instant}`;
+  if (!graphiques[cle]) {
+    try { graphiques[cle] = await api(`/api/bougies?jeu=${gr.jeu}&unite=${gr.unite}&instant=${gr.instant}&n=80`); }
+    catch (e) { place.innerHTML = `<span class="doux">Bougies indisponibles : ${esc(e.message)}</span>`; return; }
+  }
+  const actuel = zone.querySelector("[data-graphique]");
+  if (actuel) actuel.innerHTML = svgBougies(graphiques[cle], esp.jeux[gr.jeu]);
+}
+
+window.rendreEspace = rendreEspace;
+window.apresEspace = apresEspace;
 window.addEventListener("resize", appliquerVue);
 window.majPlateau = majPlateau;
 window.modePlateau = () => mode;

@@ -171,18 +171,20 @@ function brancherZoom() {
 
 // ------------------------------------------------------------------ panneau d'un agent
 async function ouvrirAgent(n) {
-  choisi = n; ongletChoisi = "mission";
+  choisi = n; ongletChoisi = window.rendreEspace ? "espace" : "mission";
   $("#panneau").hidden = false;
   await majPanneau(true);
   majHall();
 }
 
 async function majPanneau(premier) {
-  const f = await api(`/api/agent/${choisi}`);
+  const [f, esp] = await Promise.all([api(`/api/agent/${choisi}`),
+    window.rendreEspace ? api(`/api/agent/${choisi}/espace`) : null]);
   const a = etat.agents.find((x) => x.n === choisi);
-  const onglets = { mission: "Mission", taches: `Tâches (${f.missions.length})`, documents: `Documents (${f.documents.length})`,
+  const onglets = { ...(esp ? { espace: "Son espace" } : {}), mission: "Mission", taches: `Tâches (${f.missions.length})`, documents: `Documents (${f.documents.length})`,
     soutiens: "Soutiens", historique: "Historique" };
   const contenu = {
+    espace: () => window.rendreEspace(esp),
     mission: () => `
       <div class="bloc"><h3>Mission</h3>${esc(f.mission)}</div>
       ${a.mission ? `<div class="bloc"><h3>En ce moment</h3>${esc(a.mission.titre)}<br><span class="doux">Étape : ${esc(a.mission.etape)} — depuis ${duree(etat.maintenant - a.mission.battement)}</span></div>` : ""}
@@ -218,6 +220,7 @@ async function majPanneau(premier) {
     ${f.competences_branchees.length ? "" : '<span class="doux"> aucune compétence branchée</span>'}
     <div class="onglets">${Object.entries(onglets).map(([k, t]) => `<button data-onglet="${k}" class="${k === ongletChoisi ? "actif" : ""}">${t}</button>`).join("")}</div>
     <div>${contenu[ongletChoisi]()}</div>`;
+  if (ongletChoisi === "espace") window.apresEspace(zone, esp);
   if (!premier) $("#panneau").scrollTop = defil;
 }
 

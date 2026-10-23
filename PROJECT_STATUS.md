@@ -1,6 +1,6 @@
 # MGC AI Trading Desk — état du projet
 
-Dernière mise à jour : 23/10/2026 (bureau immersif, étapes E1 à E3 : plan, plateau isométrique, écrans des postes). Ce fichier est la mémoire du projet : on le lit
+Dernière mise à jour : 23/10/2026 (bureau immersif, étapes E1 à E4 : plan, plateau, écrans des postes, espace de travail d'un agent). Ce fichier est la mémoire du projet : on le lit
 avant de reprendre le travail, on le met à jour après chaque étape.
 
 ## 0. Audit du 23/10/2026 (soir, sur le PC de Jabran) : à lire en premier
@@ -94,8 +94,12 @@ d'orchestre (et la caméra du bureau), bouton « lancer », voix / appli / Teleg
    - E3 FAIT : en s'approchant (zoom), un écran au-dessus de chaque poste montre son dernier document réel (genre,
      statut de vérification, titre, heure) et la courbe des clôtures des bougies que l'agent a réellement lues
      (`/api/bougies`, fermées à l'instant analysé). `/api/etat` donne maintenant `dernier_document` par agent.
-   - À faire : E4 espace de travail d'un agent · E5 bibliothèque, réunion, labo, données · E6 bureau du directeur ·
-     E7 finitions PC / téléphone, livraison.
+   - E4 FAIT : onglet « Son espace » (ouvert d'office en cliquant un poste) : travail en cours, file, dernier
+     document avec son statut, graphique en chandeliers des bougies réellement lues (trait = instant analysé, rien
+     après), sources citées (jeu, unité, période, document, lien, fichier), « Confier une tâche » = vraie mission,
+     dernières missions, échanges. `/api/agent/N/espace` donne aussi les noms des jeux ; une source garde sa propre
+     référence (`document`) et dit où elle est citée (`cite_dans`).
+   - À faire : E5 bibliothèque, réunion, labo, données · E6 bureau du directeur · E7 finitions, livraison.
 3. Quand NinjaTrader 8 / Bookmap seront installés : temps réel et agent 4 (heatmap).
 
 ## 6. Problèmes connus et limites
@@ -119,7 +123,7 @@ d'orchestre (et la caméra du bureau), bouton « lancer », voix / appli / Teleg
 - Le dossier git du PC n'a pas de lien vers GitHub : la sauvegarde GitHub est une copie (voir 9).
 
 ## 7. Tests (23/10/2026)
-- Conteneur de développement : 182 tests de la Salle + 93 de l'université = **275 réussis** (bureau E3),
+- Conteneur de développement : 182 tests de la Salle + 94 de l'université = **276 réussis** (bureau E4),
   avec la commande ci-dessous (les deux dossiers ensemble fonctionnent maintenant).
 - Sur le PC de Jabran (Python 3.13.16) : 217 réussis avant l'ajout du replay et de la bibliothèque
   (les tests ajoutés depuis n'y ont pas encore été lancés).

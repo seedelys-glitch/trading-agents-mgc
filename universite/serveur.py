@@ -124,7 +124,7 @@ class Universite:
                 cle = json_cle(s)
                 if cle not in vues and len(sources) < 20:
                     vues.add(cle)
-                    sources.append({**s, "document": d["id"]} if isinstance(s, dict) else {"texte": s, "document": d["id"]})
+                    sources.append({**s, "cite_dans": d["id"]} if isinstance(s, dict) else {"texte": s, "cite_dans": d["id"]})
         return {"agent": {k: f[k] for k in ("n", "cle", "nom", "court", "mission", "outils", "qualite", "escalade",
                                              "competences_branchees", "en_construction", "soutiens")},
                 "statut": vivant["statut"], "mission_en_cours": vivant["mission"], "file": vivant["file"],
@@ -133,6 +133,7 @@ class Universite:
                                            " FROM missions WHERE agent=? ORDER BY id DESC LIMIT 15", (a["n"],)),
                 "documents": documents, "dernier_document": dernier, "graphique": graphique(dernier),
                 "sources": sources,
+                "jeux": {j["id"]: j for j in self.base.lire("SELECT id, nom, source, temps_reel FROM jeux")},
                 "echanges": self.base.lire("SELECT * FROM messages WHERE de=? OR a=? ORDER BY id DESC LIMIT 20",
                                            (a["n"], a["n"])),
                 "taches": [c for c in competences.catalogue() if c["agent"] == a["n"] and not c["interne"]]}

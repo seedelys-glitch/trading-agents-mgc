@@ -110,3 +110,14 @@ def test_etat_donne_le_dernier_document_reel(univ):
     d = {a["n"]: a["dernier_document"] for a in e["agents"]}
     assert d[3]["genre"] == "analyse" and d[3]["statut"] == "verifie"
     assert d[9]["genre"] == "verification" and d[1] is None
+
+
+def test_sources_gardent_leur_reference(univ):
+    univ.base.nouvelle_mission(1, "analyse_smc", "test", {"jeu": univ.jeu, "instant": INSTANT})
+    executer_tout(univ.moteur)
+    _, e9 = lire(univ, "/api/agent/9/espace")
+    doc_analyse = univ.base.un("SELECT id FROM documents WHERE genre='analyse'")["id"]
+    assert [s["document"] for s in e9["sources"]] == [doc_analyse]          # le document vérifié
+    assert e9["sources"][0]["cite_dans"] != doc_analyse                      # cité dans le procès-verbal
+    _, e1 = lire(univ, "/api/agent/1/espace")
+    assert e1["jeux"][str(univ.jeu)]["nom"] == "test"

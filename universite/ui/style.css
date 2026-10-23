@@ -173,3 +173,11 @@ dialog::backdrop { background: #000a; }
 .ecran-flottant .l1 { font-weight: 700; fill: var(--or-clair); }
 .ecran-flottant .l3, .ecran-flottant .l4 { fill: var(--doux); font-size: 6.8px; }
 .ecran-flottant .courbe { fill: none; stroke: var(--bleu); stroke-width: .9; }
+pre.doc.apercu { max-height: 220px; overflow: auto; font-size: 13px; margin: 8px 0 0; }
+.graphique svg.bougies { width: 100%; height: auto; display: block; background: var(--fond); border-radius: 8px; margin-bottom: 4px; }
+.bougies .meche { stroke: #8a877f; stroke-width: 1; }
+.bougies .hausse { fill: var(--vert); } .bougies .baisse { fill: var(--rouge); }
+.bougies .instant { stroke: var(--or); stroke-dasharray: 4 4; }
+.bougies .prix { fill: var(--doux); font-size: 10px; text-anchor: end; }
+.bougies .date { fill: var(--doux); font-size: 10px; } .bougies .date.fin { text-anchor: end; }
+.bloc button[data-lancer] { margin: 4px 6px 4px 0; }
