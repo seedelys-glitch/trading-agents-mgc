@@ -306,7 +306,8 @@ async function fenetreDonnees() {
     <div class="bloc"><h3>Importer un fichier CSV (export TradingView ou NinjaTrader)</h3>
       <div class="ligne"><input type="file" name="fichier" accept=".csv,text/csv"><input name="nom" placeholder="nom du jeu" maxlength="80"></div>
       <p class="ligne"><button data-csv>Importer le fichier</button></p></div>
-    <div class="ligne"><button data-ninja>Importer depuis NinjaTrader</button><button data-yahoo>Importer Yahoo (différé)</button></div>
+    <div class="ligne"><button data-tv>Lire le dossier TradingView</button><button data-ninja>Importer depuis NinjaTrader</button><button data-yahoo>Importer Yahoo (différé)</button></div>
+    <p class="doux">Dossier TradingView : déposez vos exports (graphique → « Exporter les données du graphique ») dans Documents\TradingAgents\donnees_tradingview ; les exports MGC du dossier Téléchargements sont lus aussi.</p>
     <h3 style="margin-top:16px">Jeux enregistrés</h3>
     ${jeux.length ? `<ul class="liste">${jeux.map((j) => `<li><b>${esc(j.nom)}</b> ${j.temps_reel ? etiquette("temps réel") : '<span class="etiquette">différé / historique</span>'}
       <br><small>${esc(j.source)} · ${Object.entries(j.unites).map(([u, x]) => `${u} : ${x.n} bougies (${heure(x.debut)} → ${heure(x.fin)})`).join(" · ") || "vide"}</small>
@@ -322,6 +323,10 @@ async function fenetreDonnees() {
   corps.querySelector("[data-ninja]").addEventListener("click", () => action(async () => {
     const r = await poster("/api/jeux/ninja");
     return `NinjaTrader : ${Object.entries(r.unites).map(([u, x]) => `${x.ajoutees} nouvelles bougies ${u}`).join(", ")}.`;
+  }));
+  corps.querySelector("[data-tv]").addEventListener("click", () => action(async () => {
+    const r = await poster("/api/missions", { type: "import_tradingview", params: {} });
+    return `Mission n° ${r.mission} confiée au chercheur quantitatif : il lit le dossier.`;
   }));
   corps.querySelector("[data-yahoo]").addEventListener("click", () => action(async () => {
     const r = await poster("/api/jeux/yahoo");

@@ -97,6 +97,13 @@ MIGRATIONS = [
     """, """
         DROP TABLE annonces;
     """),
+    (4, "fichiers TradingView déjà importés", """
+        CREATE TABLE fichiers_importes (
+            empreinte TEXT PRIMARY KEY, chemin TEXT NOT NULL, jeu INTEGER NOT NULL, unite TEXT NOT NULL,
+            lignes INTEGER NOT NULL, ajoutees INTEGER NOT NULL, importe_le REAL NOT NULL);
+    """, """
+        DROP TABLE fichiers_importes;
+    """),
 ]
 
 CHAMPS_JSON = ("params", "resultat", "donnees", "sources", "etat", "detail", "source")

@@ -1,0 +1,4 @@
+Dépose ici les exports de TradingView (sur le graphique : menu → « Exporter les données du graphique »).
+Un fichier par unité de temps (1 min, 5 min, 1 h, 1 jour...). L'université les lit avec le bouton
+Données → « Lire le dossier TradingView » (ou une boucle). Chaque fichier n'est importé qu'une fois.
+Les exports MGC / GC du dossier Téléchargements sont lus aussi, sans être déplacés ni effacés.

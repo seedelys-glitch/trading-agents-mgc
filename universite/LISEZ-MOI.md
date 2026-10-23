@@ -35,7 +35,8 @@ Bouton **Bibliothèque** : le secrétaire lit STRATEGIE.md (sans le modifier) et
 avec sa ligne d'origine. Tu valides, corriges ou rejettes ; chaque version est gardée. Une case permet de chercher.
 
 ## Données
-Bouton **Données** : import d'un fichier CSV exporté de TradingView, des fichiers de l'indicateur NinjaTrader
+Bouton **Données** : « Lire le dossier TradingView » importe tous les exports déposés dans
+`donnees_tradingview` (et les exports MGC des Téléchargements), une seule fois chacun ; ou import d'un fichier CSV exporté de TradingView, des fichiers de l'indicateur NinjaTrader
 (temps réel), ou de Yahoo (différé, signalé comme tel). Aucune donnée n'est jamais inventée.
 
 ## Garde-fous

@@ -119,7 +119,7 @@ AGENTS = [
      "outils": ["donnees.py (import, contrôle qualité)", "mgc.backtest", "mgc.stats"],
      "qualite": ["Source, période et nombre de bougies toujours affichés.", "Trous et doublons signalés."],
      "escalade": "Données douteuses -> bloque les analyses qui en dépendent.",
-     "competences": ["controle_donnees", "replay_strategie_v1"]},
+     "competences": ["import_tradingview", "controle_donnees", "replay_strategie_v1"]},
     {"n": 14, "cle": "directeur", "nom": "Directeur", "court": "Dir", "salle": None,
      "mission": "Interlocuteur principal de Jabran : reçoit les demandes, les confie aux bons agents, "
                 "suit l'avancement et fait la synthèse de ce qui est vérifié.",
