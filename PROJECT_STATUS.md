@@ -8,7 +8,7 @@ Demande de Jabran : agents Piège, Règles Topstep, bulletin de notes, Liquidit�
 - **8 votants** dans `bureau.SPECIALISTES` : smc, fibo, ichimoku, tendance, orderflow, calendrier, **liquidite**,
   **dollar**. Le Calendrier ne lit plus le dollar (il passe à « Dollar & taux », données `macro`).
 - **Vote** : `bureau.majorite()` = au moins 2/3 des voix pondérées (`ACCORD_MIN`). À 6 votants de même poids = 4 sur 6
-  (règle d'origine) ; à 8 = **6 sur 8** (plus exigeant : à revoir avec Jabran si le desk bloque trop).
+  (règle d'origine) ; à 8 = **6 sur 8** (plus exigeant : **choix validé par Jabran le 24/10**, moins de trades, moins de pièges).
 - **Agent Liquidité** : `calculs.liquidite_sessions()` (Asie 1h-8h, Londres 8h-15h30 Paris, du jour et de la veille,
   + plus haut / bas de la veille en D1) : intacte, balayée (mèche puis retour), cassée, en formation ; liquidité intacte
   la plus proche au-dessus / en dessous, dernière prise. Veille : `veille/liquidite.py` écrit un événement
