@@ -3,6 +3,21 @@
 Dernière mise à jour : 24/10/2026 (mémoire : Scribe n° 15 et Archiviste n° 16 écrits et testés dans le conteneur ; reste l'installation sur le PC). Ce fichier est la mémoire du projet : on le lit
 avant de reprendre le travail, on le met à jour après chaque étape.
 
+## 0ter. Veille du desk (24/10/2026) : la cascade quitte Jarvis
+Plan « Jarvis connecteur » (étape 3) : Jarvis n'est plus un agent de trading, le calcul des setups va au desk.
+- `salle_des_marches/veille/` : `bougies.py` (outils de bougies repris de Jarvis), `cascade.py` (Weekly -> 12H ->
+  48 min -> 12 min, même calcul qu'avant dans Jarvis, Yahoo GC=F), `service.py` (boucle 1 tour / min, journal
+  `rapports\salle\veille-evenements.jsonl` numéroté, 500 gardés, état `rapports\salle\cascade-etat.json`),
+  `__main__.py` (serveur 127.0.0.1:8791, un seul à la fois, `VEILLE_PORT` pour changer ; log `rapports\salle\veille.log`).
+- API : `GET /api/veille`, `GET /api/evenements?depuis=N`, `POST /api/veille/commande {"texte"}` (« état de la
+  cascade », « coupe / remets la cascade » ; refusé si l'en-tête Origin est présent).
+- Événements : `etage` (setup trouvé), `entree` (avec `plan` : entrée, stop, objectifs), `hors_fenetre` (entrée hors
+  15h30-20h, sans plan). **Aucun ordre** : la veille écrit, Jarvis (`veille_lien.py`) lit, annonce, applique son
+  coupe-circuit et transmet le plan à son `ordres.py` (entraînement, « je confirme ») tant que Jabran n'a pas décidé
+  du sort de ordres.py. Jarvis lance la veille (`pythonw -m salle_des_marches.veille`) si elle ne répond pas.
+- Tests : `salle_des_marches/tests/test_veille.py` (8) ; `test_aucun_ordre.py` couvre aussi le dossier veille.
+- Suite prévue : alertes 1H (observation), journal des setups, actus / annonces vers le desk ou l'université.
+
 ## 0bis. Mémoire de l'université (24/10/2026) : Scribe (agent 15) et Archiviste (agent 16)
 Demande de Jabran : « un agent qui note tout dans les sessions, en blocs, un autre qui redonne les informations à
 ceux qui en ont besoin, avec un index » + « sur nos sessions Claude aussi, rangé dans un dossier par sujet ».
