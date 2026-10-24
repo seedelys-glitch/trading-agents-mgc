@@ -53,7 +53,7 @@ def test_plan_incoherent_detecte():
 
 def test_api_scene(univ):
     code, s = lire(univ, "/api/scene")
-    assert code == 200 and s["version"] == 1 and len(s["postes"]) == 14
+    assert code == 200 and s["version"] == 1 and len(s["postes"]) == 16
 
 
 def test_espace_vide_ne_montre_rien_d_invente(univ):

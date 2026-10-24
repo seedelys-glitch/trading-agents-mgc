@@ -50,7 +50,7 @@ def test_page_et_etat_initial(univ):
     with urllib.request.urlopen(univ.url + "/", timeout=5) as r:
         assert b"Universit" in r.read()
     code, etat = appel(univ, "/api/etat")
-    assert code == 200 and len(etat["agents"]) == 14
+    assert code == 200 and len(etat["agents"]) == 16
     statuts = {a["n"]: a["statut"] for a in etat["agents"]}
     assert statuts[6] == "disponible" and statuts[4] == "construction"
     assert etat["liens"] == [] and etat["compteurs"]["documents"] == 0

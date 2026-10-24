@@ -46,9 +46,15 @@ function el(nom, attrs = {}, parent) {
 // ------------------------------------------------------------------ le hall
 function placer(agents) {
   const autres = agents.filter((a) => a.n !== 14);
+  // à intervalles égaux le long de l'ellipse (et non d'angle) : les bureaux des côtés ne se chevauchent plus
+  const N = 720, rx = 610, ry = 370, cumul = [0];
+  const pt = (k) => { const t = -Math.PI / 2 + (k * 2 * Math.PI) / N; return [800 + rx * Math.cos(t), 500 + ry * Math.sin(t)]; };
+  for (let k = 1; k <= N; k++) { const [x0, y0] = pt(k - 1), [x1, y1] = pt(k); cumul.push(cumul[k - 1] + Math.hypot(x1 - x0, y1 - y0)); }
   autres.forEach((a, i) => {
-    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / autres.length;
-    pos[a.n] = { x: 800 + 600 * Math.cos(angle), y: 500 + 365 * Math.sin(angle) };
+    const cible = (i * cumul[N]) / autres.length;
+    let k = 0; while (cumul[k] < cible) k++;
+    const [x, y] = pt(k);
+    pos[a.n] = { x, y };
   });
   pos[14] = { x: 800, y: 480 };
 }
@@ -470,6 +476,51 @@ async function fenetreBibliotheque(recherche = "") {
   }));
 }
 
+// ------------------------------------------------------------------ mémoire (Scribe n° 15, Archiviste n° 16)
+async function fenetreMemoire(recherche = "", dossier = "") {
+  const idx = await api("/api/memoire/index");
+  const corps = modale("Mémoire de l'université", `
+    <p class="doux">Le Scribe note tout en blocs (agents, directeur, desk de Jarvis, sessions Claude, règles, état du projet)
+      et les range par sujet ; l'Archiviste les retrouve. ${idx.total} bloc(s)${idx.dernier_passage ? `, dernier passage ${heure(idx.dernier_passage)}` : ", aucun passage pour l'instant"}.
+      Copie lisible : <code>${esc(idx.dossier_fichiers)}</code></p>
+    <div class="ligne">${idx.dossiers.map((d) => `<button data-dossier="${esc(d.dossier)}" class="${d.dossier === dossier ? "principal" : ""}">${esc(d.dossier)} (${d.blocs})</button>`).join("")}
+      ${dossier ? '<button data-dossier="">Tous</button>' : ""}</div>
+    <div class="ligne" style="margin-top:8px"><input name="q" placeholder="Chercher (ex. break-even, bouton micro, replay compte B)" value="${esc(recherche)}" style="flex:1">
+      <button data-chercher>Chercher</button></div>
+    <div data-resultats></div>
+    <div class="ligne" style="margin:12px 0"><button data-noter>Faire noter maintenant</button>
+      <button data-archiviste>Demander une réponse écrite à l'Archiviste</button></div>
+    <details><summary>Sessions récentes (${idx.sessions.length})</summary><ul class="liste">${idx.sessions.map((s) => `<li><b>${esc(s.session)}</b>
+      <span class="doux">${esc(s.dossier)} · ${s.blocs} bloc(s) · ${heure(s.debut)} → ${heure(s.fin)}</span></li>`).join("")}</ul></details>`);
+  const zone = corps.querySelector("[data-resultats]");
+  const chercher = async () => {
+    const q = corps.querySelector("[name=q]").value;
+    const r = await api(`/api/memoire?n=30&q=${encodeURIComponent(q)}${dossier ? `&dossier=${encodeURIComponent(dossier)}` : ""}`);
+    zone.innerHTML = `<p class="doux">${r.resultats.length} bloc(s)${q.trim() ? "" : " (les plus récents)"}</p><ul class="liste">${r.resultats.map((b) => `<li>
+      <a data-bloc="${b.id}"><b>${esc(b.titre)}</b></a><br><small class="doux">n° ${b.id} · ${esc(b.dossier)} · ${esc(b.session)} · ${heure(b.debut)}</small>
+      <br><small>${esc(b.extrait || "")}</small></li>`).join("")}</ul>`;
+    zone.querySelectorAll("[data-bloc]").forEach((a) => a.addEventListener("click", async () => {
+      const b = await api(`/api/memoire/bloc/${a.dataset.bloc}`);
+      const li = a.closest("li");
+      if (!li.querySelector("pre")) li.insertAdjacentHTML("beforeend", `<pre class="doc" style="margin:6px 0">${esc(b.texte)}</pre>`);
+    }));
+  };
+  corps.querySelector("[data-chercher]").addEventListener("click", chercher);
+  corps.querySelector("[name=q]").addEventListener("keydown", (e) => { if (e.key === "Enter") chercher(); });
+  corps.querySelectorAll("[data-dossier]").forEach((b) => b.addEventListener("click", () => fenetreMemoire(corps.querySelector("[name=q]").value, b.dataset.dossier)));
+  corps.querySelector("[data-noter]").addEventListener("click", async () => {
+    try { const r = await poster("/api/missions", { type: "ecriture_memoire", params: {} }); avis(corps, `Mission n° ${r.mission} confiée au Scribe. Rouvrez la mémoire dans un instant.`, true); rafraichir(); }
+    catch (e) { avis(corps, e.message, false); }
+  });
+  corps.querySelector("[data-archiviste]").addEventListener("click", async () => {
+    const q = corps.querySelector("[name=q]").value.trim();
+    if (!q) { avis(corps, "Écrivez d'abord ce que vous cherchez.", false); return; }
+    try { const r = await poster("/api/missions", { type: "recherche_memoire", params: { question: q, dossier } }); avis(corps, `Mission n° ${r.mission} confiée à l'Archiviste : sa réponse arrivera dans « Documents », contrôlée par l'agent 9.`, true); rafraichir(); }
+    catch (e) { avis(corps, e.message, false); }
+  });
+  chercher();
+}
+
 // ------------------------------------------------------------------ démarrage
 $("#b-demander").addEventListener("click", () => formulaireDemande("analyse_vwap_ema", true));
 $("#b-donnees").addEventListener("click", fenetreDonnees);
@@ -477,6 +528,7 @@ $("#b-boucles").addEventListener("click", fenetreBoucles);
 $("#b-documents").addEventListener("click", fenetreDocuments);
 $("#b-reglages").addEventListener("click", fenetreReglages);
 $("#b-bibliotheque").addEventListener("click", () => fenetreBibliotheque());
+$("#b-memoire").addEventListener("click", () => fenetreMemoire());
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#modale").open) { $("#panneau").hidden = true; choisi = null; } });
 
 (async () => {

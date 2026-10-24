@@ -111,6 +111,19 @@ MIGRATIONS = [
     """, """
         DROP TABLE conversation;
     """),
+    (6, "mémoire : blocs du Scribe et curseurs de lecture", """
+        CREATE TABLE memoire_blocs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, ref TEXT NOT NULL UNIQUE,   -- d'où vient le bloc (mission:12, claude:…)
+            genre TEXT NOT NULL, source TEXT NOT NULL, session TEXT NOT NULL DEFAULT '', dossier TEXT NOT NULL,
+            titre TEXT NOT NULL, texte TEXT NOT NULL, mots TEXT NOT NULL DEFAULT '', agents TEXT NOT NULL DEFAULT '[]',
+            debut REAL NOT NULL, fin REAL NOT NULL, empreinte TEXT NOT NULL, cree REAL NOT NULL, maj REAL NOT NULL);
+        CREATE INDEX memoire_blocs_dossier ON memoire_blocs(dossier, debut);
+        CREATE INDEX memoire_blocs_fin ON memoire_blocs(fin);
+        CREATE INDEX memoire_blocs_maj ON memoire_blocs(maj);
+        CREATE TABLE memoire_curseurs (source TEXT PRIMARY KEY, position TEXT NOT NULL, maj REAL NOT NULL);
+    """, """
+        DROP TABLE IF EXISTS memoire_index; DROP TABLE memoire_curseurs; DROP TABLE memoire_blocs;
+    """),
 ]
 
 CHAMPS_JSON = ("params", "resultat", "donnees", "sources", "etat", "detail", "source")

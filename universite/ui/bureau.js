@@ -223,7 +223,7 @@ function choisirMode(m) {
   $("#plateau").style.display = mode === "bureau" ? "" : "none";
   const b = $("#b-mode");
   if (b) { b.textContent = mode === "bureau" ? "◯" : "▦"; b.setAttribute("aria-label", mode === "bureau" ? "Voir l'ancien hall" : "Voir le bureau"); b.title = b.getAttribute("aria-label"); }
-  $("#hall").setAttribute("aria-label", mode === "bureau" ? "Le bureau de l'université : zones et postes des 14 agents" : "Le grand hall de l'université : les 14 agents à leur bureau");
+  $("#hall").setAttribute("aria-label", mode === "bureau" ? "Le bureau de l'université : zones et postes des agents" : "Le grand hall de l'université : les agents à leur bureau");
   if (window.basculer3d) window.basculer3d(mode);
   if (!CAMERA) try { localStorage.setItem("universite-vue", mode); } catch { /* stockage indisponible : sans conséquence */ }
 }
@@ -383,6 +383,9 @@ function rendreZone(r) {
     h += liste("Dernières règles", r.regles_recentes, (x) => `<li>${etiquette(x.statut === "validee" ? "verifie" : x.statut === "proposee" ? "a_verifier" : x.statut === "rejetee" ? "rejete" : "brouillon")} ${esc(x.titre)}<br><small class="doux">${esc(x.theme)} · version ${x.version} · ${heure(x.cree)}</small></li>`, "Aucune règle.");
     h += liste("Extraits gardés", r.extraits, (x) => `<li>${esc(x.genre === "fed" ? "Discours de la Fed" : x.genre)} : ${x.n} extrait(s) de ${x.origines} texte(s)</li>`, "Aucun extrait gardé.");
     h += liste("Derniers contrôles de l'agent 9", r.verifications, ligneDoc, "Aucun contrôle pour l'instant.");
+    if (r.memoire) h += `<div class="bloc"><h3>Mémoire (Scribe et Archiviste)</h3>${r.memoire.total} bloc(s)${r.memoire.dossiers.length ? " : " + r.memoire.dossiers.map((d) => `${esc(d.dossier)} ${d.blocs}`).join(" · ") : ""}
+      <br><small class="doux">${r.memoire.dernier_passage ? `Dernier passage du Scribe : ${heure(r.memoire.dernier_passage)}` : "Le Scribe n'est pas encore passé."}</small>
+      <p class="ligne"><button data-fenetre="memoire">Ouvrir la mémoire</button></p></div>`;
   } else if (z.cle === "macro") {
     h += liste("Annonces des 48 prochaines heures", r.annonces, (x) => `<li><b>${heure(x.quand)}</b> · ${esc(x.pays)} · ${esc(x.titre)}${x.impact ? ` <span class="doux">(${esc(x.impact)})</span>` : ""}<br><small class="doux">${esc(x.source)}</small></li>`,
       r.annonces_gardees ? "Aucune annonce gardée dans les 48 h." : "Calendrier pas encore téléchargé (agent 5).");
@@ -412,6 +415,7 @@ $("#panneau").addEventListener("click", (e) => {
   if (t.dataset.agent) voirAgent(+t.dataset.agent);
   else if (t.dataset.fenetre === "bibliotheque") fenetreBibliotheque();
   else if (t.dataset.fenetre === "donnees") fenetreDonnees();
+  else if (t.dataset.fenetre === "memoire") fenetreMemoire();
 });
 $("#fermer-panneau").addEventListener("click", () => { zoneChoisie = null; });
 

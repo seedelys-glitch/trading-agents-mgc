@@ -10,9 +10,10 @@ from universite import agents, competences, donnees
 from universite.competences import analyse_vwap_ema
 
 
-def test_quatorze_agents_et_cinquante_six_roles():
-    assert [a["n"] for a in agents.AGENTS] == list(range(1, 15))
-    assert agents.agent(14)["cle"] == "directeur" and len(agents.roles()) == 56
+def test_seize_agents_et_soixante_quatre_roles():
+    assert [a["n"] for a in agents.AGENTS] == list(range(1, 17))
+    assert agents.agent(14)["cle"] == "directeur" and len(agents.roles()) == 64
+    assert agents.agent(15)["cle"] == "scribe" and agents.agent(16)["cle"] == "archiviste"
 
 
 def test_chaque_competence_appartient_a_un_agent_qui_la_declare():

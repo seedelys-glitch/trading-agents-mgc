@@ -17,7 +17,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from . import agents, bibliotheque, competences, config, donnees, scene
+from . import agents, bibliotheque, competences, config, donnees, memoire, scene
 from .base import Base
 from .directeur_chat import DirecteurChat
 from .ia import IALocale
@@ -48,6 +48,8 @@ class Universite:
         self.ia = IALocale(self.base, self.reglages)
         self.moteur = Moteur(self.base, self.reglages, self.ia)
         self.directeur = DirecteurChat(self)
+        memoire.preparer(self.base)
+        memoire.assurer_boucle(self.moteur)        # le Scribe note tout, en continu
         if demarrer_moteur:
             self.moteur.demarrer()
 
@@ -184,6 +186,8 @@ class Universite:
                                            " ELSE 'fichier' END AS genre, COUNT(*) AS n, COUNT(DISTINCT origine) AS origines"
                                            " FROM extraits GROUP BY genre")
             r["verifications"] = self.base.lire(docs + " WHERE genre='verification' ORDER BY id DESC LIMIT 6")
+            idx = memoire.index(self.base)
+            r["memoire"] = {k: idx[k] for k in ("total", "dossiers", "dernier_passage", "recherche_rapide")}
         elif cle == "macro":
             r["annonces"] = self.base.lire("SELECT quand, titre, pays, impact, genre, source FROM annonces WHERE quand>=?"
                                            " AND quand<=? ORDER BY quand LIMIT 30", (e["maintenant"], e["maintenant"] + 48 * 3600))
@@ -344,6 +348,20 @@ def fabriquer_handler(univ):
                     return self._envoyer(200, univ.base.lire(sql, (statut,) if statut else ()))
                 if u.path == "/api/recherche":
                     return self._envoyer(200, univ.rechercher(q.get("q", "")))
+                if u.path == "/api/memoire":                    # l'Archiviste : chercher dans la mémoire
+                    return self._envoyer(200, {"resultats": memoire.chercher(
+                        univ.base, q.get("q", ""), dossier=memoire.dossier_nomme(q.get("dossier")), genre=q.get("genre"),
+                        source=q.get("source"), depuis=q.get("depuis"), jusqua=q.get("jusqua"), n=int(q.get("n", 20)))})
+                if u.path == "/api/memoire/contexte":           # texte compact pour Jarvis, le directeur, une session Claude
+                    return self._envoyer(200, {**memoire.contexte(univ.base, q.get("q", ""), n=int(q.get("n", 6)),
+                                                                  max_car=int(q.get("max", 3000)),
+                                                                  dossier=memoire.dossier_nomme(q.get("dossier"))),
+                                               "reponse": memoire.reponse_courte(univ.base, q.get("q", ""))})
+                if u.path == "/api/memoire/index":
+                    return self._envoyer(200, {**memoire.index(univ.base), "noms_dossiers": memoire.NOMS_DOSSIERS})
+                if len(morceaux) == 4 and morceaux[:3] == ["api", "memoire", "bloc"]:
+                    b = memoire.bloc(univ.base, int(morceaux[3]))
+                    return self._envoyer(200 if b else 404, b or {"erreur": "bloc inconnu"})
                 return self._fichier(u.path)
             except (ValueError, KeyError) as e:
                 return self._envoyer(400, {"erreur": str(e)})
@@ -378,6 +396,10 @@ def fabriquer_handler(univ):
                     return self._envoyer(200, {"mission": univ.creer_mission(corps)})
                 if u.path == "/api/directeur":
                     return self._envoyer(200, univ.directeur.repondre(corps.get("texte", ""), corps.get("origine", "jarvis")))
+                if u.path == "/api/memoire/noter":              # une note pour le Scribe (Jarvis, une session Claude…)
+                    return self._envoyer(200, memoire.noter(univ.base, corps.get("texte", ""), corps.get("titre", ""),
+                                                            corps.get("source", "note"), corps.get("session", ""),
+                                                            corps.get("dossier"), corps.get("quand"), corps.get("agents") or ()))
                 if len(morceaux) == 4 and morceaux[:2] == ["api", "mission"] and morceaux[3] == "annuler":
                     return self._envoyer(200, {"annulee": univ.base.annuler(int(morceaux[2]))})
                 if u.path == "/api/jeux/ninja":

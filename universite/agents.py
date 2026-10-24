@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Les 14 agents de l'université (le directeur est le n° 14) et leurs 4 fonctions de soutien (56 rôles).
+Les agents de l'université (le directeur est le n° 14 ; la mémoire : Scribe n° 15 et Archiviste n° 16) et leurs
+4 fonctions de soutien.
 
 Ce fichier dit QUI fait QUOI. Ce qu'un agent sait réellement faire est la liste `competences` : chaque nom
 renvoie à un module de competences/. Un agent sans compétence branchée est affiché « en construction » :
@@ -92,7 +93,7 @@ AGENTS = [
      "escalade": "Écart hors tolérance -> rejet + message à l'auteur et au directeur.",
      "competences": ["verification_analyse", "verification_reproductibilite", "verification_risque",
                      "verification_calendrier", "verification_reactions", "verification_discours",
-                     "verification_citations",
+                     "verification_citations", "verification_memoire",
                      "verification_replay", "extraction_regles", "indexation_bibliotheque"]},
     {"n": 10, "cle": "discours", "nom": "Analyse des discours", "court": "Disc", "salle": None,
      "mission": "Analyser le ton des discours (Fed, BCE, Trésor) : faucon, colombe, neutre, et ce qui change.",
@@ -127,6 +128,24 @@ AGENTS = [
      "qualite": ["La synthèse ne reprend que des documents existants, avec leur statut."],
      "escalade": "Décision qui change l'objectif -> la pose à Jabran.",
      "competences": ["synthese_directeur", "demande_directeur"]},
+    {"n": 15, "cle": "scribe", "nom": "Scribe", "court": "Scribe", "salle": None,
+     "mission": "Noter en blocs tout ce qui se passe : missions des agents, conversations avec le directeur et le "
+                "desk de Jarvis, sessions Claude du PC, règles décidées, alertes, état du projet ; ranger chaque "
+                "bloc dans le dossier de son sujet et tenir l'index.",
+     "outils": ["base de l'université", "chat du desk de Jarvis", "sessions Claude Code (~\\.claude\\projects)",
+                "PROJECT_STATUS.md", "index de recherche FTS5"],
+     "qualite": ["Seulement du texte réellement écrit ou enregistré : rien n'est résumé ni inventé.",
+                 "Secrets masqués (clés, tokens, mots de passe, lignes CLE=valeur) ; contenu des fichiers lus jamais copié.",
+                 "Chaque bloc garde sa source, sa date, sa session et son dossier."],
+     "escalade": "Source illisible -> le passage continue avec les autres et l'erreur est notée.",
+     "competences": ["ecriture_memoire"]},
+    {"n": 16, "cle": "archiviste", "nom": "Archiviste", "court": "Archives", "salle": None,
+     "mission": "Retrouver dans la mémoire ce dont quelqu'un a besoin (Jabran, Jarvis, le directeur, un agent, une "
+                "session Claude) et le redonner avec la date, le dossier et la source de chaque bloc.",
+     "outils": ["index de recherche FTS5 (accents ignorés)", "dossiers de sujet", "API /api/memoire"],
+     "qualite": ["Ne cite que des blocs existants, avec leur numéro.", "Dit franchement quand rien n'est trouvé."],
+     "escalade": "Rien trouvé -> le dit, ne répond pas de mémoire.",
+     "competences": ["recherche_memoire"]},
 ]
 
 PAR_NUMERO = {a["n"]: a for a in AGENTS}
@@ -139,7 +158,7 @@ def agent(n):
 
 
 def roles():
-    """Les 56 rôles de soutien (14 agents x 4)."""
+    """Les rôles de soutien (4 par agent)."""
     return [{"agent": a["n"], "role": cle, **s} for a in AGENTS for cle, s in SOUTIENS.items()]
 
 

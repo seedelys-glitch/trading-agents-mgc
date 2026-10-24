@@ -56,6 +56,16 @@ missions à l'agent qui sait les faire (jamais sans bougies importées) ; une r�
 absent de la base est refusée. API : `POST /api/directeur {"texte": …}`, historique `GET /api/directeur`.
 La caméra de Jarvis (écran du PC, appli) montre ce bureau en 3D : `?camera=1` (vue qui tourne lentement).
 
+## Mémoire (Scribe et Archiviste)
+Le **Scribe** (agent 15) note tout seul, toutes les 5 minutes, ce qui s'est passé : missions des agents, conversation
+avec le directeur, chat du desk de Jarvis, ce que Jarvis retient, notes dictées, sessions Claude du PC, règles
+décidées, alertes, PROJECT_STATUS.md. Chaque chose devient un **bloc** rangé dans un **dossier de sujet** (Jarvis,
+Université, Stratégie…). Copie lisible : `rapports\universite\memoire\` (un dossier par sujet + `INDEX.md`).
+L'**Archiviste** (agent 16) retrouve les blocs : bouton « Mémoire » du bureau, « archiviste, … » à Jarvis,
+« rappelle-moi… » au directeur, ou `python -m universite.memoire cherche "…"`. Les secrets sont masqués ; le
+contenu des fichiers lus par Claude n'est jamais copié. Pour ajouter le résumé d'une session faite ailleurs :
+déposer un fichier `.md` dans `rapports\universite\memoire\a_ranger\` (première ligne possible : `dossier: Jarvis`).
+
 ## Bibliothèque
 Bouton **Bibliothèque** : le secrétaire lit STRATEGIE.md (sans le modifier) et te propose chaque règle mot pour mot,
 avec sa ligne d'origine. Tu valides, corriges ou rejettes ; chaque version est gardée. Une case permet de chercher.

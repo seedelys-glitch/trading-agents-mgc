@@ -17,7 +17,7 @@ import re
 import time
 import unicodedata
 
-from . import agents, competences, donnees
+from . import agents, competences, donnees, memoire
 
 MAX_TEXTE = 800
 NOMBRE = re.compile(r"(?<![\w.])-?\d+(?:[.,]\d+)?")
@@ -60,6 +60,10 @@ ETAT = (r"(?<![a-z])(?:etat|ou en (?:est|sont|es)|qui travaille|ca avance|avance
         r"tu fais quoi|vous faites quoi|en ce moment)")
 RESULTATS = r"(?<![a-z])(?:resultats?|documents?|rapports?|conclusions?|trouve quoi|appris)"
 MERCI = r"^\W*(?:merci|ok merci|c'est tout|c'est bon)\b"
+# « rappelle-moi… », « qu'est-ce qu'on a décidé sur… », « archiviste, … » -> l'Archiviste (agent 16) cherche dans la mémoire
+MEMOIRE = (r"(?<![a-z])(?:rappelle[- ]moi|tu te souviens|souviens|souvenir|qu'est[- ]ce qu'on a (?:dit|decide|fait|vu)|"
+           r"on avait (?:dit|decide|fait)|qu'avions[- ]nous|memoire|archiviste|archives?\b|"
+           r"retrouve\w* .{0,40}(?:session|conversation|discussion|bloc))")
 
 
 def plat(texte):
@@ -113,6 +117,8 @@ class DirecteurChat:
         t = plat(texte)
         if re.search(MERCI, t) and len(t.split()) <= 5:
             return "merci", "Avec plaisir. L'équipe continue, je te tiens au courant.", None
+        if re.search(MEMOIRE, t):
+            return "memoire", "L'Archiviste : " + memoire.reponse_courte(self.base, texte), None
         if re.search(SUIVI, t):
             return "suivi", self.suivi(), None
         if re.search(SYNTHESE, t) and not re.search(r"(?<![a-z])derniere synthese", t):
@@ -282,8 +288,11 @@ class DirecteurChat:
                 "Demande-moi « où en est la mission » ou « les derniers résultats »."), ids[-1]
 
     # ------------------------------------------------------------------ question libre (IA locale, faits seulement)
-    def faits(self):
+    def faits(self, question=""):
         lignes = ["État : " + self.etat()]
+        souvenirs = memoire.contexte(self.base, question, n=4, max_car=1500)["texte"] if question else ""
+        if souvenirs:
+            lignes.append("Mémoire (blocs notés par le Scribe) :\n" + souvenirs)
         docs = self.base.lire("SELECT id, agent, genre, titre, statut FROM documents ORDER BY id DESC LIMIT 8")
         lignes.append("Derniers documents : " + ("; ".join(
             f"n° {d['id']} {d['titre']} ({_nom(d['agent'])}, {STATUTS_DOC.get(d['statut'], d['statut'])})" for d in docs)
@@ -300,7 +309,7 @@ class DirecteurChat:
         return "\n".join(lignes)
 
     def question(self, texte):
-        faits = self.faits()
+        faits = self.faits(texte)
         histo = self.historique(7)[:-1]
         conversation = "\n".join(f"{'Jabran' if m['de'] == 'jabran' else 'Directeur'} : {_court(m['texte'], 200)}"
                                  for m in histo)

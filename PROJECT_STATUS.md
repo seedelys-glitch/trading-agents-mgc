@@ -1,7 +1,40 @@
 # MGC AI Trading Desk — état du projet
 
-Dernière mise à jour : 23/10/2026 (bureau immersif E1 à E6 terminés et testés ; reste E7 : livraison sur le PC et essai par Jabran). Ce fichier est la mémoire du projet : on le lit
+Dernière mise à jour : 24/10/2026 (mémoire : Scribe n° 15 et Archiviste n° 16 écrits et testés dans le conteneur ; reste l'installation sur le PC). Ce fichier est la mémoire du projet : on le lit
 avant de reprendre le travail, on le met à jour après chaque étape.
+
+## 0bis. Mémoire de l'université (24/10/2026) : Scribe (agent 15) et Archiviste (agent 16)
+Demande de Jabran : « un agent qui note tout dans les sessions, en blocs, un autre qui redonne les informations à
+ceux qui en ont besoin, avec un index » + « sur nos sessions Claude aussi, rangé dans un dossier par sujet ».
+- `universite/memoire.py` (migration 6 : tables `memoire_blocs`, `memoire_curseurs` ; index FTS5 `memoire_index`,
+  accents ignorés, créé par `memoire.preparer()`, recherche simple par LIKE si FTS5 manque).
+- **Scribe** (`competences/ecriture_memoire.py`) : boucle créée une seule fois au démarrage (« Scribe : tout noter »,
+  toutes les 5 min, premier passage 1 min après ; si Jabran la met en pause, elle le reste). Relit depuis son
+  dernier passage (curseurs) : missions terminées (étapes, documents, messages, erreurs), conversation avec le
+  directeur, chat du desk de Jarvis (`Documents\Jarvis\.cache\desk-chat.json`), `memoire-jarvis.txt`,
+  `notes-jarvis.txt`, sessions Claude Code du PC (`~\.claude\projects\*.jsonl` : seulement ce que Jabran écrit et ce
+  que Claude répond, jamais les sorties d'outils ni les sous-agents ; le dernier tour est relu tant qu'il peut encore
+  recevoir des réponses), règles décidées, alertes / erreurs du journal, sections de PROJECT_STATUS.md (de
+  TradingAgents et de Jarvis), notes déposées dans `rapports\universite\memoire\a_ranger\` (.md / .txt / .json,
+  déplacées ensuite dans `ranges\`) ou envoyées par `POST /api/memoire/noter`.
+  Chaque bloc a une source unique (`ref`), une session, une date et **un dossier de sujet** : Jarvis, Université,
+  Analyse technique, Macro et discours, Risque, Données et replays, Stratégie, Salle des marchés, PC et installation,
+  Divers (par mots-clés + indice de la source). Copie lisible : `rapports\universite\memoire\<dossier>\<AAAA-MM>.md`
+  + `INDEX.md`. Secrets masqués (clés, tokens, mots de passe, lignes CLE=valeur). Aucune IA : rien n'est résumé.
+- **Archiviste** (`competences/recherche_memoire.py`) : réponse écrite bloc par bloc, contrôlée par l'agent 9
+  (`verification_memoire` : chaque bloc cité existe et commence par le passage cité). Réponses directes :
+  `GET /api/memoire?q=&dossier=`, `/api/memoire/contexte?q=` (texte compact + réponse orale), `/api/memoire/index`,
+  `/api/memoire/bloc/N` ; le directeur répond « L'Archiviste : … » à « rappelle-moi… », « qu'est-ce qu'on a décidé… »,
+  « mémoire », et ses réponses libres reçoivent les 4 blocs les plus proches. Bureau : bouton « Mémoire »
+  (dossiers, recherche, sessions, « Faire noter maintenant », « Demander une réponse écrite »), pièce Bibliothèque.
+  Postes 15 et 16 dans la bibliothèque (vue 2,5D et 3D) ; hall : bureaux répartis à intervalles égaux sur l'ellipse.
+- Pour Claude (sessions sur le PC) : `.venv\Scripts\python.exe -m universite.memoire cherche "…"` / `note` / `index` /
+  `ranger` (lit la base directement, même université arrêtée). Écrit aussi dans le CLAUDE.md de Jarvis.
+- Jarvis (`desk_chat.py`, `universite_lien.py`, `jarvis.py`) : agent externe « archiviste » (« archiviste, … »,
+  « demande à l'archiviste… », « qu'est-ce qu'on a décidé… ») -> `/api/memoire/contexte` ; `universite_lien.noter()`.
+- Limites : les sessions Claude de l'application (cloud) ne sont pas sur le PC : elles arrivent par une note déposée
+  dans `a_ranger` ; le classement par dossier est fait par mots-clés (un bloc peut tomber dans un dossier voisin).
+- Tests conteneur : 127 université (dont 9 mémoire) ; essai réel sur la session Claude du conteneur et PROJECT_STATUS.md.
 
 ## 0. Audit du 23/10/2026 (soir, sur le PC de Jabran) : à lire en premier
 - Tests sur le PC : **263 réussis, 0 échec** (`pytest -q salle_des_marches\tests universite\tests`, 65 s).
@@ -19,7 +52,8 @@ avant de reprendre le travail, on le met à jour après chaque étape.
   Limite écrite : l'entrée est simulée sur la confirmation H1, la cascade 48 min / 12 min n'est pas rejouée.
 
 ## 1. Vision
-Un bureau de recherche sur le Micro Gold (MGC) : 14 agents spécialisés (le directeur est le n° 14), chacun avec
+Un bureau de recherche sur le Micro Gold (MGC) : 14 agents spécialisés (le directeur est le n° 14) + la mémoire
+(Scribe n° 15, Archiviste n° 16), chacun avec
 4 fonctions de soutien (chercheur, professeur, documentaliste, gestionnaire des connaissances), qui analysent,
 se vérifient entre eux et alimentent une bibliothèque de règles validées par Jabran.
 **Recherche et simulation seulement** : aucun courtier, aucun ordre, réel ou simulé, envoyé automatiquement.
@@ -62,7 +96,9 @@ Aucun service payant.
 | 6. VWAP & EMA 200 | VWAP de séance (depuis 17 h Chicago) + bandes, EMA 200 en M5/M15/H1, à un instant donné | agent 9 (recalcul indépendant) |
 | 9. Secrétaire / auditeur | Vérifie les analyses et les replays ; lit STRATEGIE.md et propose les règles ; range les documents dans la bibliothèque | – |
 | 13. Chercheur quantitatif | Lit le dossier d'exports TradingView (une fois par fichier, toutes les unités dans un jeu) ; contrôle qualité d'un jeu de bougies ; replay de la stratégie V1 (60/20/20, Monte-Carlo, régimes) | agent 9 |
-| 14. Directeur | Confie une demande au bon agent ; synthèse des documents vérifiés | – |
+| 14. Directeur | Confie une demande au bon agent ; synthèse des documents vérifiés ; passe les questions de mémoire à l'Archiviste | – |
+| 15. Scribe | Note tout en blocs rangés par dossier de sujet (agents, directeur, desk et notes de Jarvis, sessions Claude, règles, journal, état du projet) ; index FTS5 | – (texte réel seulement) |
+| 16. Archiviste | Retrouve les blocs pour Jabran, Jarvis, le directeur, une session Claude | agent 9 (chaque bloc cité existe tel quel) |
 | 10. Discours | Flux officiel federalreserve.gov, texte gardé dans la bibliothèque, lexique « faucon / colombe » fixé à l'avance, citations exactes | agent 9 (recompte mot à mot, citations retrouvées) |
 | 11. Historien | Précédents d'un thème dans les textes gardés et l'historique des annonces, avec date et source | agent 9 (chaque citation existe telle quelle) |
 | 12. Réactions | Mouvement du gold à +5 / +15 / +60 min et excursions sur 1 h après chaque annonce gardée ; < 20 cas = pas de conclusion | agent 9 (requêtes directes sur les bougies) |
