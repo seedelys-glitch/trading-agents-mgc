@@ -678,14 +678,19 @@ def index_markdown(base):
 # ------------------------------------------------------------------ l'Archiviste : retrouver
 MOTS_VIDES = set("""le la les l de des du d un une et ou a au aux en on qu que qui quoi est sur pour dans ce cet cette ces
 mon ma mes ton ta tes son sa ses nous vous il elle ils elles je j tu t avec pas plus se s y ne n me m moi toi lui leur
-quel quelle quels quelles comment quand pourquoi combien est-ce c ca etait ete fait dit decide rappelle rappeler souviens
-souvenir memoire archiviste retrouve retrouver cherche chercher dis donne avait avons ont as ai sais savoir infos info
-information informations tout tous toutes parle parler propos sujet""".split())
+quel quelle quels quelles comment quand pourquoi combien est-ce c ca etait ete""".split())
+# Mots de la demande elle-même (« qu'est-ce qu'on a décidé… », « rappelle-moi… ») : ignorés s'il reste un vrai sujet,
+# gardés sinon (« qu'est-ce qu'on a décidé sur la mémoire ? » cherche alors « décidé » et « mémoire »)
+MOTS_DEMANDE = set("""fait dit decide rappelle rappeler souviens souvenir memoire archiviste retrouve retrouver cherche
+chercher dis donne avait avons ont as ai sais savoir infos info information informations tout tous toutes parle parler
+propos sujet""".split())
 
 
 def mots_question(question):
-    return [m for m in re.findall(r"[a-z0-9][a-z0-9.]*[a-z0-9]|[a-z0-9]", plat(question).replace("'", " "))
-            if m not in MOTS_VIDES and len(m) >= 2][:12]
+    mots = [m for m in re.findall(r"[a-z0-9][a-z0-9.]*[a-z0-9]|[a-z0-9]", plat(question).replace("'", " "))
+            if m not in MOTS_VIDES and len(m) >= 2]
+    sujet = [m for m in mots if m not in MOTS_DEMANDE]
+    return (sujet or mots)[:12]
 
 
 def chercher(base, question="", dossier=None, genre=None, source=None, depuis=None, jusqua=None, n=10):

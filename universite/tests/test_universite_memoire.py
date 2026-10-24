@@ -211,3 +211,12 @@ def test_api_et_directeur(univ):
     rep = univ.directeur.repondre("Rappelle-moi ce qu'on a décidé pour le compte B", "voix")
     assert rep["intention"] == "memoire" and "Compte B" in rep["reponse"]
     assert http(univ, "/api/zone/bibliotheque")["memoire"]["total"] == 1
+
+
+def test_question_sans_autre_sujet_que_la_memoire(base):
+    memoire.noter(base, "Agents 15 Scribe et 16 Archiviste ajoutés : la mémoire de l'université est créée.",
+                  titre="Création de la mémoire des agents", quand=time.time() - 3600)
+    memoire.noter(base, "Le replay du compte A est terminé.", titre="Replay compte A")       # plus récent, sans rapport
+    assert memoire.mots_question("Qu'est-ce qu'on a décidé sur la mémoire ?") == ["decide", "memoire"]
+    assert memoire.mots_question("Qu'est-ce qu'on a décidé sur le break-even ?") == ["break", "even"]
+    assert memoire.chercher(base, "Qu'est-ce qu'on a décidé sur la mémoire ?")[0]["titre"] == "Création de la mémoire des agents"
