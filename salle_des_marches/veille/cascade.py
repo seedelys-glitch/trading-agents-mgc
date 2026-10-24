@@ -23,7 +23,6 @@ Jarvis lit les événements et les annonce. Aucun appel réseau sous verrou.
 
 from __future__ import annotations
 
-import datetime as dt
 import json
 import logging
 import re

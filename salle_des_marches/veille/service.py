@@ -15,6 +15,7 @@ from pathlib import Path
 
 from .bougies import plain
 from .cascade import CHECK_S, Cascade
+from .strategie_1h import CHECK_S as CHECK_STRAT_S, Strategie1H
 
 log = logging.getLogger("veille")
 
@@ -31,6 +32,7 @@ class Veille:
         self.lock = threading.Lock()
         self.evenements: list[dict] = self._lire()
         self.cascade = Cascade(self.dossier, emettre=self.ajouter)
+        self.strategie = Strategie1H(self.dossier, emettre=self.ajouter)
         self.depart = time.time()
 
     # ------------------------------------------------------------------ journal
@@ -76,7 +78,8 @@ class Veille:
 
     # ------------------------------------------------------------------ état et commandes
     def etat(self) -> dict:
-        return {"agents": {"cascade": self.cascade.resume()}, "dernier_id": self.dernier_id(),
+        return {"agents": {"cascade": self.cascade.resume(), "strategie": self.strategie.resume()},
+                "dernier_id": self.dernier_id(),
                 "depuis": self.depart}
 
     def commande(self, texte: str) -> str | None:
@@ -88,10 +91,13 @@ class Veille:
             if not self.cascade.etat.get("maj"):
                 return "La cascade démarre, je n'ai pas encore fini mon premier tour. Redemande dans une minute."
             return self.cascade.etat_phrase()
+        if self.strategie.wants(t):
+            return self.strategie.handle(t)
         return None
 
     # ------------------------------------------------------------------ boucle
     def boucle(self) -> None:
+        prochaine_strat = 0.0
         while True:
             try:
                 self.cascade.check()
@@ -99,6 +105,14 @@ class Veille:
             except Exception as e:
                 self.cascade.erreur = repr(e)[:200]
                 log.warning("Cascade : %s", e)
+            if time.time() >= prochaine_strat:
+                prochaine_strat = time.time() + CHECK_STRAT_S
+                try:
+                    self.strategie.check()
+                    self.strategie.erreur = ""
+                except Exception as e:
+                    self.strategie.erreur = repr(e)[:200]
+                    log.warning("Stratégie : %s", e)
             time.sleep(CHECK_S)
 
     def demarrer(self) -> None:

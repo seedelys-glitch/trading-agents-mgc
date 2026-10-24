@@ -117,3 +117,29 @@ def test_serveur_local(veille, monkeypatch):
 def test_dans_fenetre():
     assert cas.dans_fenetre(_paris_ts(15, 30)) and cas.dans_fenetre(_paris_ts(19, 59))
     assert not cas.dans_fenetre(_paris_ts(15, 29)) and not cas.dans_fenetre(_paris_ts(20, 0))
+
+
+# ---------------------------------------------------------------------------- stratégie 1H / 12H
+from veille import strategie_1h as s1h  # noqa: E402
+
+
+def test_strategie_commandes(veille):
+    assert "premier calcul" in veille.commande("état de la stratégie")
+    assert "coupées" in veille.commande("coupe les alertes de stratégie")
+    assert not veille.strategie.enabled()
+    assert "actives" in veille.commande("remets les alertes de stratégie")
+    assert veille.etat()["agents"]["strategie"]["observation"] is True
+
+
+def test_strategie_observation_n_emet_rien(veille):
+    veille.strategie._send("k1", "zone", "Alerte stratégie : test", ["x"])
+    assert veille.depuis(0) == []
+
+
+def test_strategie_hors_observation_emet_et_note(veille, monkeypatch):
+    monkeypatch.setattr(s1h, "OBSERVE_ONLY", False)
+    veille.strategie._send("k1", "confirmation", "Alerte stratégie : test", ["a", "b"], {"stop": 1.0})
+    veille.strategie._send("k1", "confirmation", "Alerte stratégie : test", ["a", "b"], {"stop": 1.0})
+    ev = veille.depuis(0)
+    assert len(ev) == 1 and ev[0]["source"] == "strategie" and ev[0]["plan"]["stop"] == 1.0
+    assert veille.strategie.journal.read_text(encoding="utf-8").count("\n") == 2

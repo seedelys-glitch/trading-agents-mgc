@@ -3,7 +3,7 @@
 Dernière mise à jour : 24/10/2026 (mémoire : Scribe n° 15 et Archiviste n° 16 écrits et testés dans le conteneur ; reste l'installation sur le PC). Ce fichier est la mémoire du projet : on le lit
 avant de reprendre le travail, on le met à jour après chaque étape.
 
-## 0ter. Veille du desk (24/10/2026) : la cascade quitte Jarvis
+## 0ter. Veille du desk (24/10/2026) : la cascade et les alertes 1H quittent Jarvis
 Plan « Jarvis connecteur » (étape 3) : Jarvis n'est plus un agent de trading, le calcul des setups va au desk.
 - `salle_des_marches/veille/` : `bougies.py` (outils de bougies repris de Jarvis), `cascade.py` (Weekly -> 12H ->
   48 min -> 12 min, même calcul qu'avant dans Jarvis, Yahoo GC=F), `service.py` (boucle 1 tour / min, journal
@@ -15,8 +15,14 @@ Plan « Jarvis connecteur » (étape 3) : Jarvis n'est plus un agent de trading,
   15h30-20h, sans plan). **Aucun ordre** : la veille écrit, Jarvis (`veille_lien.py`) lit, annonce, applique son
   coupe-circuit et transmet le plan à son `ordres.py` (entraînement, « je confirme ») tant que Jabran n'a pas décidé
   du sort de ordres.py. Jarvis lance la veille (`pythonw -m salle_des_marches.veille`) si elle ne répond pas.
-- Tests : `salle_des_marches/tests/test_veille.py` (8) ; `test_aucun_ordre.py` couvre aussi le dossier veille.
-- Suite prévue : alertes 1H (observation), journal des setups, actus / annonces vers le desk ou l'université.
+- `strategie_1h.py` : alertes de stratégie 1H / 12H reprises de Jarvis (`alertes_strategie.py`), toujours en
+  **observation** (`OBSERVE_ONLY` : notées dans veille.log, rien n'est annoncé) ; sinon événements `zone` /
+  `confirmation` (source `strategie`) + `rapports\salle\alertes-strategie.csv`. Tour toutes les 2 min, prix =
+  dernier prix Yahoo. Commandes : « état de la stratégie », « coupe / remets les alertes de stratégie ».
+- Jarvis : un seul fil (`veille_lien.VeilleDesk`) lit tous les événements ; son coupe-circuit bloque les alertes de
+  stratégie et les entrées de la cascade. Décision de Jabran (24/10) : ordres.py (entraînement) reste chez Jarvis.
+- Tests : `salle_des_marches/tests/test_veille.py` (11) ; `test_aucun_ordre.py` couvre aussi le dossier veille.
+- Suite prévue : journal des setups (photos) et actus / annonces (impact gold) vers le desk ou l'université.
 
 ## 0bis. Mémoire de l'université (24/10/2026) : Scribe (agent 15) et Archiviste (agent 16)
 Demande de Jabran : « un agent qui note tout dans les sessions, en blocs, un autre qui redonne les informations à
