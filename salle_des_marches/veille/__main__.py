@@ -6,6 +6,7 @@
   POST /api/setups/noter          {"image": base64, "extra", "resultat", "quand", "source"} -> {"reponse"}
   GET  /api/setups/stats          points communs du journal des setups -> {"reponse"}
   POST /api/actus/analyser        {"texte", "source"} -> {"impact", "sens", "resume", "traduction"}
+  POST /api/veille/arret          arrête la veille (Jarvis la relance avec le nouveau code après une mise à jour)
 """
 
 from __future__ import annotations
@@ -17,12 +18,14 @@ import logging
 import os
 import socket
 import sys
+import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 from .service import DOSSIER, Veille
 
 PORT = int(os.environ.get("VEILLE_PORT", "8791"))
+VERSION = "2026-10-24c"   # Jarvis compare : si elle change, il arrête l'ancienne veille et lance la nouvelle
 log = logging.getLogger("veille")
 
 
@@ -42,7 +45,7 @@ def fabrique(veille: Veille):
         def do_GET(self):
             u = urlparse(self.path)
             if u.path == "/api/veille":
-                return self.envoyer(200, dict(veille.etat(), service="veille"))
+                return self.envoyer(200, dict(veille.etat(), service="veille", version=VERSION))
             if u.path == "/api/evenements":
                 try:
                     n = int((parse_qs(u.query).get("depuis") or ["0"])[0])
@@ -56,7 +59,7 @@ def fabrique(veille: Veille):
         def do_POST(self):
             chemin = urlparse(self.path).path
             limites = {"/api/veille/commande": 10_000, "/api/actus/analyser": 100_000,
-                       "/api/setups/noter": 30_000_000}
+                       "/api/setups/noter": 30_000_000, "/api/veille/arret": 1_000}
             if chemin not in limites:
                 return self.envoyer(404, {"erreur": "inconnu"})
             # une page web d'un autre site ne doit pas pouvoir piloter la veille
@@ -69,6 +72,11 @@ def fabrique(veille: Veille):
                 data = json.loads(self.rfile.read(n).decode("utf-8") or "{}")
             except (ValueError, UnicodeDecodeError):
                 return self.envoyer(400, {"erreur": "json"})
+            if chemin == "/api/veille/arret":
+                log.info("Veille : arrêt demandé (mise à jour).")
+                self.envoyer(200, {"reponse": "arrêt"})
+                threading.Thread(target=self.server.shutdown, daemon=True).start()
+                return None
             if chemin == "/api/veille/commande":
                 rep = veille.commande(str(data.get("texte") or ""))
                 return self.envoyer(200, {"reponse": rep, "connu": rep is not None})
@@ -111,6 +119,7 @@ def main() -> int:
         serveur.serve_forever()
     except KeyboardInterrupt:
         pass
+    serveur.server_close()
     return 0
 
 

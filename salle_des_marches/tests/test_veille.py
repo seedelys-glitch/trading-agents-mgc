@@ -257,3 +257,18 @@ def test_ia_locale_prend_le_modele_charge():
     finally:
         srv.shutdown()
     assert IALocale("http://127.0.0.1:9").complete("x") is None
+
+
+def test_version_et_arret(veille):
+    from veille.__main__ import VERSION
+
+    srv = ServeurExclusif(("127.0.0.1", 0), fabrique(veille))
+    fil = threading.Thread(target=srv.serve_forever, daemon=True)
+    fil.start()
+    base = f"http://127.0.0.1:{srv.server_address[1]}"
+    assert json.load(urllib.request.urlopen(base + "/api/veille"))["version"] == VERSION
+    req = urllib.request.Request(base + "/api/veille/arret", method="POST", data=b"{}")
+    assert json.load(urllib.request.urlopen(req))["reponse"] == "arrêt"
+    fil.join(5)
+    assert not fil.is_alive()
+    srv.server_close()
