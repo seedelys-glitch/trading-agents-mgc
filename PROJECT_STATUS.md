@@ -213,6 +213,17 @@ Aucun lien avec `ordres.py`.
      cours, agents (seuls ceux au travail bougent), anneau au sol = état réel, arcs lumineux = vrais messages, ombres et
      halo lumineux. Clic = espace de l'agent ou pièce. Sans WebGL 2 ou avec `?vue=plan` : vue 2,5D SVG. Le serveur
      force le type « text/javascript » (sous Windows le registre peut casser les modules).
+   - Design (24/10, « que ce soit beau, pas un jeu basique » puis « des bureaux fermés sans porte, pas un open
+     space ; je peux entrer dans chaque bureau et on garde la vue d'ensemble ») : soleil du soir par les hautes
+     fenêtres (ombres), marbre, noyer, lustres, personnages assis. Chaque pièce est un bureau fermé (`scene.py` :
+     murs de 3,4 m, `porte` = côté + centre + largeur de l'ouverture, vérifiée par `verifier()`), parquet, plafond à
+     caissons vu seulement de l'intérieur, tableaux et appliques. Vue d'ensemble « maison de poupée » : les murs dont
+     la face extérieure regarde la caméra s'abaissent (plans de coupe par orientation). Barre des pièces en haut de la
+     vue (entrer, « Vue d'ensemble », « Fiche de la pièce »), Échap = sortir. Idées ajoutées, toutes sur du réel :
+     grand écran de la salle d'analyse = vraies bougies H1 fermées du jeu le plus récent ; écran de la réunion = vrais
+     échanges entre agents ; horloges Paris / Londres / New York / Tokyo à l'heure réelle (pôle macro) ; lanterne
+     au-dessus de chaque ouverture = état réel des agents de la pièce ; cheminée chez le directeur (décor). Mode
+     caméra de Jarvis : la ronde passe 20 s dans les pièces où un agent travaille vraiment, puis revient.
    - E7 : livrer sur le PC (fichiers de `universite/`), Jabran relance l'université et regarde ; ensuite seulement,
      idées possibles : moteur 3D (Three.js) qui relirait la même scène, VR plus tard.
 3. Quand NinjaTrader 8 / Bookmap seront installés : temps réel et agent 4 (heatmap).

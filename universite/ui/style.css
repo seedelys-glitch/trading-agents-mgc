@@ -209,6 +209,20 @@ pre.doc.apercu { max-height: 220px; overflow: auto; font-size: 13px; margin: 8px
   text-transform: uppercase; color: #e8c97a; text-shadow: 0 0 10px #000, 0 1px 2px #000; white-space: nowrap; }
 .nom-zone3d:hover { color: #fff1c9; }
 @media (max-width: 700px) { .tag3d { font-size: 10.5px; } .tag3d small { font-size: 9.5px; } .nom-zone3d { font-size: 10.5px; letter-spacing: 1px; } }
+/* barre des pièces : entrer dans un bureau, revenir à l'ensemble */
+.pieces3d { position: absolute; top: 10px; left: 12px; right: 70px; z-index: 2; display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
+.pieces3d button { pointer-events: auto; cursor: pointer; font: 600 12px/1 system-ui, "Segoe UI", sans-serif; color: var(--texte);
+  background: rgba(6,8,14,.78); border: 1px solid rgba(212,166,74,.35); border-radius: 999px; padding: 6px 11px; white-space: nowrap; }
+.pieces3d button:hover { border-color: var(--or-clair); }
+.pieces3d button.actif { background: #d4a64a; border-color: #d4a64a; color: #140e04; }
+.pieces3d button.info { border-style: dashed; color: var(--or-clair); }
+.pieces3d button[hidden] { display: none; }
+@media (max-width: 700px) {
+  .pieces3d { flex-wrap: nowrap; overflow-x: auto; top: 6px; left: 6px; right: 56px; scrollbar-width: none; }
+  .pieces3d::-webkit-scrollbar { display: none; }
+  .pieces3d button { font-size: 11px; padding: 5px 9px; }
+}
+.camera .pieces3d { display: none; }
 
 /* ------------------------------------------------------------------ mode caméra (?camera=1, montré par Jarvis) */
 .camera body { grid-template-rows: 1fr; }

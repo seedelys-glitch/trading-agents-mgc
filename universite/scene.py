@@ -10,31 +10,33 @@ Une zone dit ce qu'elle montre et d'où ça vient : elle n'affiche jamais une ac
 from . import agents
 
 SOL = {"l": 48, "p": 30}
-HAUTEUR_MUR = 3.0
+HAUTEUR_MUR = 3.4
+# Chaque pièce est un bureau fermé, avec une ouverture sans porte : côté du mur (x0 / x1 = murs à x et x + l,
+# y0 / y1 = murs à y et y + p), centre de l'ouverture le long de ce mur (même repère que le plan), largeur.
 
 ZONES = [
-    {"cle": "directeur", "nom": "Bureau du directeur", "x": 19, "y": 11, "l": 10, "p": 8,
+    {"cle": "directeur", "nom": "Bureau du directeur", "x": 19, "y": 11, "l": 10, "p": 8, "porte": {"cote": "y1", "centre": 24, "l": 2.4},
      "montre": "Dernière synthèse, demandes en cours, alertes reçues",
      "source": "documents de synthèse, missions et messages de l'agent 14"},
-    {"cle": "analyse", "nom": "Salle d'analyse technique", "x": 1, "y": 1, "l": 16, "p": 12,
+    {"cle": "analyse", "nom": "Salle d'analyse technique", "x": 1, "y": 1, "l": 16, "p": 12, "porte": {"cote": "y1", "centre": 9, "l": 2.0},
      "montre": "Les analyses SMC, Fibonacci, Ichimoku, VWAP / EMA et flux, et leur vérification",
      "source": "documents d'analyse des agents 1, 2, 3, 6 et 7"},
-    {"cle": "macro", "nom": "Pôle macro et discours", "x": 31, "y": 1, "l": 16, "p": 12,
+    {"cle": "macro", "nom": "Pôle macro et discours", "x": 31, "y": 1, "l": 16, "p": 12, "porte": {"cote": "y1", "centre": 39, "l": 2.0},
      "montre": "Calendrier des annonces, discours de la Fed, précédents, réactions mesurées du gold",
      "source": "annonces gardées et documents des agents 5, 10, 11 et 12"},
-    {"cle": "reunion", "nom": "Salle de réunion", "x": 19, "y": 1, "l": 10, "p": 8,
+    {"cle": "reunion", "nom": "Salle de réunion", "x": 19, "y": 1, "l": 10, "p": 8, "porte": {"cote": "y1", "centre": 24, "l": 2.0},
      "montre": "Les vraies chaînes de travail : qui a demandé quoi à qui, et la réponse",
      "source": "messages entre agents"},
-    {"cle": "bibliotheque", "nom": "Bibliothèque et vérification", "x": 1, "y": 17, "l": 16, "p": 12,
+    {"cle": "bibliotheque", "nom": "Bibliothèque et vérification", "x": 1, "y": 17, "l": 16, "p": 12, "porte": {"cote": "y0", "centre": 9, "l": 2.0},
      "montre": "Règles proposées et validées, extraits gardés, recherche, contrôles de l'agent 9, mémoire (Scribe et Archiviste)",
      "source": "tables des règles, des extraits et des blocs de mémoire, documents de vérification"},
-    {"cle": "labo", "nom": "Labo quant", "x": 19, "y": 21, "l": 10, "p": 8,
+    {"cle": "labo", "nom": "Labo quant", "x": 19, "y": 21, "l": 10, "p": 8, "porte": {"cote": "y0", "centre": 24, "l": 2.0},
      "montre": "Replays de la stratégie, contrôles de données",
      "source": "documents de replay et de contrôle de l'agent 13"},
-    {"cle": "risque", "nom": "Contrôle des risques", "x": 31, "y": 17, "l": 8, "p": 12,
+    {"cle": "risque", "nom": "Contrôle des risques", "x": 31, "y": 17, "l": 8, "p": 12, "porte": {"cote": "y0", "centre": 35, "l": 2.0},
      "montre": "Évaluations de risque et vetos",
      "source": "documents de l'agent 8"},
-    {"cle": "donnees", "nom": "Salle des données", "x": 41, "y": 17, "l": 6, "p": 12,
+    {"cle": "donnees", "nom": "Salle des données", "x": 41, "y": 17, "l": 6, "p": 12, "porte": {"cote": "y0", "centre": 44, "l": 1.8},
      "montre": "Jeux de bougies, période couverte, imports TradingView",
      "source": "jeux et fichiers importés"},
 ]
@@ -83,7 +85,8 @@ def poste(n):
 
 
 def verifier(s=None):
-    """Problèmes du plan (liste vide = plan cohérent) : un poste par agent, postes dans leur zone, pas de chevauchement."""
+    """Problèmes du plan (liste vide = plan cohérent) : un poste par agent, postes dans leur zone, pas de chevauchement,
+    une ouverture dans un mur de chaque pièce."""
     s = s or scene()
     problemes = []
     vus = [p["agent"] for p in s["postes"]]
@@ -98,6 +101,12 @@ def verifier(s=None):
         for b in s["zones"][i + 1:]:
             if a["x"] < b["x"] + b["l"] and b["x"] < a["x"] + a["l"] and a["y"] < b["y"] + b["p"] and b["y"] < a["y"] + a["p"]:
                 problemes.append(f"zones {a['cle']} et {b['cle']} se chevauchent")
+    for z in s["zones"]:
+        o = z.get("porte")
+        debut, long = (z["x"], z["l"]) if o and o["cote"] in ("y0", "y1") else (z["y"], z["p"])
+        if not o or o["cote"] not in ("x0", "x1", "y0", "y1") \
+                or not (debut + 0.5 + o["l"] / 2 <= o["centre"] <= debut + long - 0.5 - o["l"] / 2):
+            problemes.append(f"pièce {z['cle']} sans ouverture valable")
     for p in s["postes"]:
         z = zones.get(p["zone"])
         if not z or not (z["x"] + p["l"] / 2 <= p["x"] <= z["x"] + z["l"] - p["l"] / 2

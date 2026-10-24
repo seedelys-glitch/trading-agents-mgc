@@ -51,6 +51,13 @@ def test_plan_incoherent_detecte():
     assert any("chevauchent" in p for p in problemes)
 
 
+def test_chaque_piece_a_une_ouverture():
+    s = scene.scene()
+    assert all(z["h"] >= 3 and z["porte"]["cote"] in ("x0", "x1", "y0", "y1") for z in s["zones"])
+    s["zones"][0] = {**s["zones"][0], "porte": {"cote": "y1", "centre": s["zones"][0]["x"], "l": 2}}
+    assert any("ouverture" in p for p in scene.verifier(s))
+
+
 def test_api_scene(univ):
     code, s = lire(univ, "/api/scene")
     assert code == 200 and s["version"] == 1 and len(s["postes"]) == 16
