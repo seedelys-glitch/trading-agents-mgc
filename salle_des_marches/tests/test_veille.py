@@ -143,3 +143,117 @@ def test_strategie_hors_observation_emet_et_note(veille, monkeypatch):
     ev = veille.depuis(0)
     assert len(ev) == 1 and ev[0]["source"] == "strategie" and ev[0]["plan"]["stop"] == 1.0
     assert veille.strategie.journal.read_text(encoding="utf-8").count("\n") == 2
+
+
+# ---------------------------------------------------------------------------- journal des setups et actus
+import base64  # noqa: E402
+
+from veille import actus as act  # noqa: E402
+
+LECTURE = json.dumps({"unite": "1H", "sens": "Short", "fibo_haut": "2700", "fibo_bas": "2600", "niveau": "0.705",
+                      "prix_niveau": "2670,5", "fvg": "Oui", "entree": "2670", "stop": "2680", "tp1": "2600",
+                      "tp2": "2538", "tp3": "?", "date_entree": "21/10/2026", "heure_entree": "16:05",
+                      "biais_12h": "Baissier", "ema": "Sous", "rsi": "?", "volume": "?", "confluences": "BOS",
+                      "notes": "rejet net"})
+PNG = b"\x89PNG\r\n\x1a\n" + b"0" * 50
+
+
+class FausseIA:
+    def __init__(self, texte=None, image=None):
+        self.texte, self.image, self.vision_error = texte, image, ""
+
+    def complete(self, prompt, max_tokens=700):
+        return self.texte
+
+    def see(self, image, prompt, mime="image/png", max_tokens=700):
+        return self.image
+
+
+def test_setup_note_dans_le_journal(veille, tmp_path):
+    bot = tmp_path / "bot trad"
+    bot.mkdir()
+    veille.setups.base, veille.setups.brain = bot, FausseIA(image=LECTURE)
+    rep = veille.noter_setup(PNG, "", "TP1", "", "Telegram")
+    assert rep.startswith("Setup n°1 ajouté au journal") and "Conforme" in rep
+    lignes = (bot / "journal_setups.csv").read_text(encoding="utf-8-sig").splitlines()
+    assert len(lignes) == 2 and ";Short;" in lignes[1] and "noté par le desk, Telegram" in lignes[1]
+    assert (bot / "captures" / "001_2026-10-21_short.png").is_file()
+    assert "1 setup dans ton journal" in veille.stats_setups()
+
+
+def test_setup_sans_image_ni_dossier(veille, tmp_path):
+    assert "pas reçu" in veille.noter_setup(b"")
+    veille.setups.base = None
+    veille.setups.folder = lambda: None
+    assert "bot trad" in veille.noter_setup(PNG)
+
+
+def test_actu_analysee_par_l_ia_et_secours():
+    ia = FausseIA(texte='Voilà : {"impact": "Fort", "sens": "haussier", "resume": "Droits de douane", '
+                        '"traduction": "Nous taxons la Chine"}')
+    r = act.analyse(ia, "We tariff China", "Truth Social")
+    assert r["impact"] == "fort" and r["sens"] == "haussier" and "secours" not in r
+    r = act.analyse(FausseIA(), "Fed rate inflation dollar", "Gmail")
+    assert r["impact"] == "fort" and r["secours"] is True
+
+
+def test_serveur_setups_et_actus(veille, tmp_path):
+    bot = tmp_path / "bot trad"
+    bot.mkdir()
+    veille.setups.base, veille.setups.brain = bot, FausseIA(image=LECTURE)
+    veille.ia = FausseIA(texte='{"impact": "faible", "sens": "neutre", "resume": "r", "traduction": "t"}')
+    srv = ServeurExclusif(("127.0.0.1", 0), fabrique(veille))
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{srv.server_address[1]}"
+
+    def post(chemin, data):
+        req = urllib.request.Request(base + chemin, method="POST", data=json.dumps(data).encode())
+        return json.load(urllib.request.urlopen(req))
+
+    try:
+        r = post("/api/setups/noter", {"image": base64.b64encode(PNG).decode(), "resultat": "stop", "source": "voix"})
+        assert r["reponse"].startswith("Setup n°1")
+        assert "1 setup" in json.load(urllib.request.urlopen(base + "/api/setups/stats"))["reponse"]
+        assert post("/api/actus/analyser", {"texte": "hello", "source": "Gmail"})["impact"] == "faible"
+        with pytest.raises(urllib.error.HTTPError):
+            post("/api/setups/noter", {"image": "pas du base64 !"})
+    finally:
+        srv.shutdown()
+
+
+def test_ia_locale_prend_le_modele_charge():
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    from veille.ia import IALocale
+
+    vu = {}
+
+    class LM(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def _env(self, d):
+            b = json.dumps(d).encode()
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(b)))
+            self.end_headers()
+            self.wfile.write(b)
+
+        def do_GET(self):
+            self._env({"data": [{"id": "qwen/qwen3.5-9b", "state": "not-loaded", "type": "llm"},
+                                {"id": "google/gemma-4-e4b", "state": "loaded", "type": "vlm"}]})
+
+        def do_POST(self):
+            vu.update(json.loads(self.rfile.read(int(self.headers["Content-Length"]))))
+            self._env({"choices": [{"message": {"content": "<think>x</think>**Bonjour**"}}]})
+
+    srv = ThreadingHTTPServer(("127.0.0.1", 0), LM)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        ia = IALocale(f"http://127.0.0.1:{srv.server_address[1]}")
+        assert ia.complete("salut") == "Bonjour" and vu["model"] == "google/gemma-4-e4b"
+        assert ia.see(PNG, "lis") == "Bonjour"
+        assert vu["messages"][0]["content"][1]["image_url"]["url"].startswith("data:image/png;base64,")
+    finally:
+        srv.shutdown()
+    assert IALocale("http://127.0.0.1:9").complete("x") is None

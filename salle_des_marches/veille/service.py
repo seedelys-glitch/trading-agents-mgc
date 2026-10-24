@@ -13,8 +13,11 @@ import threading
 import time
 from pathlib import Path
 
+from . import actus
 from .bougies import plain
 from .cascade import CHECK_S, Cascade
+from .ia import IALocale
+from .journal_setups import SetupJournal
 from .strategie_1h import CHECK_S as CHECK_STRAT_S, Strategie1H
 
 log = logging.getLogger("veille")
@@ -33,6 +36,8 @@ class Veille:
         self.evenements: list[dict] = self._lire()
         self.cascade = Cascade(self.dossier, emettre=self.ajouter)
         self.strategie = Strategie1H(self.dossier, emettre=self.ajouter)
+        self.ia = IALocale()
+        self.setups = SetupJournal(self.ia)            # journal des setups du dossier bot trad
         self.depart = time.time()
 
     # ------------------------------------------------------------------ journal
@@ -94,6 +99,19 @@ class Veille:
         if self.strategie.wants(t):
             return self.strategie.handle(t)
         return None
+
+    # ------------------------------------------------------------------ demandes de Jarvis (photo, actu)
+    def noter_setup(self, image: bytes, extra: str = "", resultat: str = "", quand: str = "",
+                    source: str = "") -> str:
+        if not image:
+            return "Je n'ai pas reçu d'image du setup."
+        return self.setups.add(image, extra, resultat, quand, source=source)
+
+    def stats_setups(self) -> str:
+        return self.setups.stats()
+
+    def analyser_actu(self, texte: str, source: str) -> dict:
+        return actus.analyse(self.ia, texte, source)
 
     # ------------------------------------------------------------------ boucle
     def boucle(self) -> None:

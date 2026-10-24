@@ -3,10 +3,15 @@
   GET  /api/veille                état des agents de veille
   GET  /api/evenements?depuis=N   événements après le numéro N
   POST /api/veille/commande       {"texte": "état de la cascade" | "coupe la cascade" | ...} -> {"reponse"}
+  POST /api/setups/noter          {"image": base64, "extra", "resultat", "quand", "source"} -> {"reponse"}
+  GET  /api/setups/stats          points communs du journal des setups -> {"reponse"}
+  POST /api/actus/analyser        {"texte", "source"} -> {"impact", "sens", "resume", "traduction"}
 """
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import logging
 import os
@@ -44,21 +49,39 @@ def fabrique(veille: Veille):
                 except ValueError:
                     n = 0
                 return self.envoyer(200, {"evenements": veille.depuis(n), "dernier_id": veille.dernier_id()})
+            if u.path == "/api/setups/stats":
+                return self.envoyer(200, {"reponse": veille.stats_setups()})
             self.envoyer(404, {"erreur": "inconnu"})
 
         def do_POST(self):
-            if urlparse(self.path).path != "/api/veille/commande":
+            chemin = urlparse(self.path).path
+            limites = {"/api/veille/commande": 10_000, "/api/actus/analyser": 100_000,
+                       "/api/setups/noter": 30_000_000}
+            if chemin not in limites:
                 return self.envoyer(404, {"erreur": "inconnu"})
-            # une page web d'un autre site ne doit pas pouvoir couper la veille
+            # une page web d'un autre site ne doit pas pouvoir piloter la veille
             if self.headers.get("Origin"):
                 return self.envoyer(403, {"erreur": "origine refusée"})
             try:
-                n = min(int(self.headers.get("Content-Length") or 0), 10000)
+                n = int(self.headers.get("Content-Length") or 0)
+                if n > limites[chemin]:
+                    return self.envoyer(413, {"erreur": "trop gros"})
                 data = json.loads(self.rfile.read(n).decode("utf-8") or "{}")
             except (ValueError, UnicodeDecodeError):
                 return self.envoyer(400, {"erreur": "json"})
-            rep = veille.commande(str(data.get("texte") or ""))
-            self.envoyer(200, {"reponse": rep, "connu": rep is not None})
+            if chemin == "/api/veille/commande":
+                rep = veille.commande(str(data.get("texte") or ""))
+                return self.envoyer(200, {"reponse": rep, "connu": rep is not None})
+            if chemin == "/api/actus/analyser":
+                return self.envoyer(200, veille.analyser_actu(str(data.get("texte") or ""),
+                                                              str(data.get("source") or "")))
+            try:
+                image = base64.b64decode(str(data.get("image") or ""), validate=True)
+            except (binascii.Error, ValueError):
+                return self.envoyer(400, {"erreur": "image"})
+            rep = veille.noter_setup(image, str(data.get("extra") or ""), str(data.get("resultat") or ""),
+                                     str(data.get("quand") or ""), str(data.get("source") or ""))
+            self.envoyer(200, {"reponse": rep})
 
     return Gestion
 

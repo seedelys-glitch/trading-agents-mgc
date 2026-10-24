@@ -3,7 +3,7 @@
 Dernière mise à jour : 24/10/2026 (mémoire : Scribe n° 15 et Archiviste n° 16 écrits et testés dans le conteneur ; reste l'installation sur le PC). Ce fichier est la mémoire du projet : on le lit
 avant de reprendre le travail, on le met à jour après chaque étape.
 
-## 0ter. Veille du desk (24/10/2026) : la cascade et les alertes 1H quittent Jarvis
+## 0ter. Veille du desk (24/10/2026) : la cascade, les alertes 1H, le journal des setups et l'analyse des actus quittent Jarvis
 Plan « Jarvis connecteur » (étape 3) : Jarvis n'est plus un agent de trading, le calcul des setups va au desk.
 - `salle_des_marches/veille/` : `bougies.py` (outils de bougies repris de Jarvis), `cascade.py` (Weekly -> 12H ->
   48 min -> 12 min, même calcul qu'avant dans Jarvis, Yahoo GC=F), `service.py` (boucle 1 tour / min, journal
@@ -21,8 +21,15 @@ Plan « Jarvis connecteur » (étape 3) : Jarvis n'est plus un agent de trading,
   dernier prix Yahoo. Commandes : « état de la stratégie », « coupe / remets les alertes de stratégie ».
 - Jarvis : un seul fil (`veille_lien.VeilleDesk`) lit tous les événements ; son coupe-circuit bloque les alertes de
   stratégie et les entrées de la cascade. Décision de Jabran (24/10) : ordres.py (entraînement) reste chez Jarvis.
-- Tests : `salle_des_marches/tests/test_veille.py` (11) ; `test_aucun_ordre.py` couvre aussi le dossier veille.
-- Suite prévue : journal des setups (photos) et actus / annonces (impact gold) vers le desk ou l'université.
+- `journal_setups.py` (repris de Jarvis `setups.py`) : Jarvis envoie la photo / capture + ses 2 réponses
+  (`POST /api/setups/noter`, image en base64, 30 Mo max) ; la veille lit le graphique avec l'IA locale (`ia.py` :
+  LM Studio 127.0.0.1:1234, modèle DÉJÀ chargé, Gemma de préférence, jamais d'autre chargé) et ajoute la ligne dans
+  `Bureau\bot trad\journal_setups.csv` (+ capture dans `captures\`). `GET /api/setups/stats` : points communs.
+- `actus.py` : `POST /api/actus/analyser {"texte","source"}` -> impact fort/moyen/faible, sens, résumé, traduction
+  (IA locale ; sans IA : mots-clés, `secours: true`). Jarvis relève toujours Trump et Gmail (Gmail = assistant perso).
+- Tests : `salle_des_marches/tests/test_veille.py` (16) ; `test_aucun_ordre.py` couvre aussi le dossier veille.
+- Reste dans Jarvis : vision.py (vérification d'un setup avec STRATEGIE.md), annonces_direct (chiffres CPI/NFP),
+  notifs_trading, coupe-circuit (discipline.py), ordres.py (décision de Jabran : garder).
 
 ## 0bis. Mémoire de l'université (24/10/2026) : Scribe (agent 15) et Archiviste (agent 16)
 Demande de Jabran : « un agent qui note tout dans les sessions, en blocs, un autre qui redonne les informations à
