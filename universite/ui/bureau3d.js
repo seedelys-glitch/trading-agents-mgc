@@ -27,10 +27,14 @@ const telephone = window.innerWidth < 700;
 // mode caméra (Jarvis) : la vue tourne lentement toute seule, 30 images par seconde suffisent
 const camera3d = document.documentElement.classList.contains("camera");
 const LEGER = telephone || camera3d;   // téléphone et petite caméra : ombres plus petites, moins d.anticrénelage
+// écran tactile (téléphone, tablette) : un doigt fait glisser le plan, deux doigts zooment, boutons de déplacement en bas
+const tactile = matchMedia("(pointer: coarse)").matches;
+if (tactile) document.documentElement.classList.add("tactile");
+const camLente = camera3d && !tactile;   // la petite caméra de l'écran Jarvis : 30 images/s ; au doigt : fluide
 let image = 0;
 
 let plan, L, P, renderer, scene, camera, controls, composer, labels, conteneur, pret = false, actif = false;
-const postes = {}, cliquables = [], tetes = {};
+const postes = {}, cliquables = [], tetes = {}, sols = [];
 let liens3d = [], dernierLiens = "", t0 = performance.now(), poussiere = null, feu = null, grand = null, tableauEchanges = null;
 const horloges = [];
 
@@ -766,6 +770,7 @@ function piece(z) {
     return m;
   };
   const sol = dalle(M.parquet, 0.004, false, 1.6); sol.receiveShadow = true; scene.add(sol);
+  sol.userData = { zone: z.cle, sol: true }; sols.push(sol);   // toucher le sol : entrer, ou avancer jusque-là
   murs(z, p);
   p.plafond = dalle(z.cle === "directeur" ? M.plafondNoyer : M.plafond, z.h - 0.002, true, 2);
   p.plafond.visible = false; ombre(p.plafond); scene.add(p.plafond);
@@ -1208,6 +1213,7 @@ function maj3d(etat, choix) {
     const a = etats[ps.zone];
     if (!a || ordre.indexOf(ps.statut) < ordre.indexOf(a)) etats[ps.zone] = ps.statut;
   }
+  etatsPieces = etats; majBarre();
   for (const [k, p] of Object.entries(pieces)) {
     const st = etats[k], col = new THREE.Color(st ? COULEURS[st] : 0xffd9a0);
     for (const m of p.lampes) m.color.copy(col).multiplyScalar(st ? 2.4 : 1.3);
@@ -1311,15 +1317,25 @@ const PLACES = {
   bibliotheque: [[13.8, 28.2, 1.75], [7.5, 19.5, 1.4]], labo: [[27.6, 28.3, 1.75], [22.5, 23.4, 1.2]],
   risque: [[37.9, 28.3, 1.75], [34, 20.5, 1.2]], donnees: [[42.1, 28.3, 1.75], [45.5, 21, 1.3]],
 };
-let vol = null, pieceActuelle = null, pieceVue = null, barre = null;
+let vol = null, pieceActuelle = null, pieceVue = null, barre = null, nav = null, zoomPiece = 1, pince = false, etatsPieces = {};
 // vol de caméra : courbe passant par deux points (au-dessus des murs quand on entre ou sort d'une pièce)
 function allerVers(pos, cible, duree = 900, c1 = null, c2 = null) {
   const de = camera.position.clone();
   vol = { de, deC: controls.target.clone(), a: pos, aC: cible, c1: c1 || de.clone().lerp(pos, 1 / 3), c2: c2 || de.clone().lerp(pos, 2 / 3), t: performance.now(), duree };
 }
+// vue d'ensemble : on tourne autour du bâtiment (au doigt : un doigt fait glisser le plan, deux doigts zooment et tournent)
+// dans une pièce : on regarde autour de soi en « attrapant » la vue ; molette ou pincement = zoom ; toucher le sol = y aller
 function limites() {
-  if (pieceActuelle) Object.assign(controls, { minDistance: 0.4, maxDistance: 12, minPolarAngle: 0.3, maxPolarAngle: 2.05 });
-  else Object.assign(controls, { minDistance: 3, maxDistance: 85, minPolarAngle: 0, maxPolarAngle: 1.38 });
+  if (pieceActuelle) Object.assign(controls, { minDistance: 0.01, maxDistance: 1, minPolarAngle: 0.45, maxPolarAngle: 2.4, rotateSpeed: -0.4, enableZoom: false, enablePan: false });
+  else Object.assign(controls, { minDistance: 3, maxDistance: 85, minPolarAngle: 0, maxPolarAngle: 1.38, rotateSpeed: 1, enableZoom: true, enablePan: true });
+  controls.touches = { ONE: pieceActuelle || !tactile ? THREE.TOUCH.ROTATE : THREE.TOUCH.PAN, TWO: pieceActuelle ? THREE.TOUCH.DOLLY_PAN : THREE.TOUCH.DOLLY_ROTATE };
+}
+// arrivé dans une pièce : le point regardé passe juste devant les yeux, la vue tourne alors autour de soi
+function regarder() {
+  const d = controls.target.clone().sub(camera.position);
+  if (d.lengthSq() < 1e-6) camera.getWorldDirection(d);
+  controls.target.copy(camera.position).addScaledVector(d.normalize(), 0.05);
+  controls.update();
 }
 function entrer(cle) {
   const p = pieces[cle];
@@ -1328,24 +1344,36 @@ function entrer(cle) {
   const depuis = pieceActuelle && pieceActuelle !== cle ? pieces[pieceActuelle].z : null;
   const c1 = depuis ? P3(depuis.x + depuis.l / 2, depuis.y + depuis.p / 2, depuis.h + 5) : null;
   const c2 = P3(z.x + z.l / 2, z.y + z.p / 2, z.h + 6);
-  pieceActuelle = cle; limites();
+  pieceActuelle = cle; zoomPiece = 1; limites();
   allerVers(P3(...pc), P3(...cc), depuis ? 2300 : 1800, c1, c2);
   if (camera3d) ronde = performance.now() + 25000;
-  majBarre();
+  majBarre(); carton(cle);
   return true;
 }
 function ensemble() {
   if (!actif) return false;
   const z = pieceActuelle ? pieces[pieceActuelle].z : null;
-  pieceActuelle = null; limites();
+  pieceActuelle = null; zoomPiece = 1; limites();
   allerVers(VUES.ensemble[0].clone(), VUES.ensemble[1].clone(), z ? 1800 : 900, z ? P3(z.x + z.l / 2, z.y + z.p / 2, z.h + 6) : null);
   majBarre();
   return true;
 }
-// clic sur une pièce : on y entre (et sur grand écran, sa fiche s'ouvre) ; déjà dedans : sa fiche
+// l'utilisateur entre lui-même dans une pièce (toucher, barre, boutons) : la ronde de la caméra s'arrête
+function visiter(cle) {
+  pris();
+  if (!entrer(cle)) return;
+  astuce("piece", tactile ? "Glisse pour regarder autour de toi · touche le sol pour avancer · ‹ › pièce voisine"
+    : "Glisse pour regarder autour de toi · clic sur le sol pour avancer · Échap pour sortir");
+}
+// pièce voisine (boutons ‹ ›), dans l'ordre du plan
+function voisine(sens) {
+  const cles = plan.zones.map((z) => z.cle), i = cles.indexOf(pieceActuelle);
+  visiter(cles[(i + (i < 0 && sens < 0 ? 0 : sens) + cles.length) % cles.length]);
+}
+// toucher une pièce : on y entre (et sur grand écran, sa fiche s'ouvre) ; déjà dedans : on avance (voir cliquer)
 function allerPiece(cle) {
   if (pieceActuelle === cle && !vol) { window.ouvrirZone(cle); return; }
-  entrer(cle);
+  visiter(cle);
   if (!telephone && !camera3d) window.ouvrirZone(cle);
 }
 function vue3d(nom) {
@@ -1355,19 +1383,42 @@ function vue3d(nom) {
 }
 function zoom3d(f) {
   if (!actif) return false;
+  if (pieceActuelle) { zoomPiece = THREE.MathUtils.clamp(zoomPiece / f, 0.45, 1.25); return true; }
   const v = camera.position.clone().sub(controls.target).multiplyScalar(1 / f);
   if (v.length() < controls.minDistance || v.length() > controls.maxDistance) return true;
   allerVers(controls.target.clone().add(v), controls.target.clone(), 350);
   return true;
 }
-// dans une pièce, la caméra et ce qu'elle regarde restent entre les murs
+// vue d'ensemble : un quart de tour (boutons ⟲ ⟳), en suivant l'arc de cercle
+function tourner(sens) {
+  if (!actif || pieceActuelle) return;
+  const t = controls.target.clone(), o = camera.position.clone().sub(t), axe = new THREE.Vector3(0, 1, 0);
+  const pt = (k) => t.clone().add(o.clone().applyAxisAngle(axe, sens * Math.PI / 4 * k));
+  allerVers(pt(1), t, 700, pt(1 / 3), pt(2 / 3));
+}
+// dans une pièce : on avance vers le point touché (on s'arrête juste avant, le regard ne change pas)
+function marcher(p) {
+  const z = pieces[pieceActuelle].z, m = EP + 0.3, cl = THREE.MathUtils.clamp, de = camera.position.clone();
+  const vers = new THREE.Vector3(p.x - de.x, 0, p.z - de.z), d = vers.length();
+  if (d < 0.25) return;
+  const a = de.clone().addScaledVector(vers.normalize(), Math.max(0, d - 0.5));
+  a.x = cl(a.x, z.x + m - L / 2, z.x + z.l - m - L / 2);
+  a.z = cl(a.z, z.y + m - P / 2, z.y + z.p - m - P / 2);
+  allerVers(a, controls.target.clone().add(a.clone().sub(de)), cl(d * 260, 450, 1300));
+}
+// dans une pièce, la caméra reste entre les murs (le regard la suit)
 function garderDans(cle) {
-  const z = pieces[cle].z, m = EP + 0.3, cl = THREE.MathUtils.clamp;
-  for (const v of [camera.position, controls.target]) {
-    v.x = cl(v.x, z.x + m - L / 2, z.x + z.l - m - L / 2);
-    v.z = cl(v.z, z.y + m - P / 2, z.y + z.p - m - P / 2);
-    v.y = cl(v.y, 0.45, z.h - 0.25);
-  }
+  const z = pieces[cle].z, m = EP + 0.3, cl = THREE.MathUtils.clamp, v = camera.position, avant = v.clone();
+  v.x = cl(v.x, z.x + m - L / 2, z.x + z.l - m - L / 2);
+  v.z = cl(v.z, z.y + m - P / 2, z.y + z.p - m - P / 2);
+  v.y = cl(v.y, 0.45, z.h - 0.25);
+  controls.target.add(v.clone().sub(avant));
+}
+// vue d'ensemble : ce qu'on regarde reste au-dessus du bâtiment (on ne le perd pas en faisant glisser)
+function garderBatiment() {
+  const t = controls.target, cl = THREE.MathUtils.clamp, avant = t.clone();
+  t.x = cl(t.x, -L / 2, L / 2); t.z = cl(t.z, -P / 2, P / 2); t.y = cl(t.y, 0, 4);
+  camera.position.add(t.clone().sub(avant));
 }
 // murs coupés selon l'orientation de la caméra (vue d'ensemble) ou tous debout (à hauteur d'homme)
 const dirCam = new THREE.Vector3();
@@ -1404,13 +1455,18 @@ function majPieceVue() {
   for (const l of liens3d) l.mesh.visible = l.point.visible = !vue;   // les arcs des messages se lisent de haut
 }
 function majOptique(dt) {
-  const fov = pieceActuelle || pieceVue ? FOV[1] : FOV[0], pres = camera.position.y < 4.5 ? 0.08 : 0.3;
+  const fov = pieceActuelle ? FOV[1] * zoomPiece : pieceVue ? FOV[1] : FOV[0], pres = camera.position.y < 4.5 ? 0.08 : 0.3;
   let change = camera.near !== pres;
-  if (Math.abs(camera.fov - fov) > 0.05) { camera.fov += (fov - camera.fov) * Math.min(1, dt * 3); change = true; }
+  if (Math.abs(camera.fov - fov) > 0.05) { camera.fov += (fov - camera.fov) * Math.min(1, dt * (pince ? 14 : 3)); change = true; }
   if (change) { camera.near = pres; camera.updateProjectionMatrix(); }
 }
 // mode caméra (Jarvis) : la ronde passe voir les pièces où un agent travaille VRAIMENT, puis revient sur l'ensemble
 let ronde = 0, rondeI = 0, priseEnMain = 0;
+// l'utilisateur prend la main : la ronde et la rotation lente s'arrêtent (3 min au doigt, 1 min à la souris)
+function pris() {
+  if (!camera3d) return;
+  controls.autoRotate = false; priseEnMain = performance.now() + (tactile ? 180000 : 60000);
+}
 function rondeCamera(t) {
   if (vol || t < priseEnMain) return;
   if (!ronde) { ronde = t + 40000; return; }
@@ -1426,7 +1482,8 @@ function barrePieces() {
   barre = document.createElement("div"); barre.className = "pieces3d";
   const bouton = (cle, nom) => {
     const b = document.createElement("button"); b.type = "button"; b.textContent = nom; b.dataset.piece = cle;
-    b.addEventListener("click", () => (cle ? entrer(cle) : ensemble()));
+    b.addEventListener("click", () => { if (cle) visiter(cle); else { pris(); ensemble(); } });
+    if (cle && TAPIS[cle]) b.style.setProperty("--teinte", TAPIS[cle][0]);
     barre.appendChild(b);
   };
   bouton("", "Vue d'ensemble");
@@ -1438,42 +1495,124 @@ function barrePieces() {
   majBarre();
 }
 function majBarre() {
+  majNav();
   if (!barre) return;
-  barre.querySelectorAll("[data-piece]").forEach((b) => b.classList.toggle("actif", (b.dataset.piece || null) === pieceActuelle));
+  barre.querySelectorAll("[data-piece]").forEach((b) => {
+    b.classList.toggle("actif", (b.dataset.piece || null) === pieceActuelle);
+    const st = etatsPieces[b.dataset.piece];
+    if (st) b.dataset.etat = st; else delete b.dataset.etat;   // point coloré : l'état réel de ses agents
+  });
   barre.querySelector(".info").hidden = !pieceActuelle;
+  const a = barre.querySelector(".actif");   // la pièce choisie reste visible dans la barre (téléphone)
+  if (a && majBarre.vue !== pieceActuelle && barre.scrollWidth > barre.clientWidth) barre.scrollTo({ left: a.offsetLeft - (barre.clientWidth - a.offsetWidth) / 2, behavior: "smooth" });
+  majBarre.vue = pieceActuelle;
+}
+// boutons de déplacement en bas (écran tactile) : tourner et zoomer sur l'ensemble ; pièce voisine ou sortir dans une pièce
+function navigation() {
+  nav = document.createElement("div"); nav.className = "nav3d";
+  const bouton = (texte, titre, action, classe = "") => {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = texte; b.title = titre;
+    b.setAttribute("aria-label", titre); if (classe) b.className = classe;
+    b.addEventListener("click", () => { pris(); action(); });
+    nav.appendChild(b); return b;
+  };
+  nav.ensemble = [bouton("⟲", "Tourner à gauche", () => tourner(-1)), bouton("−", "Dézoomer", () => zoom3d(0.8)),
+    bouton("+", "Zoomer", () => zoom3d(1.25)), bouton("⟳", "Tourner à droite", () => tourner(1))];
+  nav.piece = [bouton("‹", "Pièce précédente", () => voisine(-1)), bouton("⌂ Sortir", "Revenir à la vue d'ensemble", ensemble, "large"),
+    bouton("›", "Pièce suivante", () => voisine(1))];
+  conteneur.appendChild(nav);
+  majNav();
+}
+function majNav() {
+  if (!nav) return;
+  for (const b of nav.ensemble) b.hidden = !!pieceActuelle;
+  for (const b of nav.piece) b.hidden = !pieceActuelle;
+}
+// petite astuce en bas de l'écran (les trois premières fois seulement)
+function astuce(cle, texte) {
+  if (camLente) return;
+  let n = 0;
+  try { n = +localStorage.getItem(`astuce3d-${cle}`) || 0; localStorage.setItem(`astuce3d-${cle}`, n + 1); } catch { /* navigation privée */ }
+  if (n >= 3) return;
+  conteneur.querySelector(".astuce3d")?.remove();
+  const d = document.createElement("div"); d.className = "astuce3d"; d.textContent = texte;
+  conteneur.appendChild(d); setTimeout(() => d.remove(), 5400);
+}
+// carton à l'entrée d'une pièce : son nom et ses agents (vrai état)
+function carton(cle) {
+  const z = pieces[cle].z, ag = Object.values(postes).filter((ps) => ps.zone === cle && ps.statut && ps.statut !== "construction");
+  const n = ag.filter((ps) => ps.travail).length;
+  conteneur.querySelector(".carton3d")?.remove();
+  const d = document.createElement("div"); d.className = "carton3d";
+  const b = document.createElement("b"); b.textContent = z.nom;
+  const sous = document.createElement("span");
+  sous.textContent = `${ag.length} agent${ag.length > 1 ? "s" : ""}${n ? ` · ${n} au travail` : ""}`;
+  d.append(b, sous); conteneur.appendChild(d); setTimeout(() => d.remove(), 3400);
 }
 
 function cliquer() {
-  const ray = new THREE.Raycaster(), souris = new THREE.Vector2(), cibles = cliquables.concat(murs3d);
-  let depart = null, survol = null;
+  const el = renderer.domElement, ray = new THREE.Raycaster(), souris = new THREE.Vector2(), cibles = cliquables.concat(murs3d, sols);
+  const doigts = new Map(), cl = THREE.MathUtils.clamp;
+  let depart = null, survol = null, plusieurs = false, ecart0 = 0, zoom0 = 1;
   const viser = (e) => {
-    const r = renderer.domElement.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
     souris.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(souris, camera);
     for (const t of ray.intersectObjects(cibles, false)) {
       const u = t.object.userData;
-      if (!u.mur) return u;
+      if (!u.mur) return { u, p: t.point };
       if (t.point.y <= coupes[u.mur].h + 0.01) return null;   // partie debout d'un mur : le clic s'arrête là
     }
     return null;
   };
-  renderer.domElement.addEventListener("pointerdown", (e) => { depart = [e.clientX, e.clientY]; });
-  renderer.domElement.addEventListener("pointerup", (e) => {
-    if (!depart || Math.hypot(e.clientX - depart[0], e.clientY - depart[1]) > 6) { depart = null; return; }
-    depart = null;
-    const u = viser(e);
-    if (u && u.agent) window.voirAgent(u.agent);
-    else if (u && u.zone) allerPiece(u.zone);
+  const ecart = () => { const [a, b] = [...doigts.values()]; return Math.hypot(a[0] - b[0], a[1] - b[1]) || 1; };
+  el.addEventListener("pointerdown", (e) => {
+    doigts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (doigts.size === 1) { depart = [e.clientX, e.clientY]; plusieurs = false; }
+    if (doigts.size === 2) { plusieurs = true; ecart0 = ecart(); zoom0 = zoomPiece; }
+    pris();
   });
-  renderer.domElement.addEventListener("pointermove", (e) => {
-    if (e.buttons) return;
-    const u = viser(e), cle = u ? (u.agent ? `a${u.agent}` : `z${u.zone}`) : null;
-    renderer.domElement.style.cursor = cle ? "pointer" : "grab";
+  el.addEventListener("pointermove", (e) => {
+    if (doigts.has(e.pointerId)) {
+      doigts.set(e.pointerId, [e.clientX, e.clientY]);
+      if (doigts.size === 2 && pieceActuelle && ecart0) { zoomPiece = cl(zoom0 * ecart0 / ecart(), 0.45, 1.25); pince = true; }
+    }
+    if (e.buttons || e.pointerType === "touch") return;
+    const h = viser(e), u = h && h.u, cle = u ? (u.agent ? `a${u.agent}` : `z${u.zone}`) : null;
+    el.style.cursor = cle ? "pointer" : "grab";
     if (cle === survol) return;
     survol = cle;
-    for (const t of cliquables) if (t.userData.zone) t.material.emissive.setHex(u && u.zone === t.userData.zone ? 0x2a1d06 : 0x000000);
+    for (const t of cliquables) if (t.userData.zone) t.material.emissive.setHex(u && u.zone === t.userData.zone && u.zone !== pieceActuelle ? 0x2a1d06 : 0x000000);
   });
-  window.addEventListener("keydown", (e) => { if (e.key === "Escape" && actif && pieceActuelle) ensemble(); });
+  const lacher = (e) => {
+    doigts.delete(e.pointerId);
+    if (doigts.size < 2) { ecart0 = 0; pince = false; }
+  };
+  el.addEventListener("pointerup", (e) => {
+    lacher(e);
+    const tape = depart && !plusieurs && Math.hypot(e.clientX - depart[0], e.clientY - depart[1]) <= (e.pointerType === "touch" ? 10 : 6);
+    if (doigts.size === 0) depart = null;
+    if (!tape) return;
+    const h = viser(e), u = h && h.u;
+    if (u && u.agent) window.voirAgent(u.agent);
+    else if (u && u.zone && u.zone === pieceActuelle) { if (!vol) marcher(h.p); }
+    else if (u && u.zone) allerPiece(u.zone);
+  });
+  el.addEventListener("pointercancel", (e) => { lacher(e); if (doigts.size === 0) depart = null; });
+  el.addEventListener("wheel", (e) => {   // dans une pièce, la molette règle le zoom de l'objectif
+    if (!pieceActuelle) return;
+    e.preventDefault(); pris();
+    zoomPiece = cl(zoomPiece * Math.exp(e.deltaY * 0.0012), 0.45, 1.25);
+  }, { passive: false });
+  window.addEventListener("keydown", (e) => {
+    if (!actif || (e.target.closest && e.target.closest("input, textarea, select, dialog"))) return;
+    if (e.key === "Escape" && pieceActuelle) ensemble();
+    else if ((e.key === "ArrowUp" || e.key === "ArrowDown") && pieceActuelle && !vol) {   // flèches : un pas en avant ou en arrière
+      const d = new THREE.Vector3(); camera.getWorldDirection(d); d.y = 0;
+      marcher(camera.position.clone().addScaledVector(d.normalize(), e.key === "ArrowUp" ? 1.3 : -0.8));
+      e.preventDefault();
+    }
+  });
 }
 
 // étalonnage final : vignette et léger grain (cinéma)
@@ -1497,7 +1636,7 @@ function taille() {
 function boucle(t) {
   requestAnimationFrame(boucle);
   if (!actif || document.hidden) return;
-  if (camera3d && (image++ & 1)) return;
+  if (camLente && (image++ & 1)) return;
   const s = (t - t0) / 1000, dt = Math.min(0.25, (t - (boucle.avant || t)) / 1000);
   boucle.avant = t;
   if (vol) {
@@ -1505,10 +1644,10 @@ function boucle(t) {
     camera.position.set(0, 0, 0).addScaledVector(vol.de, u * u * u).addScaledVector(vol.c1, 3 * u * u * e)
       .addScaledVector(vol.c2, 3 * u * e * e).addScaledVector(vol.a, e * e * e);
     controls.target.lerpVectors(vol.deC, vol.aC, e); camera.lookAt(controls.target);
-    if (k >= 1) vol = null;
+    if (k >= 1) { vol = null; if (pieceActuelle) regarder(); }
   } else {
     controls.update();
-    if (pieceActuelle) garderDans(pieceActuelle);
+    if (pieceActuelle) garderDans(pieceActuelle); else garderBatiment();
   }
   majCoupes(dt); majPieceVue(); majOptique(dt);
   if (camera3d) rondeCamera(t);
@@ -1532,7 +1671,7 @@ function boucle(t) {
   }
   if (grain) grain.uniforms.temps.value = s % 10;
   if (image % 120 === 0) dessinerHorloges();
-  if (!camera3d) image++;
+  if (!camLente) image++;
   composer.render();
   labels.render(scene, camera);
 }
@@ -1547,7 +1686,7 @@ async function demarrer() {
   plan = await (await fetch("api/scene")).json();
   L = plan.sol.l; P = plan.sol.p;
   renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
-  renderer.setPixelRatio(camera3d ? 1 : Math.min(window.devicePixelRatio, telephone ? 1.75 : 2));
+  renderer.setPixelRatio(camLente ? 1 : Math.min(window.devicePixelRatio, camera3d ? 1.5 : telephone ? 1.75 : 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.localClippingEnabled = true;   // murs coupés de la vue d'ensemble
@@ -1562,11 +1701,11 @@ async function demarrer() {
   controls = new OrbitControls(camera, renderer.domElement);
   controls.target.copy(VUES.ensemble[1]);
   Object.assign(controls, { enableDamping: true, dampingFactor: 0.08, maxPolarAngle: 1.38, minDistance: 3, maxDistance: 85, screenSpacePanning: false });
-  if (camera3d) {   // la caméra tourne seule ; si on la prend en main, elle reprend sa ronde 20 s après
+  if (camera3d) {   // la caméra tourne seule ; si on la prend en main, elle reprend sa ronde 20 s après (3 min au doigt)
     let reprise = null;
     Object.assign(controls, { autoRotate: true, autoRotateSpeed: 0.35 });
-    controls.addEventListener("start", () => { controls.autoRotate = false; clearTimeout(reprise); priseEnMain = performance.now() + 60000; });
-    controls.addEventListener("end", () => { reprise = setTimeout(() => { if (!pieceActuelle) controls.autoRotate = true; }, 20000); });
+    controls.addEventListener("start", () => { pris(); clearTimeout(reprise); });
+    controls.addEventListener("end", () => { reprise = setTimeout(() => { if (!pieceActuelle) controls.autoRotate = true; }, tactile ? 180000 : 20000); });
   }
   // rendu : anticrénelage (MSAA), halo lumineux, étalonnage
   const cible = new THREE.WebGLRenderTarget(16, 16, { type: THREE.HalfFloatType, samples: LEGER ? 2 : 4 });
@@ -1579,7 +1718,7 @@ async function demarrer() {
   for (const z of plan.zones) { piece(z); tapis(z); decor(z); }
   plante(0.5, 15); plante(47.5, 0.6); plante(29.6, 9.6); plante(18.4, 20.4); plante(47.5, 29.4); plante(0.5, 29.4);
   for (const p of plan.postes) poste(p);
-  cliquer(); limites(); barrePieces();
+  cliquer(); limites(); barrePieces(); navigation();
   majGraphique(); majEchanges();
   setInterval(majGraphique, 5 * 60000); setInterval(majEchanges, 60000);
   new ResizeObserver(taille).observe(conteneur);
@@ -1588,6 +1727,8 @@ async function demarrer() {
   basculer(window.modePlateau ? window.modePlateau() : "bureau");
   if (window.etatCourant) maj3d(window.etatCourant(), null);
   requestAnimationFrame(boucle);
+  astuce("ensemble", tactile ? "Un doigt : faire glisser · deux doigts : zoomer et tourner · touche une pièce pour y entrer"
+    : "Glisser : tourner · clic droit : se déplacer · molette : zoom · clic sur une pièce : y entrer");
 }
 
 // Le bureau en 3D remplace la vue 2,5D quand on est en mode « bureau » ; le hall en cercle reste en SVG.

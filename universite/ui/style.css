@@ -187,12 +187,12 @@ pre.doc.apercu { max-height: 220px; overflow: auto; font-size: 13px; margin: 8px
 .noms-zones .nom-zone { pointer-events: auto; cursor: pointer; }
 .noms-zones .nom-zone:hover, .noms-zones .nom-zone:focus { fill: var(--or-clair); outline: none; }
 
-/* bureau 3D */
-#scene3d { position: absolute; inset: 0; background: #04060b; }
+/* bureau 3D (isolé : ses étiquettes restent sous la fiche d'un agent et sous les boutons) */
+#scene3d { position: absolute; inset: 0; background: #04060b; isolation: isolate; }
 #scene3d[hidden] { display: none; }
 #scene3d canvas { display: block; touch-action: none; }
 .zoom, .legende { z-index: 2; }
-.etiquettes3d { position: absolute; top: 0; left: 0; pointer-events: none; }
+.etiquettes3d { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1; }
 .tag3d { pointer-events: auto; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 1px;
   font: 600 12px/1.2 system-ui, "Segoe UI", sans-serif; color: var(--texte); white-space: nowrap; }
 .tag3d b { background: rgba(6,8,14,.82); border: 1px solid rgba(212,166,74,.45); border-radius: 999px; padding: 2px 9px 2px 20px;
@@ -205,6 +205,9 @@ pre.doc.apercu { max-height: 220px; overflow: auto; font-size: 13px; margin: 8px
 .tag3d.erreur i { background: var(--rouge); box-shadow: 0 0 8px var(--rouge); } .tag3d.erreur small { color: var(--rouge); }
 .tag3d.construction i { background: var(--gris); box-shadow: none; } .tag3d.construction b, .tag3d.construction small { color: var(--doux); }
 .tag3d.choisi b, .tag3d:hover b { border-color: var(--or-clair); }
+.tag3d.choisi b { box-shadow: 0 0 0 1px var(--or-clair), 0 0 16px rgba(240,207,133,.45); }
+.tag3d.travail i { animation: pouls 1.6s ease-in-out infinite; } .tag3d.erreur i { animation: pouls .9s ease-in-out infinite; }
+@keyframes pouls { 50% { transform: scale(1.4); opacity: .6; } }
 .nom-zone3d { pointer-events: auto; cursor: pointer; font: 600 13px Georgia, "Times New Roman", serif; letter-spacing: 2px;
   text-transform: uppercase; color: #e8c97a; text-shadow: 0 0 10px #000, 0 1px 2px #000; white-space: nowrap; }
 .nom-zone3d:hover { color: #fff1c9; }
@@ -212,9 +215,18 @@ pre.doc.apercu { max-height: 220px; overflow: auto; font-size: 13px; margin: 8px
 /* barre des pièces : entrer dans un bureau, revenir à l'ensemble */
 .pieces3d { position: absolute; top: 10px; left: 12px; right: 70px; z-index: 2; display: flex; flex-wrap: wrap; gap: 6px; pointer-events: none; }
 .pieces3d button { pointer-events: auto; cursor: pointer; font: 600 12px/1 system-ui, "Segoe UI", sans-serif; color: var(--texte);
-  background: rgba(6,8,14,.78); border: 1px solid rgba(212,166,74,.35); border-radius: 999px; padding: 6px 11px; white-space: nowrap; }
+  background: linear-gradient(135deg, var(--teinte, rgba(6,8,14,.78)) 0%, rgba(6,8,14,.84) 75%); border: 1px solid rgba(212,166,74,.35);
+  border-radius: 999px; padding: 6px 11px; white-space: nowrap; transition: border-color .25s, box-shadow .25s, transform .15s; }
+.pieces3d button:active { transform: scale(.95); }
+/* point de couleur : l'état réel des agents de la pièce */
+.pieces3d button[data-etat]::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px;
+  vertical-align: 1px; background: var(--vert); }
+.pieces3d button[data-etat="travail"]::before { background: var(--bleu); box-shadow: 0 0 6px var(--bleu); animation: pouls 1.6s ease-in-out infinite; }
+.pieces3d button[data-etat="attente"]::before { background: var(--orange); }
+.pieces3d button[data-etat="erreur"]::before { background: var(--rouge); animation: pouls .9s ease-in-out infinite; }
 .pieces3d button:hover { border-color: var(--or-clair); }
-.pieces3d button.actif { background: #d4a64a; border-color: #d4a64a; color: #140e04; }
+.pieces3d button.actif { background: linear-gradient(135deg, #f0cf85, #d4a64a); border-color: #f0cf85; color: #140e04;
+  box-shadow: 0 0 14px rgba(240,207,133,.35); }
 .pieces3d button.info { border-style: dashed; color: var(--or-clair); }
 .pieces3d button[hidden] { display: none; }
 @media (max-width: 700px) {
@@ -223,6 +235,43 @@ pre.doc.apercu { max-height: 220px; overflow: auto; font-size: 13px; margin: 8px
   .pieces3d button { font-size: 11px; padding: 5px 9px; }
 }
 .camera .pieces3d { display: none; }
+.camera.tactile .pieces3d { display: flex; top: 38px; }   /* la caméra de l'appli, au doigt : on peut choisir sa pièce */
+
+/* boutons de déplacement (écran tactile) : en bas au centre, à portée du pouce */
+.nav3d { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 2; display: none; gap: 4px; padding: 5px;
+  border-radius: 999px; background: rgba(6,8,14,.74); border: 1px solid rgba(212,166,74,.35); box-shadow: 0 8px 26px #000b;
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.tactile .nav3d { display: flex; }
+.nav3d button { min-width: 46px; height: 46px; padding: 0 12px; border-radius: 999px; border: 1px solid transparent;
+  background: rgba(255,255,255,.04); color: var(--or-clair); font-size: 21px; line-height: 1; white-space: nowrap; transition: background .2s, transform .12s; }
+.nav3d button.large { font-size: 14px; font-weight: 600; padding: 0 18px; color: var(--texte); border-color: rgba(212,166,74,.45); }
+.nav3d button:active { background: rgba(212,166,74,.28); transform: scale(.93); }
+.nav3d button[hidden] { display: none; }
+.tactile:not(.camera) .legende { bottom: 74px; }
+/* astuce (les premières fois) et carton d'entrée dans une pièce */
+.astuce3d { position: absolute; left: 50%; bottom: 76px; z-index: 3; width: max-content; max-width: calc(100% - 32px); text-align: center;
+  font-size: 13px; line-height: 1.4; padding: 8px 14px; border-radius: 12px; background: rgba(6,8,14,.88); color: var(--texte);
+  border: 1px solid rgba(212,166,74,.4); pointer-events: none; animation: astuce 5.4s ease both; }
+@keyframes astuce { 0% { opacity: 0; transform: translate(-50%, 10px); } 8%, 86% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, 0); } }
+.carton3d { position: absolute; left: 0; right: 0; top: 24%; z-index: 3; text-align: center; pointer-events: none; animation: carton 3.4s ease both; }
+.carton3d b { display: block; font: 600 clamp(17px, 4.4vw, 32px) Georgia, "Times New Roman", serif; letter-spacing: .16em; text-transform: uppercase;
+  color: #f0cf85; text-shadow: 0 0 22px rgba(240,160,60,.5), 0 2px 4px #000; animation: espace 3.4s ease both; padding: 0 12px; }
+.carton3d b::after { content: ""; display: block; height: 1px; margin: 10px auto 0; width: min(320px, 70%);
+  background: linear-gradient(90deg, transparent, #d4a64a, transparent); animation: trait 3.4s ease both; }
+.carton3d span { display: inline-block; margin-top: 8px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: #cfc7b4;
+  text-shadow: 0 1px 3px #000; }
+@keyframes carton { 0% { opacity: 0; } 14%, 76% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes espace { 0% { letter-spacing: .42em; } 40%, 100% { letter-spacing: .16em; } }
+@keyframes trait { 0%, 12% { transform: scaleX(0); } 45%, 100% { transform: scaleX(1); } }
+/* fiche d'un agent : elle glisse (de côté sur grand écran, du bas sur téléphone) */
+#panneau:not([hidden]) { animation: panneau .3s cubic-bezier(.2,.8,.2,1); }
+@keyframes panneau { from { transform: translateX(42px); opacity: 0; } }
+@media (max-width: 700px) { #panneau:not([hidden]) { animation-name: panneau-bas; } }
+@keyframes panneau-bas { from { transform: translateY(48px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .tag3d i, .pieces3d button::before, .carton3d, .carton3d b, .carton3d b::after, .astuce3d, #panneau:not([hidden]) { animation: none !important; }
+}
 
 /* ------------------------------------------------------------------ mode caméra (?camera=1, montré par Jarvis) */
 .camera body { grid-template-rows: 1fr; }
@@ -237,5 +286,6 @@ pre.doc.apercu { max-height: 220px; overflow: auto; font-size: 13px; margin: 8px
 /* petite caméra (encadré de l'écran Jarvis) : seulement les agents, sans le nom des zones */
 @media (max-width: 640px) and (max-height: 420px) {
   .camera .nom-zone3d { display: none; }
+  .camera .carton3d b { font-size: 14px; } .camera .carton3d span { font-size: 10px; }
   .camera #cam-bandeau { font-size: 11px; top: 6px; left: 6px; padding: 2px 8px; }
 }

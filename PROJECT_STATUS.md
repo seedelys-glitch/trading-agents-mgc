@@ -224,6 +224,15 @@ Aucun lien avec `ordres.py`.
      échanges entre agents ; horloges Paris / Londres / New York / Tokyo à l'heure réelle (pôle macro) ; lanterne
      au-dessus de chaque ouverture = état réel des agents de la pièce ; cheminée chez le directeur (décor). Mode
      caméra de Jarvis : la ronde passe 20 s dans les pièces où un agent travaille vraiment, puis revient.
+   - Téléphone et déplacement (24/10, « les noms des autres agents passent par-dessus la fiche » et « compliqué de
+     se déplacer au téléphone ») : la vue 3D est isolée (`#scene3d` en `isolation`), ses étiquettes restent sous la
+     fiche. Écran tactile (`pointer: coarse`, classe `tactile`) : un doigt fait glisser le plan, deux doigts zooment
+     et tournent, boutons en bas (⟲ − + ⟳ ; dans une pièce ‹ ⌂ Sortir ›), barre des pièces visible aussi dans la
+     caméra de l'appli. Dans une pièce (PC et téléphone) : glisser = regarder autour de soi, molette ou pincement =
+     zoom, toucher le sol = avancer, flèches ↑ ↓ = un pas. Au doigt, la ronde automatique s'arrête 3 min et le rendu
+     reste fluide. Petites animations : titre de la pièce à l'entrée (vrai nombre d'agents), pièces colorées avec le
+     point d'état réel de leurs agents, point qui pulse sur un agent au travail, fiche qui glisse, astuces les 3
+     premières fois.
    - E7 : livrer sur le PC (fichiers de `universite/`), Jabran relance l'université et regarde ; ensuite seulement,
      idées possibles : moteur 3D (Three.js) qui relirait la même scène, VR plus tard.
 3. Quand NinjaTrader 8 / Bookmap seront installés : temps réel et agent 4 (heatmap).
