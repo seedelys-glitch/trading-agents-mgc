@@ -24,7 +24,11 @@ DEFAUTS = {
     "frais_aller_retour_usd": 1.50,     # ESTIMATION par contrat (commission + frais CME) : à confirmer sur un relevé
     "glissement_ticks_par_cote": 1,     # hypothèse : 1 tick à l'entrée + 1 tick à la sortie
     "ratio_min": 1.5,                   # rendement / risque minimal (net, sur le TP1)
-    "max_contrats": 50,                 # plafond de sécurité ; à aligner sur la taille max du compte Topstep
+    "max_contrats": 50,                 # Topstep 50K : 5 minis = 50 micros (aide Topstep, vérifié le 24/10/2026)
+    "perte_max_compte_usd": 2000.0,     # Topstep 50K : perte max du compte, suit le plus haut solde de fin de journée
+    "objectif_usd": 3000.0,             # Topstep 50K : objectif du Trading Combine
+    "consistance_pct": 55.0,            # Topstep : meilleur jour < 55 % de l'objectif (sinon l'objectif monte)
+    "marge_securite_mll_usd": 250.0,    # jamais un trade qui laisse moins que ça avant la perte max du compte
     "fenetre_paris": ["15:30", "20:00"],  # décision de Jabran du 17/10
     "rollover_jours_restriction": 5,    # jours ouvrés avant la bascule pendant lesquels rien n'est exploitable
     "bascule_jours_avant_avis": 2,      # bascule de liquidité estimée N jours ouvrés avant le premier jour d'avis

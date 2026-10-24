@@ -1,7 +1,39 @@
 # MGC AI Trading Desk — état du projet
 
-Dernière mise à jour : 24/10/2026 (mémoire : Scribe n° 15 et Archiviste n° 16 écrits et testés dans le conteneur ; reste l'installation sur le PC). Ce fichier est la mémoire du projet : on le lit
+Dernière mise à jour : 24/10/2026 (nouveaux agents du desk : Liquidité, Dollar & taux, Piège, Règles Topstep, bulletin de notes, mode express). Ce fichier est la mémoire du projet : on le lit
 avant de reprendre le travail, on le met à jour après chaque étape.
+
+## 0quater. Nouveaux agents du desk (24/10/2026, session cloud « améliorations Jarvis / université / desk »)
+Demande de Jabran : agents Piège, Règles Topstep, bulletin de notes, Liquidité, Dollar & taux, mode express.
+- **8 votants** dans `bureau.SPECIALISTES` : smc, fibo, ichimoku, tendance, orderflow, calendrier, **liquidite**,
+  **dollar**. Le Calendrier ne lit plus le dollar (il passe à « Dollar & taux », données `macro`).
+- **Vote** : `bureau.majorite()` = au moins 2/3 des voix pondérées (`ACCORD_MIN`). À 6 votants de même poids = 4 sur 6
+  (règle d'origine) ; à 8 = **6 sur 8** (plus exigeant : à revoir avec Jabran si le desk bloque trop).
+- **Agent Liquidité** : `calculs.liquidite_sessions()` (Asie 1h-8h, Londres 8h-15h30 Paris, du jour et de la veille,
+  + plus haut / bas de la veille en D1) : intacte, balayée (mèche puis retour), cassée, en formation ; liquidité intacte
+  la plus proche au-dessus / en dessous, dernière prise. Veille : `veille/liquidite.py` écrit un événement
+  `source: liquidite`, `type: prise` quand un niveau est balayé (8h-20h30, semaine, une fois par niveau,
+  `rapports\salle\liquidite-etat.json`). VERSION de la veille : 2026-10-24d (Jarvis relance l'ancienne).
+- **Agent Dollar & taux** : `calculs.macro(ticker, d1)` + argent (SI=F), variation 24 h, corrélation 20 j or/dollar,
+  « l'argent confirme l'or ».
+- **Agent Piège** (ne vote pas) : IA « avocat du diable » après le tour 1 (`piege_ia`, format RISQUE / SCENARIO /
+  ATTENDRE, lu par le chef) + calcul `mgc/piege.py` sur la configuration du programme : liquidité intacte entre
+  l'entrée et le Fibo 1 (3 pts), prix sur le 50 % (0.44-0.56, 2 pts), liquidité balayée dans le sens du trade (1),
+  divergence d'order flow (1), stop < 0,3 ATR H1 (1). **3 points et plus = « fort » = statut limité à ATTENDRE**.
+- **Règles Topstep** : `mgc/topstep.py` (50K : perte max 2 000 $ qui suit le plus haut solde de FIN de journée et
+  s'arrête au solde de départ ; objectif 3 000 $ ; consistance 55 % ; vérifié le 24/10 sur l'aide Topstep). Soldes
+  notés par Jabran (`/solde 50340`, ou à Jarvis) dans `rapports\salle\compte-topstep.json`. Veto si le trade laisse
+  moins de 250 $ avant la perte max ; avertissement de consistance. `/topstep` pour l'état.
+- **Bulletin de notes** : `mgc/bulletin.py` note chaque spécialiste 4 h après chaque desk (clôture H1 GC=F, seuil
+  0,5 ATR H1) ; poids de vote 1 jusqu'à 10 notes puis 0,5 + note (0,5 à 1,5). `rapports\salle\bulletin.json`,
+  `GET /api/bulletin`, `/bulletin`. Notation après chaque desk + toutes les heures (serveur de la salle).
+- **Mode express** : `bureau.py --express` / `{"express": true}` sur `/api/lancer` : Fibo, SMC, Liquidité (accord
+  des 3 exigé), l'agent Piège et le chef, sans débat (5 appels d'IA). Case « Express » sur la page de la salle.
+- Règle de risque des consignes corrigée : 0,25 % (et non plus 1 %).
+- Commandes : `/express` (géré par Jarvis), `/bulletin`, `/liquidite`, `/topstep`, `/solde`.
+- Tests : `salle_des_marches/tests/test_nouveaux_agents.py` (34, dont un desk complet et un express avec une fausse IA).
+- Constat : la plupart des desks récents sont « ANALYSE BLOQUÉE » (données NinjaTrader absentes / périmées) : le
+  branchement des données en direct reste la priorité n° 1 pour que ces agents servent.
 
 ## 0ter. Veille du desk (24/10/2026) : la cascade, les alertes 1H, le journal des setups et l'analyse des actus quittent Jarvis
 Plan « Jarvis connecteur » (étape 3) : Jarvis n'est plus un agent de trading, le calcul des setups va au desk.

@@ -281,3 +281,179 @@ def test_texte_liquidite():
                                       "D1": jours()}, 10.0)
     texte = commandes.texte_liquidite(liq)
     assert "plus haut Asie 4210.0" in texte and "Plus proche liquidité intacte" in texte
+
+
+# ------------------------------------------------------------------ règles Topstep
+
+from datetime import date  # noqa: E402
+
+from mgc import topstep  # noqa: E402
+
+
+def compte(*soldes, depart=50_000.0):
+    jours = [date(2026, 10, 19 + i).isoformat() for i in range(len(soldes))]
+    return {"solde_depart": depart, "soldes": dict(zip(jours, soldes, strict=True))}
+
+
+def test_topstep_plancher_suit_la_fin_de_journee():
+    e = topstep.etat(contenu=compte(50_600, 51_200, 51_000), aujourd_hui=date(2026, 10, 21))
+    assert e["plancher_perte_max"] == 49_200          # plus haut de fin de journée 51 200 - 2 000
+    assert e["marge_avant_perte_max"] == 1_800
+    assert e["gain_du_jour"] == -200 and e["profit"] == 1_000
+    assert e["meilleur_jour"] == {"jour": "2026-10-19", "gain": 600}
+
+
+def test_topstep_plancher_bloque_au_depart_et_consistance():
+    e = topstep.etat(contenu=compte(52_500, 53_100), aujourd_hui=date(2026, 10, 25))
+    assert e["plancher_perte_max"] == 50_000 and e["plancher_bloque"]
+    # meilleur jour 2 500 $ > 55 % de 3 000 : l'objectif monte à 2 500 / 0,55
+    assert e["objectif"] == round(2500 / 0.55, 2)
+
+
+def test_topstep_veto_pres_de_la_perte_max():
+    e = topstep.etat(contenu=compte(48_300), aujourd_hui=date(2026, 10, 20))
+    assert e["marge_avant_perte_max"] == 300
+    assert topstep.vetos(e, 125.0)[0].startswith("Topstep : il ne te reste que 300 $")
+    assert topstep.vetos(topstep.etat(contenu=compte(50_000), aujourd_hui=date(2026, 10, 20)), 125.0) == []
+    assert topstep.vetos(None, 125.0) == []
+
+
+def test_topstep_consistance_du_jour():
+    e = topstep.etat(contenu=compte(50_100, 51_500), aujourd_hui=date(2026, 10, 20))
+    assert e["gain_du_jour"] == 1_400
+    assert "consistance" in topstep.limites(e)[0]
+
+
+def test_commande_solde(tmp_path, monkeypatch):
+    monkeypatch.setattr(topstep, "FICHIER", tmp_path / "compte.json")
+    monkeypatch.setattr(topstep.noter_solde, "__defaults__", (None, tmp_path / "compte.json", 50_000.0))
+    monkeypatch.setattr(topstep.etat, "__defaults__", (None, None, None, tmp_path / "compte.json"))
+    assert "je n'ai pas encore ton solde" in commandes.executer("/topstep")
+    texte = commandes.executer("/solde", "50 340")
+    assert texte.startswith("Solde noté.") and "50340" in texte
+    assert topstep.lire(tmp_path / "compte.json")["soldes"][date.today().isoformat()] == 50_340
+    commandes.executer("/solde", "50.400")
+    assert topstep.lire(tmp_path / "compte.json")["soldes"][date.today().isoformat()] == 50_400
+    assert "illisible" in commandes.executer("/solde", "beaucoup")
+
+
+def test_topstep_veto_dans_le_desk(config):
+    avis, debat = desk(7, 0)
+    e = topstep.etat(contenu=compte(48_300), aujourd_hui=date(2026, 10, 20))
+    d = bureau.finaliser_mgc(decision_chef(), avis, debat, faits_desk(), [], config, compte=e)
+    assert d["statut"] == "AUCUNE OPPORTUNITÉ"
+    assert any(v.startswith("Topstep") for v in d["vetos"])
+
+
+# ------------------------------------------------------------------ veille : liquidité prise annoncée
+
+from veille import liquidite as vliq  # noqa: E402
+
+
+def test_veille_annonce_une_liquidite_prise(tmp_path):
+    m5 = bougies_m5({"2026-10-22 03:00": (4210.0, 4199.0, 4205.0),      # plus haut d'Asie 4210
+                     "2026-10-22 16:00": (4214.0, 4205.0, 4206.0),      # balayé à 16h, retour dessous
+                     "2026-10-22 16:55": (4207.0, 4199.0, 4200.0)})
+    evenements = []
+    agent = vliq.Liquidite(tmp_path, emettre=evenements.append,
+                           charger=lambda intervalle, periode: m5 if intervalle == "5m" else jours())
+    a_17h = datetime(2026, 10, 22, 15, 0, tzinfo=timezone.utc).timestamp()   # 17h à Paris
+    agent.check(a_17h)
+    prises = [e for e in evenements if e["niveau"]["nom"] == "plus haut Asie"]
+    assert len(prises) == 1 and prises[0]["source"] == "liquidite"
+    assert "balayé à 16h00" in prises[0]["texte"]
+    agent.check(a_17h + 120)                      # pas deux fois la même annonce
+    assert len([e for e in evenements if e["niveau"]["nom"] == "plus haut Asie"]) == 1
+    assert vliq.Liquidite(tmp_path).envoyes == agent.envoyes   # gardé après un redémarrage
+
+
+def test_veille_liquidite_silencieuse_la_nuit(tmp_path):
+    m5 = bougies_m5({"2026-10-22 03:00": (4210.0, 4199.0, 4205.0), "2026-10-22 16:00": (4214.0, 4205.0, 4206.0)})
+    evenements = []
+    agent = vliq.Liquidite(tmp_path, emettre=evenements.append, charger=lambda i, p: m5 if i == "5m" else jours())
+    agent.check(datetime(2026, 10, 22, 21, 0, tzinfo=timezone.utc).timestamp())   # 23h à Paris
+    assert evenements == []
+    assert agent.resume()["actif"] is True
+
+
+def test_veille_liquidite_sans_donnees(tmp_path):
+    agent = vliq.Liquidite(tmp_path, charger=lambda i, p: None)
+    agent.check()
+    assert agent.dernier["disponible"] is False
+
+
+# ------------------------------------------------------------------ un desk complet avec une fausse IA
+
+class FausseIA:
+    def __init__(self):
+        self.consignes = []
+
+    def invoke(self, consigne):
+        self.consignes.append(consigne)
+        if "chef d'un desk" in consigne:
+            texte = "DECISION: long\nZONE: 4129.5\nSL: 4126.0\nTP1: 4200\nRAISON: accord du desk."
+        elif "agent Piège" in consigne:
+            texte = "RISQUE: fort\nSCÉNARIO: le prix va chercher le plus bas de Londres.\nÀ ATTENDRE: un balayage du 4115."
+        elif "Ton avis au premier tour" in consigne:
+            texte = "BIAIS: haussier\nCONFIANCE: 4\nREPONSE: d'accord avec Fibo."
+        else:
+            texte = "BIAIS: haussier\nCONFIANCE: 4\nNIVEAUX: 4129.5\nINVALIDATION: 4100\nARGUMENT: zone avec FVG."
+
+        class Reponse:
+            content = texte
+            usage_metadata = {}
+        return Reponse()
+
+
+@pytest.fixture
+def fausse_ia(monkeypatch):
+    import sys
+    import types
+
+    import moteur
+
+    ia = FausseIA()
+    fabrique = types.ModuleType("tradingagents.llm_clients.factory")
+    fabrique.create_tier_client = lambda config, tier: types.SimpleNamespace(get_llm=lambda: ia)
+    monkeypatch.setitem(sys.modules, "tradingagents.llm_clients.factory", fabrique)
+    monkeypatch.setattr(moteur, "verifier_acces", lambda m: None)
+    monkeypatch.setattr(moteur, "construire_config", lambda m, modele=None: {"quick_think_llm": "faux"})
+    monkeypatch.setattr(bureau, "poids_agents", lambda: {})
+    evenements = []
+    monkeypatch.setattr(bureau, "emettre", lambda **e: evenements.append(e))
+    return ia, evenements
+
+
+def args_desk(express=False):
+    import types
+
+    return types.SimpleNamespace(moteur="lmstudio", modele=None, express=express)
+
+
+def calculs_desk():
+    c = faits_desk()
+    c["marche"].update(heure_paris="22/10 16h00", atr_H1=10.0)
+    c["calendrier"] = {"fomc_aujourdhui": False}
+    c["liquidite"] = faits_piege("balayée")["liquidite"]
+    return c
+
+
+def test_desk_express_avec_fausse_ia(fausse_ia):
+    ia, evenements = fausse_ia
+    avis, debat, decision = bureau.debattre(args_desk(True), calculs_desk(), {"appels": 0}, economiser=True, express=True)
+    assert set(avis) == {"fibo", "smc", "liquidite"}
+    assert len(ia.consignes) == 5                      # 3 avis + Piège + chef, pas de débat
+    assert decision["decision"] == "long" and decision["accord_min"] == 1.0
+    piege_ev = next(e for e in evenements if e.get("cle") == "piege" and e.get("tour") == 1)
+    assert piege_ev["risque"] == "fort" and "4115" in piege_ev["invalidation"]
+    assert "Piège" in ia.consignes[-1] and "au moins 3 sur 3" in ia.consignes[-1]
+
+
+def test_desk_complet_avec_fausse_ia(fausse_ia, config):
+    ia, evenements = fausse_ia
+    avis, debat, decision = bureau.debattre(args_desk(), calculs_desk(), {"appels": 0}, economiser=True)
+    assert len(avis) == 8
+    assert len(ia.consignes) == 10                     # 8 avis + Piège + chef (tous d'accord : pas de débat)
+    d = bureau.finaliser_mgc(decision, avis, debat, calculs_desk(), [], config)
+    assert d["statut"] == "ACHAT ENVISAGEABLE" and d["biais"]["accord"] == "8/8"
+    assert d["avis_piege"]["risque"] == "fort"         # l'avis de l'IA est affiché, le statut suit le calcul

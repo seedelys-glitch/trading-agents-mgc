@@ -11,6 +11,8 @@ Commandes du téléphone (Telegram, relayées par Jarvis -> POST /api/commande) 
   /pause     coupe immédiatement toute nouvelle configuration exploitable ; /resume la rétablit
   /bulletin  bulletin de notes des agents (ce que le gold a fait 4 h après chaque desk)
   /liquidite plus hauts / plus bas d'Asie, de Londres et de la veille : intacts, balayés ou cassés
+  /topstep   règles du compte Topstep : marge avant la perte max, objectif, consistance
+  /solde     /solde 50340 : note le solde du compte Topstep (le dernier du jour = fin de journée)
 /analyse et /express sont gérés par Jarvis (il lance le desk et envoie le plan à la fin).
 """
 
@@ -25,7 +27,8 @@ from mgc.instrument import sur_grille
 RAPPORTS = Path(__file__).resolve().parent.parent / "rapports" / "salle"
 BASE = None  # None = rapports\salle\analyste.sqlite (les tests en donnent une autre)
 AIDE = ("Commandes : /analyse (lance le desk gold), /express (desk express ~5 min), /contrat, /news, /regime, "
-        "/stats, /memoire, /bulletin, /liquidite, /resultat <id> <win|loss> <prix>, /pause, /resume.")
+        "/stats, /memoire, /bulletin, /liquidite, /topstep, /solde <montant>, /resultat <id> <win|loss> <prix>, "
+        "/pause, /resume.")
 
 
 def _historique():
@@ -205,6 +208,28 @@ def executer(commande, args="", maintenant=None, config=None):
             return bulletin_agents()
         if commande in ("/liquidite", "/liquidité"):
             return liquidite_actuelle(config, maintenant)
+        if commande == "/topstep":
+            from mgc import topstep
+
+            return topstep.resume(config=config)
+        if commande == "/solde":
+            from mgc import topstep
+
+            if not args.strip():
+                return "Format : /solde 50340 (le solde actuel de ton compte Topstep)."
+            import re
+
+            nombre = re.search(r"\d[\d \u00a0\u202f.,]*", args)
+            try:
+                if not nombre:
+                    raise ValueError(args)
+                montant = re.sub(r"[ \u00a0\u202f]", "", nombre.group(0)).rstrip(".,")
+                if re.fullmatch(r"\d{1,3}([.,]\d{3})+", montant):  # « 50.340 » ou « 50,340 » = cinquante mille
+                    montant = re.sub(r"[.,]", "", montant)
+                topstep.noter_solde(montant, solde_depart=config["capital_usd"])
+            except ValueError:
+                return f"Solde illisible : {args.strip()}. Exemple : /solde 50340"
+            return "Solde noté. " + topstep.resume(config=config)
         if commande == "/pause":
             return pause(True)
         if commande == "/resume":

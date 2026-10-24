@@ -25,7 +25,7 @@ from urllib.parse import parse_qs, urlparse
 from .service import DOSSIER, Veille
 
 PORT = int(os.environ.get("VEILLE_PORT", "8791"))
-VERSION = "2026-10-24c"   # Jarvis compare : si elle change, il arrête l'ancienne veille et lance la nouvelle
+VERSION = "2026-10-24d"   # Jarvis compare : si elle change, il arrête l'ancienne veille et lance la nouvelle
 log = logging.getLogger("veille")
 
 

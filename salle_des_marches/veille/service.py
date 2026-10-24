@@ -18,6 +18,7 @@ from .bougies import plain
 from .cascade import CHECK_S, Cascade
 from .ia import IALocale
 from .journal_setups import SetupJournal
+from .liquidite import CHECK_S as CHECK_LIQ_S, Liquidite
 from .strategie_1h import CHECK_S as CHECK_STRAT_S, Strategie1H
 
 log = logging.getLogger("veille")
@@ -38,6 +39,7 @@ class Veille:
         self.strategie = Strategie1H(self.dossier, emettre=self.ajouter)
         self.ia = IALocale()
         self.setups = SetupJournal(self.ia)            # journal des setups du dossier bot trad
+        self.liquidite = Liquidite(self.dossier, emettre=self.ajouter)   # Asie / Londres / veille balayées
         self.depart = time.time()
 
     # ------------------------------------------------------------------ journal
@@ -83,7 +85,8 @@ class Veille:
 
     # ------------------------------------------------------------------ état et commandes
     def etat(self) -> dict:
-        return {"agents": {"cascade": self.cascade.resume(), "strategie": self.strategie.resume()},
+        return {"agents": {"cascade": self.cascade.resume(), "strategie": self.strategie.resume(),
+                           "liquidite": self.liquidite.resume()},
                 "dernier_id": self.dernier_id(),
                 "depuis": self.depart}
 
@@ -115,7 +118,7 @@ class Veille:
 
     # ------------------------------------------------------------------ boucle
     def boucle(self) -> None:
-        prochaine_strat = 0.0
+        prochaine_strat = prochaine_liq = 0.0
         while True:
             try:
                 self.cascade.check()
@@ -131,6 +134,14 @@ class Veille:
                 except Exception as e:
                     self.strategie.erreur = repr(e)[:200]
                     log.warning("Stratégie : %s", e)
+            if time.time() >= prochaine_liq:
+                prochaine_liq = time.time() + CHECK_LIQ_S
+                try:
+                    self.liquidite.check()
+                    self.liquidite.erreur = ""
+                except Exception as e:
+                    self.liquidite.erreur = repr(e)[:200]
+                    log.warning("Liquidité : %s", e)
             time.sleep(CHECK_S)
 
     def demarrer(self) -> None:

@@ -140,7 +140,7 @@ DESACCORD: le désaccord principal entre les spécialistes, en une phrase"""
 FORMAT_PIEGE = """Réponds en français, uniquement avec ces 3 lignes :
 RISQUE: faible ou moyen ou fort (risque que ce soit un piège)
 SCENARIO: 2 phrases : comment le marché pourrait piéger le desk (où il irait chercher la liquidité, quel stop il toucherait)
-A_ATTENDRE: ce qu'il faut voir sur le graphique avant d'entrer pour éviter le piège"""
+ATTENDRE: ce qu'il faut voir sur le graphique avant d'entrer pour éviter le piège"""
 
 
 def version_prompts():
@@ -291,11 +291,15 @@ def piege_ia(llm, avis, calculs_faits, compteur):
         "Données calculées par programme (exactes, n'utilise QUE ces chiffres) :\n"
         f"{bloc_donnees(calculs_faits, PIEGE['donnees'])}\n\n{FORMAT_PIEGE}"
     )
-    lignes = lire_lignes(appeler(llm, consigne, "piege (tour 1)", compteur), ["RISQUE", "SCENARIO", "A_ATTENDRE"])
+    reponse = appeler(llm, consigne, "piege (tour 1)", compteur)
+    lignes = lire_lignes(reponse, ["RISQUE", "SCENARIO", "ATTENDRE"])
+    if not lignes["ATTENDRE"]:  # « À ATTENDRE: … », « A_ATTENDRE: … »
+        lignes["ATTENDRE"] = [reste.strip().strip("*").strip() for tete, _, reste in
+                              (l.partition(":") for l in reponse.splitlines()) if "ATTENDRE" in tete.upper() and reste.strip()]
     risque = (lignes["RISQUE"][0] if lignes["RISQUE"] else "").lower()
     risque = "fort" if "fort" in risque else "faible" if "faible" in risque else "moyen"
     return {"biais": "neutre", "confiance": {"faible": 2, "moyen": 3, "fort": 5}[risque], "risque": risque,
-            "niveaux": "", "invalidation": " ".join(lignes["A_ATTENDRE"]), "argument": " ".join(lignes["SCENARIO"])}
+            "niveaux": "", "invalidation": " ".join(lignes["ATTENDRE"]), "argument": " ".join(lignes["SCENARIO"])}
 
 
 def chef(llm, avis, debat, calculs_faits, compteur, piege=None, express=False):
@@ -505,9 +509,12 @@ def biais_du_desk(avis, debat, poids=None, accord_min=ACCORD_MIN):
     return {"sens": sens, "confiance": moyenne, "accord": f"{len(membres)}/{len(debat)}", "arguments": arguments[:3]}
 
 
-def finaliser_mgc(decision, avis, debat, calculs_faits, informatifs, config, perte_du_jour_usd=0.0):
-    """Statut analytique final : configuration calculée par le programme, risque, vetos. Aucune IA ici."""
-    from mgc import risque, setup
+def finaliser_mgc(decision, avis, debat, calculs_faits, informatifs, config, perte_du_jour_usd=0.0, compte=None):
+    """Statut analytique final : configuration calculée par le programme, risque, vetos. Aucune IA ici.
+
+    compte : état du compte Topstep (mgc/topstep.py), ou None si aucun solde n'est noté.
+    """
+    from mgc import risque, setup, topstep
 
     accord_min = decision.get("accord_min") or ACCORD_MIN
     biais = biais_du_desk(avis, debat, decision.get("poids"), accord_min)
@@ -525,7 +532,8 @@ def finaliser_mgc(decision, avis, debat, calculs_faits, informatifs, config, per
             evaluation = risque.evaluer(sens, config_trade["entree"], config_trade["stop"], config_trade["tp1"],
                                         config, perte_du_jour_usd=perte_du_jour_usd)
             structurels += evaluation["vetos"]
-    informatifs = list(informatifs)
+            structurels += topstep.vetos(compte, evaluation.get("risque_total_net") or 0.0)
+    informatifs = list(informatifs) + topstep.limites(compte)
     pieges = None
     if config_trade:  # agent Piège (calcul) : un piège probable limite le statut à « ATTENDRE »
         from mgc import piege as piege_calc
@@ -556,6 +564,7 @@ def finaliser_mgc(decision, avis, debat, calculs_faits, informatifs, config, per
         "donnees": calculs_faits.get("donnees"),
         "incertitudes": incertitudes(calculs_faits, perte_du_jour_usd),
         "piege": pieges,
+        "topstep": compte,
     })
     # champs historiques (page, journal) : les niveaux affichés sont ceux du programme, jamais ceux de l'IA
     decision["blocages"] = structurels + informatifs
@@ -603,6 +612,12 @@ def analyse_mgc(args, compteur, express=False):
 
     config = cfg.charger()
     perte_du_jour, message_journal = journal_jarvis.perte_du_jour()
+    try:
+        from mgc import topstep
+
+        compte = topstep.etat(config)
+    except Exception:
+        compte = None
     maintenant = dt.datetime.now(dt.UTC)
     emettre(type="etape", etape="calculs", ticker="MGC")
     lot = sources.charger_mgc(maintenant, config)
@@ -633,7 +648,7 @@ def analyse_mgc(args, compteur, express=False):
     avis, debat, decision = debattre(args, calculs_faits, compteur, economiser=True, express=express)
     emettre(type="decision", appels=compteur["appels"],
             **finaliser_mgc(decision, avis, debat, calculs_faits, niveau1["informatifs"], config,
-                            perte_du_jour_usd=perte_du_jour))
+                            perte_du_jour_usd=perte_du_jour, compte=compte))
 
 
 def main():
