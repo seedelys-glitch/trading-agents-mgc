@@ -217,6 +217,9 @@ def test_question_sans_autre_sujet_que_la_memoire(base):
     memoire.noter(base, "Agents 15 Scribe et 16 Archiviste ajoutés : la mémoire de l'université est créée.",
                   titre="Création de la mémoire des agents", quand=time.time() - 3600)
     memoire.noter(base, "Le replay du compte A est terminé.", titre="Replay compte A")       # plus récent, sans rapport
+    for i in range(3):   # plus récents, avec un seul des deux mots
+        memoire.noter(base, f"Veille du desk {i} : le chef a décidé de ne rien faire, décision prise sans trade.",
+                      titre=f"Veille du desk {i} : décidé")
     assert memoire.mots_question("Qu'est-ce qu'on a décidé sur la mémoire ?") == ["decide", "memoire"]
     assert memoire.mots_question("Qu'est-ce qu'on a décidé sur le break-even ?") == ["break", "even"]
     assert memoire.chercher(base, "Qu'est-ce qu'on a décidé sur la mémoire ?")[0]["titre"] == "Création de la mémoire des agents"

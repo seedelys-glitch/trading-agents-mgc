@@ -715,13 +715,20 @@ def chercher(base, question="", dossier=None, genre=None, source=None, depuis=No
                            " ORDER BY b.fin DESC LIMIT ?", (*args, n))
         return lignes
     if preparer(base):
-        requete = " OR ".join(f'"{m}"*' for m in mots)
         where = "".join(f" AND {f}" for f in filtres)
+        sql = (f"SELECT {champs}, snippet(memoire_index, 1, '«', '»', ' … ', 28) AS extrait,"
+               " bm25(memoire_index, 6.0, 1.0, 2.0, 1.0, 2.0) AS score FROM memoire_index"
+               f" JOIN memoire_blocs b ON b.id = memoire_index.rowid WHERE memoire_index MATCH ?{where}"
+               " ORDER BY score, b.fin DESC LIMIT ?")
         try:
-            return base.lire(f"SELECT {champs}, snippet(memoire_index, 1, '«', '»', ' … ', 28) AS extrait,"
-                             " bm25(memoire_index, 6.0, 1.0, 2.0, 1.0, 2.0) AS score FROM memoire_index"
-                             f" JOIN memoire_blocs b ON b.id = memoire_index.rowid WHERE memoire_index MATCH ?{where}"
-                             " ORDER BY score, b.fin DESC LIMIT ?", (requete, *args, n))
+            # d'abord les blocs qui ont TOUS les mots, puis ceux qui en ont au moins un
+            resultats, vus = [], set()
+            for lien in (" AND ", " OR ") if len(mots) > 1 else (" OR ",):
+                for r in base.lire(sql, (lien.join(f'"{m}"*' for m in mots), *args, n)):
+                    if r["id"] not in vus and len(resultats) < n:
+                        vus.add(r["id"])
+                        resultats.append(r)
+            return resultats
         except Exception:  # noqa: BLE001 : requête refusée par FTS5 -> recherche simple
             pass
     score = " + ".join("(instr(lower(b.titre || ' ' || b.texte || ' ' || b.mots), ?) > 0)" for _ in mots)
