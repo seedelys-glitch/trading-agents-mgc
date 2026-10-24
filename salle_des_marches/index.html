@@ -352,6 +352,10 @@ details.chiffres td .element + .element { margin-top: 6px; padding-top: 6px; bor
           <label for="modele">Modèle LM Studio :</label>
           <select id="modele"></select>
         </div>
+        <label class="choix-modele" id="bloc-express" hidden>
+          <input type="checkbox" id="express">
+          <span><b>Express</b> (~5 min) : Fibo, SMC, Liquidité, Piège et le chef, sans débat ; les 3 votants doivent être d'accord.</span>
+        </label>
       </fieldset>
       <fieldset id="bloc-analystes">
         <legend>Analystes</legend>
@@ -475,8 +479,12 @@ const SPECIALISTES = [
   ["ichimoku", "Ichimoku", "Nuage, Tenkan, Kijun, Chikou", "#74A2FF"],
   ["tendance", "Tendance", "EMA 200, VWAP, Heikin Ashi", "#47C08A"],
   ["orderflow", "Order flow", "Volume et delta (estimés)", "#43C9B7"],
-  ["calendrier", "Macro & calendrier", "Dollar, taux, annonces", "#C792EA"],
+  ["calendrier", "Calendrier", "Annonces, FOMC, fenêtre", "#C792EA"],
+  ["liquidite", "Liquidité", "Asie, Londres, veille : prise ou pas", "#5FD3F3"],
+  ["dollar", "Dollar & taux", "DXY, taux 10 ans, argent", "#B5D99C"],
+  ["piege", "Piège", "Avocat du diable (ne vote pas)", "#FF6B6B"],
 ];
+const RISQUES_PIEGE = { faible: ["FAIBLE", "vert"], moyen: ["MOYEN", "ambre"], fort: ["FORT", "rouge"] };
 const BIAIS = { haussier: ["HAUSSIER", "vert"], baissier: ["BAISSIER", "rouge"], neutre: ["NEUTRE", "ambre"] };
 const DECISIONS = { long: ["LONG", "vert"], short: ["SHORT", "rouge"], "pas de trade": ["PAS DE TRADE", "ambre"] };
 const ETAGES = [["analystes", "Analystes"], ["debat", "Débat"], ["trader", "Trader"], ["risque", "Risque"], ["gerant", "Gérant"]];
@@ -605,7 +613,8 @@ $("#formulaire").addEventListener("submit", async (ev) => {
   ev.preventDefault();
   $("#erreur-formulaire").textContent = "";
   const demande = mode === "bureau"
-    ? { mode: "bureau", ticker: $("#ticker").value.trim(), moteur: choisis("moteur")[0], modele_local: $("#modele").value }
+    ? { mode: "bureau", ticker: $("#ticker").value.trim(), moteur: choisis("moteur")[0], modele_local: $("#modele").value,
+        express: !!$("#express")?.checked }
     : { ticker: $("#ticker").value.trim(), moteurs: choisis("moteur"), analystes: choisis("analyste"), modele_local: $("#modele").value };
   localStorageEcrire("modele", demande.modele_local);
   $("#lancer").disabled = true;
@@ -652,6 +661,7 @@ function appliquerMode() {
   document.querySelectorAll(".mode").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
   const bureau = mode === "bureau";
   $("#bloc-analystes").hidden = bureau;
+  if ($("#bloc-express")) $("#bloc-express").hidden = !bureau;
   $("#legende-ia").textContent = bureau ? "Quelle IA fait parler le desk ?" : "Qui analyse ?";
   $("#lancer").textContent = bureau ? "Réunir le desk" : "Lancer l'analyse";
   majDescriptions();
@@ -873,6 +883,7 @@ function ligneSpecialiste([cle, nom, role, couleur], s, enCours) {
     el("div", { class: classeEtape(t2, enCours && t1 && !t2 && s.etat !== "erreur"), style: "--part:40%" }, el("i"), el("span", {}, "Débat")));
   let [texte, teinte] = ["", "eteint"];
   if (s.etat === "erreur") [texte, teinte] = ["ERREUR", "rouge"];
+  else if (cle === "piege" && t1?.risque) [texte, teinte] = RISQUES_PIEGE[t1.risque] || RISQUES_PIEGE.moyen;
   else if (final) [texte, teinte] = BIAIS[final.biais] || BIAIS.neutre;
   else if (enCours) texte = "...";
   const premierTour = t1 ? (BIAIS[t1.biais] || BIAIS.neutre)[0].toLowerCase() : "–";
@@ -909,7 +920,8 @@ function dessinerBureau() {
     "Desk du ", el("b", {}, new Date(a.date + "T12:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long" })),
     ` avec ${MOTEURS[a.moteur]?.nom || a.moteur}, ${a.appels || 0} appels, ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`,
     enCours && a.etape ? `. ${a.etape}…` : "", resteAvantArret(a));
-  const lignes = el("div", { class: "lignes" }, SPECIALISTES.map((sp) => ligneSpecialiste(sp, a.specialistes?.[sp[0]], enCours)));
+  const presents = a.specialistes ? SPECIALISTES.filter(([cle]) => cle in a.specialistes) : SPECIALISTES;
+  const lignes = el("div", { class: "lignes" }, presents.map((sp) => ligneSpecialiste(sp, a.specialistes?.[sp[0]], enCours)));
   const contenu = [lignes, ligneChef(a.decision, enCours)];
   if (a.erreur) contenu.unshift(el("p", { class: "note", style: "color: var(--rouge); margin: 0 0 10px" }, a.erreur));
   else if (a.avertissement) contenu.unshift(el("p", { class: "note info", style: "margin: 0 0 10px" }, a.avertissement));
@@ -962,7 +974,8 @@ function dessinerDebat(a) {
 }
 const TITRES_CHIFFRES = [
   ["marche", "Le marché"], ["smc", "SMC / ICT"], ["fibo", "Fibonacci"], ["ichimoku", "Ichimoku"],
-  ["tendance", "Tendance"], ["orderflow", "Order flow (estimé)"], ["calendrier", "Calendrier"], ["macro", "Macro"],
+  ["tendance", "Tendance"], ["orderflow", "Order flow (estimé)"], ["calendrier", "Calendrier"],
+  ["liquidite", "Liquidité (Asie, Londres, veille)"], ["macro", "Dollar & taux"],
 ];
 function joli(cle) { return String(cle).replaceAll("_", " ").replace(/^./, (c) => c.toUpperCase()); }
 function texteSimple(v) {

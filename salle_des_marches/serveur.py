@@ -70,8 +70,12 @@ SPECIALISTES = {
     "ichimoku": "Ichimoku",
     "tendance": "Tendance",
     "orderflow": "Order flow",
-    "calendrier": "Macro & calendrier",
+    "calendrier": "Calendrier",
+    "liquidite": "Liquidité",
+    "dollar": "Dollar & taux",
+    "piege": "Piège",
 }
+EXPRESS = ("fibo", "smc", "liquidite", "piege")  # mode express : 3 votants + l'agent Piège
 
 ANALYSES = {}  # analyses en mémoire, par identifiant
 VERROU = threading.Lock()
@@ -429,6 +433,8 @@ def executer_bureau(analyse, modele_local):
     analyse["etape"] = "Calcul des niveaux"
     env = env_moteurs()
     commande = [str(PYTHON), str(ICI / "bureau.py"), "--moteur", cle_moteur, "--ticker", analyse["ticker_saisi"]]
+    if analyse.get("express"):
+        commande.append("--express")
     if cle_moteur == "lmstudio" and modele_local:
         commande += ["--modele", modele_local]
     with open(dossier / "bureau.log", "w", encoding="utf-8") as journal_erreurs:
@@ -505,6 +511,20 @@ def executer_bureau(analyse, modele_local):
         )
         (dossier / "comparaison.json").write_text(json.dumps(public(analyse), ensure_ascii=False, indent=1), encoding="utf-8")
     memoriser(analyse)
+    noter_bulletin()
+
+
+def noter_bulletin():
+    """Bulletin de notes des agents : note les desks qui ont 4 h (en arrière-plan, une panne ne casse rien)."""
+    def noter():
+        try:
+            from mgc import bulletin
+
+            bulletin.noter()
+        except Exception:
+            logging.exception("Bulletin des agents : notation impossible")
+
+    threading.Thread(target=noter, name="bulletin-apres-desk", daemon=True).start()
 
 
 def memoriser(analyse):
@@ -537,7 +557,8 @@ def memoriser(analyse):
 def resume_mgc(a, d):
     """Message de l'analyste MGC : statut, contrat réel, niveaux du programme, risque, vetos, fraîcheur des données."""
     quand = datetime.fromtimestamp(a.get("debut") or time.time()).strftime("%d/%m %Hh%M")
-    lignes = [f"{d['statut']} · {d.get('contrat') or a.get('ticker')} · {quand} (heure de Paris)"]
+    lignes = [f"{d['statut']} · {d.get('contrat') or a.get('ticker')} · {quand} (heure de Paris)"
+              + (" · EXPRESS (Fibo, SMC, Liquidité, Piège)" if a.get("express") else "")]
     r = d.get("regime") or {}
     if r:
         lignes.append(f"Régime : {r.get('regime')} (confiance {r.get('confiance')}). {r.get('justification', '')}")
@@ -566,6 +587,15 @@ def resume_mgc(a, d):
         lignes.append("Vetos : " + " ".join(d["vetos"]))
     if d.get("vetos_informatifs"):
         lignes.append("Limites : " + " ".join(d["vetos_informatifs"]))
+    p = d.get("piege") or {}
+    if p.get("niveau") in ("moyen", "fort"):
+        lignes.append(f"Agent Piège (calcul) : risque {p['niveau']}. " + " ".join(p.get("signaux") or [])[:400])
+    for bon in (p.get("bons_signes") or [])[:1]:
+        lignes.append(f"Bon signe : {bon}")
+    ap = d.get("avis_piege") or {}
+    if ap.get("argument"):
+        lignes.append(f"Agent Piège (avocat du diable) : risque {ap.get('risque')}. {ap['argument']}"
+                      + (f" À attendre : {ap['invalidation']}" if ap.get("invalidation") else ""))
     if d.get("raison"):
         lignes.append(f"Chef de desk : {d['raison']}")
     if d.get("desaccord"):
@@ -666,13 +696,14 @@ def nouvelle_analyse(demande):
             "id": identifiant, "type": "bureau", "ticker": ticker, "ticker_saisi": ticker,
             "date": date.today().strftime("%Y-%m-%d"), "moteur": cle_moteur, "etat": "en_cours",
             "etape": "Préparation", "debut": time.time(), "limite": time.time() + LIMITE_S,
-            "appels": 0, "donnees": None, "decision": None,
-            "specialistes": {k: {"nom": n, "etat": "attente"} for k, n in SPECIALISTES.items()},
+            "appels": 0, "donnees": None, "decision": None, "express": bool(demande.get("express")),
+            "specialistes": {k: {"nom": n, "etat": "attente"} for k, n in SPECIALISTES.items()
+                             if not demande.get("express") or k in EXPRESS},
             "_processus": [],
         }
         ANALYSES[identifiant] = analyse
         threading.Thread(target=executer_bureau, args=(analyse, modele_local), daemon=True).start()
-        logging.info("desk %s lancé avec %s", identifiant, cle_moteur)
+        logging.info("desk %s lancé avec %s%s", identifiant, cle_moteur, " (express)" if analyse["express"] else "")
         return identifiant
 
     moteurs = [m for m in demande.get("moteurs", []) if m in NOMS]
@@ -817,6 +848,12 @@ class Gestionnaire(BaseHTTPRequestHandler):
             )
         if chemin == "/api/historique":
             return self.envoyer(200, charger_historique())
+        if chemin == "/api/bulletin":  # bulletin de notes des agents (lecture seule)
+            from mgc import bulletin
+
+            contenu = bulletin.lire()
+            return self.envoyer(200, {"eleves": contenu.get("eleves") or {}, "poids": contenu.get("poids") or {},
+                                      "maj": contenu.get("maj"), "texte": bulletin.resume(contenu)})
         if chemin.startswith("/api/resume/"):
             identifiant = chemin.rsplit("/", 1)[-1]
             analyse = ANALYSES.get(identifiant)
@@ -964,6 +1001,12 @@ def main():
         return
     adresse = f"http://127.0.0.1:{PORT}"
     logging.info("Salle des marchés ouverte sur %s", adresse)
+    try:  # bulletin de notes des agents : une notation par heure, en arrière-plan
+        from mgc import bulletin
+
+        bulletin.noter_en_arriere_plan()
+    except Exception:
+        logging.exception("Bulletin des agents : démarrage impossible")
     if "--sans-navigateur" not in sys.argv:
         threading.Timer(0.8, lambda: webbrowser.open(adresse)).start()
     serveur.serve_forever()

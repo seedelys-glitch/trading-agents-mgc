@@ -89,14 +89,22 @@ def test_jamais_d_entree_sur_le_0_5():
 # ------------------------------------------------------------------ statuts
 
 def test_achat_envisageable(config):
-    avis, debat = desk(5, 1)
+    avis, debat = desk(6, 1)                      # 8 votants : il en faut 6 (2/3) dans le même sens
     d = bureau.finaliser_mgc(decision_chef(), avis, debat, faits(), [], config)
     assert d["statut"] == "ACHAT ENVISAGEABLE"
     assert d["decision"] == "long"
     assert d["risque"]["contrats"] == 12          # 3,5 points : 38,50 $ net par contrat, budget 500 $
     assert d["risque"]["ratio_net_tp1"] == 18.22
     assert d["sl"] == "4126.0" and d["tp4"] == "4461.8"
-    assert d["biais"]["accord"] == "5/6"
+    assert d["biais"]["accord"] == "6/8"
+    assert d["piege"]["niveau"] == "faible"
+
+
+def test_cinq_sur_huit_ne_suffit_pas(config):
+    avis, debat = desk(5, 1)
+    d = bureau.finaliser_mgc(decision_chef(), avis, debat, faits(), [], config)
+    assert d["statut"] == "AUCUNE OPPORTUNITÉ"
+    assert any("au moins 6 sur 8" in v for v in d["vetos"])
 
 
 def test_donnees_differees_au_mieux_attendre(config):
@@ -117,14 +125,14 @@ def test_desk_divise_aucune_opportunite(config):
 
 
 def test_veto_du_risque(config):
-    avis, debat = desk(5, 0)
+    avis, debat = desk(6, 0)
     d = bureau.finaliser_mgc(decision_chef(), avis, debat, faits(), [], config, perte_du_jour_usd=1000)
     assert d["statut"] == "AUCUNE OPPORTUNITÉ"
     assert any("Limite de perte" in v for v in d["vetos"])
 
 
 def test_prix_inventes_par_le_chef(config):
-    avis, debat = desk(5, 0)
+    avis, debat = desk(6, 0)
     chef = dict(decision_chef(), prix_non_verifies=[4133.3])
     d = bureau.finaliser_mgc(chef, avis, debat, faits(), [], config)
     assert d["statut"] == "ATTENDRE"
@@ -132,7 +140,7 @@ def test_prix_inventes_par_le_chef(config):
 
 
 def test_vente_dans_le_bon_sens(config):
-    avis, debat = desk(0, 5)
+    avis, debat = desk(0, 6)
     d = bureau.finaliser_mgc(decision_chef(), avis, debat, faits("baissière", 4160.0), [], config)
     assert d["statut"] == "VENTE ENVISAGEABLE"
     assert d["decision"] == "short"

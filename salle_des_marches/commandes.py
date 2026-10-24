@@ -9,7 +9,9 @@ Commandes du téléphone (Telegram, relayées par Jarvis -> POST /api/commande) 
   /memoire   les dernières analyses
   /resultat  /resultat <id> <win|loss> <prix> : note le résultat d'une analyse suivie
   /pause     coupe immédiatement toute nouvelle configuration exploitable ; /resume la rétablit
-/analyse est géré par Jarvis (il lance le desk et envoie le plan à la fin).
+  /bulletin  bulletin de notes des agents (ce que le gold a fait 4 h après chaque desk)
+  /liquidite plus hauts / plus bas d'Asie, de Londres et de la veille : intacts, balayés ou cassés
+/analyse et /express sont gérés par Jarvis (il lance le desk et envoie le plan à la fin).
 """
 
 import datetime as dt
@@ -22,8 +24,8 @@ from mgc.instrument import sur_grille
 
 RAPPORTS = Path(__file__).resolve().parent.parent / "rapports" / "salle"
 BASE = None  # None = rapports\salle\analyste.sqlite (les tests en donnent une autre)
-AIDE = ("Commandes : /analyse (lance le desk gold), /contrat, /news, /regime, /stats, /memoire, "
-        "/resultat <id> <win|loss> <prix>, /pause, /resume.")
+AIDE = ("Commandes : /analyse (lance le desk gold), /express (desk express ~5 min), /contrat, /news, /regime, "
+        "/stats, /memoire, /bulletin, /liquidite, /resultat <id> <win|loss> <prix>, /pause, /resume.")
 
 
 def _historique():
@@ -135,6 +137,42 @@ def resultat(args, maintenant, config):
     return texte
 
 
+def bulletin_agents():
+    from mgc import bulletin
+
+    return bulletin.resume(bulletin.lire())
+
+
+def liquidite_actuelle(config, maintenant):
+    """Agent Liquidité sans IA : niveaux d'Asie, de Londres et de la veille sur le contrat actif (Yahoo)."""
+    import calculs
+    from mgc import sources
+
+    code = ContractManager(config).etat(maintenant)["contrat"]
+    m5 = sources.depuis_yahoo(sources.yahoo_brut(f"{code}.CMX", "5d", "5m"))
+    d1 = sources.depuis_yahoo(sources.yahoo_brut(f"{code}.CMX", "1mo", "1d"), quotidien=True)
+    h1 = sources.depuis_yahoo(sources.yahoo_brut(f"{code}.CMX", "1mo", "1h"))
+    a = float(calculs.atr(h1).iloc[-1]) if len(h1) > 20 else None
+    liq = calculs.liquidite_sessions({"M5": m5, "D1": d1}, a)
+    return texte_liquidite(liq)
+
+
+def texte_liquidite(liq):
+    if not liq.get("disponible"):
+        return f"Liquidité : {liq.get('raison')}"
+    lignes = [f"Liquidité (prix {liq['prix']}, sessions {liq['sessions_paris']}) :"]
+    for p in liq["niveaux"]:
+        lignes.append(f"• {p['nom']} {p['prix']} : {p['etat']}" + (f" ({p['quand']})" if p.get("quand") else ""))
+    for cle, mot in (("liquidite_intacte_au_dessus", "au-dessus"), ("liquidite_intacte_en_dessous", "en dessous")):
+        p = liq.get(cle)
+        if p:
+            lignes.append(f"Plus proche liquidité intacte {mot} : {p['nom']} {p['prix']}.")
+    d = liq.get("derniere_liquidite_prise")
+    if d:
+        lignes.append(f"Dernière liquidité prise : {d['nom']} {d['prix']} ({d['quand']}).")
+    return "\n".join(lignes)
+
+
 def pause(active):
     fichier = cfg.FICHIER_PAUSE
     if active:
@@ -163,6 +201,10 @@ def executer(commande, args="", maintenant=None, config=None):
             return memoire()
         if commande == "/resultat":
             return resultat(args, maintenant, config)
+        if commande == "/bulletin":
+            return bulletin_agents()
+        if commande in ("/liquidite", "/liquidité"):
+            return liquidite_actuelle(config, maintenant)
         if commande == "/pause":
             return pause(True)
         if commande == "/resume":

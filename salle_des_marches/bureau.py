@@ -59,12 +59,45 @@ SPECIALISTES = [
     },
     {
         "cle": "calendrier",
-        "nom": "Macro & calendrier",
-        "role": "spécialiste macro et calendrier : dollar (DXY) et taux 10 ans US, annonces économiques américaines "
-                "et règles de la prop firm. Ton rôle principal : dire s'il est raisonnable de trader maintenant ou s'il faut attendre",
-        "donnees": ["marche", "calendrier", "macro"],
+        "nom": "Calendrier",
+        "role": "spécialiste du calendrier et des règles de la prop firm : annonces économiques américaines, réunions "
+                "du FOMC, discours de la Fed, fenêtre de trading. Ton rôle principal : dire s'il est raisonnable de "
+                "trader maintenant ou s'il faut attendre (le dollar et les taux sont suivis par l'agent Dollar & taux)",
+        "donnees": ["marche", "calendrier"],
+    },
+    {
+        "cle": "liquidite",
+        "nom": "Liquidité",
+        "role": "spécialiste de la liquidité : plus hauts et plus bas des sessions Asie et Londres et de la veille, et "
+                "ce que le prix en a fait (intacte, balayée = mèche puis retour, cassée). Pour Jabran, avant son vrai "
+                "mouvement le marché va chercher la liquidité : dis où est la liquidité encore intacte que le prix va "
+                "probablement chercher, et si une liquidité vient d'être prise (signe que le vrai mouvement peut partir)",
+        "donnees": ["marche", "liquidite"],
+    },
+    {
+        "cle": "dollar",
+        "nom": "Dollar & taux",
+        "role": "spécialiste Dollar & taux : dollar (DXY), taux 10 ans US et argent (silver), en journalier et sur 24 h, "
+                "et la corrélation entre l'or et le dollar. Ta question : le contexte macro pousse-t-il l'or à la hausse "
+                "ou à la baisse en ce moment, et l'argent confirme-t-il ?",
+        "donnees": ["marche", "macro"],
     },
 ]
+
+# L'agent Piège ne vote pas : il cherche pourquoi le trade majoritaire va échouer (avocat du diable).
+PIEGE = {
+    "cle": "piege",
+    "nom": "Piège",
+    "role": "agent Piège, l'avocat du diable du desk. Jabran a 2 à 3 fois plus de setups perdants que gagnants, surtout "
+            "à cause des pièges : chasse de liquidité à travers les stops, faux cassages, entrées trop tôt, entrées sur "
+            "le 50 %. Ton SEUL rôle : trouver pourquoi l'idée majoritaire du desk va échouer",
+    "donnees": ["marche", "fibo", "liquidite", "orderflow"],
+}
+
+# Mode express (~5 min) : 3 votants, pas de débat, l'agent Piège et le chef. Il faut que les 3 soient d'accord.
+EXPRESS_VOTANTS = ["fibo", "smc", "liquidite"]
+ACCORD_MIN = 2 / 3          # part des voix (pondérées par le bulletin de notes) dans le même sens
+ACCORD_MIN_EXPRESS = 1.0
 
 REGLES_JABRAN = """Règles de trading de Jabran (à respecter strictement) :
 - Méthode en cascade : un setup Fibo + FVG en Weekly, puis on cherche le suivant en 12H, puis en 48 min, puis l'entrée en 12 min.
@@ -78,7 +111,7 @@ REGLES_JABRAN = """Règles de trading de Jabran (à respecter strictement) :
 - Objectifs : niveau 0, puis -0.272, -1.272 et -2.618. Compte A : 25 % à chaque objectif. Compte B : 50 % au 0, 25 % au -1.272, 25 % au -2.618.
 - Gestion : stop au point d'entrée dès que la bougie qui suit l'entrée clôture en gain ; stop au 0.5 après le -0.272, au 0 après le -1.272.
 - Prop firm : Topstep. Règle personnelle : pas de trade un jour de réunion du FOMC ; discours du président de la Fed : rien 30 min avant et après ; annonce USD forte : rien 90 min avant et 30 min après.
-- Fenêtre de trading : 15h30-20h heure de Paris. Risque : 1 % du capital par trade, calculé par le programme."""
+- Fenêtre de trading : 15h30-20h heure de Paris. Risque : 0,25 % du capital par trade (Topstep, décision du 23/10), calculé par le programme."""
 
 FORMAT_TOUR_1 = """Réponds en français, uniquement avec ces 5 lignes :
 BIAIS: haussier ou baissier ou neutre
@@ -104,12 +137,18 @@ CONFIRMATION: ce qu'il faut voir sur le graphique avant d'entrer
 RAISON: 2 ou 3 phrases
 DESACCORD: le désaccord principal entre les spécialistes, en une phrase"""
 
+FORMAT_PIEGE = """Réponds en français, uniquement avec ces 3 lignes :
+RISQUE: faible ou moyen ou fort (risque que ce soit un piège)
+SCENARIO: 2 phrases : comment le marché pourrait piéger le desk (où il irait chercher la liquidité, quel stop il toucherait)
+A_ATTENDRE: ce qu'il faut voir sur le graphique avant d'entrer pour éviter le piège"""
+
 
 def version_prompts():
     """Empreinte des consignes données aux IA : une stat ne mélange pas deux versions des prompts."""
     import hashlib
 
-    texte = json.dumps([SPECIALISTES, REGLES_JABRAN, FORMAT_TOUR_1, FORMAT_TOUR_2, FORMAT_CHEF], ensure_ascii=False)
+    texte = json.dumps([SPECIALISTES, PIEGE, REGLES_JABRAN, FORMAT_TOUR_1, FORMAT_TOUR_2, FORMAT_CHEF, FORMAT_PIEGE],
+                       ensure_ascii=False)
     return hashlib.sha256(texte.encode("utf-8")).hexdigest()[:10]
 
 
@@ -163,7 +202,41 @@ def confiance(texte):
 
 
 def bloc_donnees(calculs_faits, cles):
-    return "\n".join(f"### {c}\n{json.dumps(calculs_faits[c], ensure_ascii=False, indent=1, default=str)}" for c in cles)
+    return "\n".join(f"### {c}\n{json.dumps(calculs_faits.get(c, 'indisponible'), ensure_ascii=False, indent=1, default=str)}"
+                     for c in cles)
+
+
+def poids_agents():
+    """Poids de vote donnés par le bulletin de notes (1 par défaut ; 0,5 à 1,5 quand un agent a assez de notes)."""
+    try:
+        from mgc import bulletin
+
+        return bulletin.poids()
+    except Exception:
+        return {}
+
+
+def majorite(debat, poids=None, accord_min=ACCORD_MIN):
+    """Sens majoritaire (« haussier » / « baissier ») si au moins `accord_min` des voix pondérées vont dans ce sens.
+
+    Avec 6 spécialistes de même poids et 2/3 : il en faut 4 (la règle d'origine du desk).
+    """
+    poids = poids or {}
+    total = sum(float(poids.get(c, 1.0)) for c in debat)
+    if total <= 0:
+        return None
+    for sens in ("haussier", "baissier"):
+        pour = sum(float(poids.get(c, 1.0)) for c, d in debat.items() if d["biais"] == sens)
+        if pour >= accord_min * total - 1e-9:
+            return sens
+    return None
+
+
+def texte_accord(n, accord_min=ACCORD_MIN):
+    """« au moins 6 sur 8 » : nombre minimal de voix (à poids égaux) pour n votants."""
+    import math
+
+    return f"au moins {max(1, math.ceil(accord_min * n - 1e-9))} sur {n}"
 
 
 def tour_1(llm, specialiste, calculs_faits, compteur):
@@ -205,7 +278,27 @@ def tour_2(llm, specialiste, avis, calculs_faits, compteur):
     }
 
 
-def chef(llm, avis, debat, calculs_faits, compteur):
+def piege_ia(llm, avis, calculs_faits, compteur):
+    """L'agent Piège lit les avis du tour 1 et cherche comment le marché pourrait piéger le desk."""
+    noms = {s["cle"]: s["nom"] for s in SPECIALISTES}
+    votes = Counter(a["biais"] for a in avis.values())
+    idee = max(("haussier", "baissier"), key=lambda s: votes.get(s, 0)) if (votes.get("haussier") or votes.get("baissier")) else None
+    resume = "\n".join(f"- {noms.get(c, c)} : {a['biais']} (confiance {a['confiance']}/5). {a['argument']}" for c, a in avis.items())
+    consigne = (
+        f"Tu es l'{PIEGE['role']}, dans un desk qui analyse {calculs_faits['marche']['ticker']}.\n{REGLES_JABRAN}\n\n"
+        f"Avis des spécialistes au premier tour :\n{resume}\n\n"
+        f"Idée majoritaire à attaquer : {idee or 'aucune (desk partagé) : dis quel piège guette les deux camps'}.\n"
+        "Données calculées par programme (exactes, n'utilise QUE ces chiffres) :\n"
+        f"{bloc_donnees(calculs_faits, PIEGE['donnees'])}\n\n{FORMAT_PIEGE}"
+    )
+    lignes = lire_lignes(appeler(llm, consigne, "piege (tour 1)", compteur), ["RISQUE", "SCENARIO", "A_ATTENDRE"])
+    risque = (lignes["RISQUE"][0] if lignes["RISQUE"] else "").lower()
+    risque = "fort" if "fort" in risque else "faible" if "faible" in risque else "moyen"
+    return {"biais": "neutre", "confiance": {"faible": 2, "moyen": 3, "fort": 5}[risque], "risque": risque,
+            "niveaux": "", "invalidation": " ".join(lignes["A_ATTENDRE"]), "argument": " ".join(lignes["SCENARIO"])}
+
+
+def chef(llm, avis, debat, calculs_faits, compteur, piege=None, express=False):
     votes = Counter(d["biais"] for d in debat.values())
     resume = "\n".join(
         f"- {s['nom']} : tour 1 {avis[s['cle']]['biais']}, après débat {debat[s['cle']]['biais']} "
@@ -213,16 +306,19 @@ def chef(llm, avis, debat, calculs_faits, compteur):
         f"Invalidation : {avis[s['cle']]['invalidation']}. {avis[s['cle']]['argument']} Débat : {debat[s['cle']]['reponse']}"
         for s in SPECIALISTES if s["cle"] in debat
     )
+    accord = texte_accord(len(debat), ACCORD_MIN_EXPRESS if express else ACCORD_MIN)
+    avocat = (f"\nL'agent Piège (avocat du diable, il ne vote pas) : risque {piege['risque']}. {piege['argument']} "
+              f"À attendre : {piege['invalidation']}\n" if piege else "")
     consigne = (
         f"Tu es le chef d'un desk de trading. Tu dois décider pour {calculs_faits['marche']['ticker']} "
         f"(prix actuel {calculs_faits['marche']['prix']}, {calculs_faits['marche']['heure_paris']} heure de Paris).\n\n"
         f"{REGLES_JABRAN}\n\n"
-        "Règles du desk : « pas de trade » si moins de 4 spécialistes sur 6 vont dans le même sens après le débat, "
+        f"Règles du desk : « pas de trade » s'il n'y a pas {accord} spécialistes dans le même sens après le débat, "
         "si c'est un jour de réunion du FOMC, ou si aucune zone de Fibo valide (avec FVG) n'existe dans le sens du biais. "
         "Utilise UNIQUEMENT les prix des données calculées ci-dessous pour la zone, le stop et les objectifs.\n\n"
         f"Votes après débat : {votes.get('haussier', 0)} haussier(s), {votes.get('baissier', 0)} baissier(s), "
         f"{votes.get('neutre', 0)} neutre(s).\n\n"
-        f"Le débat :\n{resume}\n\n"
+        f"Le débat :\n{resume}\n{avocat}\n"
         f"Données Fibo calculées :\n{json.dumps(calculs_faits['fibo'], ensure_ascii=False, default=str)}\n"
         f"Calendrier : {json.dumps(calculs_faits['calendrier'], ensure_ascii=False, default=str)}\n\n{FORMAT_CHEF}"
     )
@@ -231,6 +327,7 @@ def chef(llm, avis, debat, calculs_faits, compteur):
     resultat = {k.lower(): " ".join(v) for k, v in lignes.items()}
     resultat["decision"] = normaliser_decision(resultat.get("decision"))
     resultat["votes"] = dict(votes)
+    resultat["express"] = express
     return resultat
 
 
@@ -253,27 +350,37 @@ def prix_cites(texte):
     return [float(x.replace(",", ".")) for x in re.findall(r"\d+(?:[.,]\d+)?", texte)]
 
 
-def controler(decision, calculs_faits):
-    """Règles appliquées par le programme (pas seulement demandées à l'IA) + contrôle des prix cités."""
+def controler(decision, calculs_faits, debat=None, poids=None, accord_min=ACCORD_MIN):
+    """Règles appliquées par le programme (pas seulement demandées à l'IA) + contrôle des prix cités.
+
+    `debat` : biais finaux de chaque votant ; la majorité est pondérée par le bulletin de notes (`poids`).
+    Sans `debat` (anciens appels), on retombe sur les votes comptés (4 sur 6).
+    """
     votes = decision["votes"]
-    majorite = next((sens for sens in ("haussier", "baissier") if votes.get(sens, 0) >= 4), None)
+    if debat is not None:
+        sens_majoritaire = majorite(debat, poids, accord_min)
+        nb_votants = len(debat)
+    else:
+        sens_majoritaire = next((sens for sens in ("haussier", "baissier") if votes.get(sens, 0) >= 4), None)
+        nb_votants = 6
     cal = calculs_faits.get("calendrier") or {}
     blocages = []
     if cal.get("fomc_aujourdhui"):
         blocages.append("Jour de réunion du FOMC : règle personnelle, pas de trade aujourd'hui.")
     blocages += cal.get("annonce_forte_dans_90_min") or []
-    if not majorite:
-        blocages.append("Desk divisé : il faut au moins 4 spécialistes sur 6 dans le même sens.")
+    if not sens_majoritaire:
+        blocages.append(f"Desk divisé : il faut {texte_accord(nb_votants, accord_min)} spécialistes dans le même sens"
+                        + (" (voix pondérées par le bulletin de notes)." if poids else "."))
     fibo = calculs_faits.get("fibo") or {}
     sens_fibo = {"haussière": "haussier", "baissière": "baissier"}.get(fibo.get("impulsion"))
     if not any(z.get("fvg_dessus") for z in fibo.get("zones_entree", [])):
         blocages.append("Aucune zone Fibo 0.618 à 0.893 avec un FVG dessus.")
-    elif majorite and sens_fibo and sens_fibo != majorite:
+    elif sens_majoritaire and sens_fibo and sens_fibo != sens_majoritaire:
         blocages.append(f"La dernière impulsion H1 est {fibo['impulsion']}, à l'inverse du desk : pas de zone Fibo dans le bon sens.")
     decision["blocages"] = blocages
     decision["regle_appliquee"] = ""
     if decision["decision"] != "pas de trade":
-        attendu = "long" if majorite == "haussier" else "short" if majorite == "baissier" else None
+        attendu = "long" if sens_majoritaire == "haussier" else "short" if sens_majoritaire == "baissier" else None
         if blocages:
             decision["regle_appliquee"] = "Le chef voulait « " + decision["decision"] + " » : ramené à « pas de trade ». " + " ".join(blocages)
             decision["decision"] = "pas de trade"
@@ -309,8 +416,12 @@ def desaccord_reel(avis):
     return {"haussier", "baissier"} <= biais
 
 
-def debattre(args, calculs_faits, compteur, economiser=False):
-    """Tour 1, tour 2 (sauf si economiser et aucun vrai désaccord), puis le chef. Renvoie la décision contrôlée."""
+def debattre(args, calculs_faits, compteur, economiser=False, express=False):
+    """Tour 1, l'agent Piège, tour 2 (sauf si economiser et aucun vrai désaccord, ou en express), puis le chef.
+
+    express : seulement les votants EXPRESS_VOTANTS (Fibo, SMC, Liquidité), pas de débat, accord de tous exigé.
+    Renvoie (avis, debat, decision contrôlée).
+    """
     from tradingagents.llm_clients.factory import create_tier_client
 
     moteur.verifier_acces(args.moteur)
@@ -323,10 +434,14 @@ def debattre(args, calculs_faits, compteur, economiser=False):
     # Groq gratuit : 8 000 jetons par minute -> un spécialiste à la fois ; Gemini gratuit : 2 à la fois
     paralleles = {"groq": 1, "gemini": 2}.get(args.moteur, 3)
 
+    votants = [s for s in SPECIALISTES if not express or s["cle"] in EXPRESS_VOTANTS]
+    accord_min = ACCORD_MIN_EXPRESS if express else ACCORD_MIN
+    poids = {} if express else poids_agents()
+
     # Tour 1 : chacun sa spécialité
     avis = {}
     with ThreadPoolExecutor(max_workers=paralleles) as equipe:
-        futurs = {s["cle"]: equipe.submit(tour_1, llm, s, calculs_faits, compteur) for s in SPECIALISTES}
+        futurs = {s["cle"]: equipe.submit(tour_1, llm, s, calculs_faits, compteur) for s in votants}
         for cle, futur in futurs.items():
             try:
                 avis[cle] = futur.result()
@@ -337,16 +452,28 @@ def debattre(args, calculs_faits, compteur, economiser=False):
     if len(avis) < 2:
         raise RuntimeError("Trop peu de spécialistes ont répondu pour débattre.")
 
+    # L'agent Piège (ne vote pas) : comment le marché pourrait piéger l'idée majoritaire
+    piege = None
+    try:
+        piege = piege_ia(llm, avis, calculs_faits, compteur)
+        emettre(type="avis", cle=PIEGE["cle"], tour=1, appels=compteur["appels"], **piege)
+        emettre(type="avis", cle=PIEGE["cle"], tour=2, appels=compteur["appels"], biais="neutre",
+                confiance=piege["confiance"], reponse="(l'agent Piège ne vote pas : son avis va au chef de desk)")
+    except Exception as erreur:
+        print(traceback.format_exc(), file=sys.stderr)
+        emettre(type="avis", cle=PIEGE["cle"], tour=1, erreur=message_clair(erreur), appels=compteur["appels"])
+
     # Tour 2 : le débat (sur le même instantané de données), seulement s'il y a un vrai désaccord
     debat = {}
-    if economiser and not desaccord_reel(avis):
+    if express or (economiser and not desaccord_reel(avis)):
+        motif = ("(mode express : pas de débat)" if express else
+                 "(pas de débat : aucun spécialiste n'était dans le sens opposé)")
         for cle, a in avis.items():
-            debat[cle] = {"biais": a["biais"], "confiance": a["confiance"],
-                          "reponse": "(pas de débat : aucun spécialiste n'était dans le sens opposé)"}
+            debat[cle] = {"biais": a["biais"], "confiance": a["confiance"], "reponse": motif}
             emettre(type="avis", cle=cle, tour=2, appels=compteur["appels"], **debat[cle])
     else:
         with ThreadPoolExecutor(max_workers=paralleles) as equipe:
-            futurs = {s["cle"]: equipe.submit(tour_2, llm, s, avis, calculs_faits, compteur) for s in SPECIALISTES if s["cle"] in avis}
+            futurs = {s["cle"]: equipe.submit(tour_2, llm, s, avis, calculs_faits, compteur) for s in votants if s["cle"] in avis}
             for cle, futur in futurs.items():
                 try:
                     debat[cle] = futur.result()
@@ -357,15 +484,18 @@ def debattre(args, calculs_faits, compteur, economiser=False):
                 emettre(type="avis", cle=cle, tour=2, appels=compteur["appels"], **debat[cle])
 
     # Le chef de desk tranche
-    decision = controler(chef(llm_chef, avis, debat, calculs_faits, compteur), calculs_faits)
-    decision["debat_fait"] = not (economiser and not desaccord_reel(avis))
+    decision = controler(chef(llm_chef, avis, debat, calculs_faits, compteur, piege=piege, express=express),
+                         calculs_faits, debat=debat, poids=poids, accord_min=accord_min)
+    decision["debat_fait"] = not (express or (economiser and not desaccord_reel(avis)))
+    decision["avis_piege"] = piege
+    decision["poids"] = poids
+    decision["accord_min"] = round(accord_min, 3)
     return avis, debat, decision
 
 
-def biais_du_desk(avis, debat):
-    """Sens majoritaire (au moins 4 sur 6) et confiance moyenne de cette majorité, avec ses arguments."""
-    votes = Counter(d["biais"] for d in debat.values())
-    sens = next((s for s in ("haussier", "baissier") if votes.get(s, 0) >= 4), None)
+def biais_du_desk(avis, debat, poids=None, accord_min=ACCORD_MIN):
+    """Sens majoritaire (au moins 2/3 des voix pondérées) et confiance moyenne de cette majorité, avec ses arguments."""
+    sens = majorite(debat, poids, accord_min)
     if not sens:
         return {"sens": None, "confiance": None, "arguments": []}
     membres = [c for c, d in debat.items() if d["biais"] == sens]
@@ -379,8 +509,11 @@ def finaliser_mgc(decision, avis, debat, calculs_faits, informatifs, config, per
     """Statut analytique final : configuration calculée par le programme, risque, vetos. Aucune IA ici."""
     from mgc import risque, setup
 
-    biais = biais_du_desk(avis, debat)
+    accord_min = decision.get("accord_min") or ACCORD_MIN
+    biais = biais_du_desk(avis, debat, decision.get("poids"), accord_min)
     structurels = list(decision.get("blocages") or [])
+    if not biais["sens"] and not any(b.startswith("Desk divisé") for b in structurels):
+        structurels.append(f"Desk divisé : il faut {texte_accord(len(debat), accord_min)} spécialistes dans le même sens.")
     prix = float(calculs_faits["marche"]["prix"])
     config_trade, evaluation = None, None
     if biais["sens"]:
@@ -393,6 +526,14 @@ def finaliser_mgc(decision, avis, debat, calculs_faits, informatifs, config, per
                                         config, perte_du_jour_usd=perte_du_jour_usd)
             structurels += evaluation["vetos"]
     informatifs = list(informatifs)
+    pieges = None
+    if config_trade:  # agent Piège (calcul) : un piège probable limite le statut à « ATTENDRE »
+        from mgc import piege as piege_calc
+
+        pieges = piege_calc.evaluer(config_trade["sens"], config_trade, calculs_faits)
+        alerte = piege_calc.veto(pieges)
+        if alerte:
+            informatifs.append(alerte)
     if decision.get("prix_non_verifies"):
         informatifs.append("Le chef a cité des prix absents des calculs : " +
                            ", ".join(str(p) for p in decision["prix_non_verifies"]) + ".")
@@ -414,6 +555,7 @@ def finaliser_mgc(decision, avis, debat, calculs_faits, informatifs, config, per
         "contrat": calculs_faits["marche"]["ticker"],
         "donnees": calculs_faits.get("donnees"),
         "incertitudes": incertitudes(calculs_faits, perte_du_jour_usd),
+        "piege": pieges,
     })
     # champs historiques (page, journal) : les niveaux affichés sont ceux du programme, jamais ceux de l'IA
     decision["blocages"] = structurels + informatifs
@@ -451,7 +593,7 @@ def bloquer(calculs_faits, bloquants, informatifs):
     }
 
 
-def analyse_mgc(args, compteur):
+def analyse_mgc(args, compteur, express=False):
     """Le desk en analyste Micro Gold : contrat réel, données contrôlées, vetos AVANT les IA, statut analytique."""
     import datetime as dt
 
@@ -488,7 +630,7 @@ def analyse_mgc(args, compteur):
     if niveau1["bloquants"]:
         emettre(type="decision", appels=compteur["appels"], **bloquer(calculs_faits, niveau1["bloquants"], niveau1["informatifs"]))
         return
-    avis, debat, decision = debattre(args, calculs_faits, compteur, economiser=True)
+    avis, debat, decision = debattre(args, calculs_faits, compteur, economiser=True, express=express)
     emettre(type="decision", appels=compteur["appels"],
             **finaliser_mgc(decision, avis, debat, calculs_faits, niveau1["informatifs"], config,
                             perte_du_jour_usd=perte_du_jour))
@@ -499,11 +641,12 @@ def main():
     parser.add_argument("--moteur", required=True, choices=sorted(moteur.MOTEURS))
     parser.add_argument("--ticker", required=True)
     parser.add_argument("--modele")
+    parser.add_argument("--express", action="store_true", help="analyse express : Fibo, SMC, Liquidité, Piège et chef")
     args = parser.parse_args()
     compteur = {"appels": 0}
     try:
         if args.ticker.strip().upper() in TICKERS_OR:
-            analyse_mgc(args, compteur)
+            analyse_mgc(args, compteur, express=args.express)
         else:  # autres marchés : le desk d'origine, inchangé
             import calculs
             from cli.prompts import normalize_ticker_symbol
@@ -514,7 +657,7 @@ def main():
             calculs_faits = calculs.preparer(ticker)
             calculs_faits.pop("annonces_brutes", None)
             emettre(type="donnees", donnees=calculs_faits)
-            _, _, decision = debattre(args, calculs_faits, compteur)
+            _, _, decision = debattre(args, calculs_faits, compteur, express=args.express)
             emettre(type="decision", appels=compteur["appels"], **decision)
         emettre(type="fin", appels=compteur["appels"])
     except Exception as erreur:

@@ -226,6 +226,82 @@ def liquidite(donnees, a):
     return res
 
 
+# Sessions vues par l'agent Liquidité (heure de Paris) : ce qui est connu à l'ouverture de New York (15h30)
+SESSIONS_PARIS = {"Asie": (1, 0, 8, 0), "Londres": (8, 0, 15, 30)}
+
+
+def etat_niveau(apres, prix, cote):
+    """Ce que le prix a fait d'un niveau de liquidité depuis qu'il est formé.
+
+    intacte  : jamais dépassé ;
+    balayée  : dépassé par une mèche puis le prix est revenu (dernière clôture de l'autre côté) = liquidité prise ;
+    cassée   : le prix a clôturé au-delà et y reste.
+    """
+    if apres is None or apres.empty:
+        return {"etat": "intacte", "quand": None, "_ts": None}
+    depasse = apres[apres["h"] > prix] if cote == "haut" else apres[apres["l"] < prix]
+    if depasse.empty:
+        return {"etat": "intacte", "quand": None, "_ts": None}
+    derniere = float(apres["c"].iloc[-1])
+    revenu = derniere < prix if cote == "haut" else derniere > prix
+    return {"etat": "balayée" if revenu else "cassée", "quand": heure(depasse.index[0]), "_ts": depasse.index[0]}
+
+
+def liquidite_sessions(donnees, a_h1):
+    """Agent Liquidité : plus hauts / plus bas des sessions Asie et Londres du jour et de la veille, et ce que le
+    prix en a fait (intacte, balayée = mèche puis retour, cassée). Tout est calculé, rien n'est estimé par l'IA."""
+    df = donnees["M5"] if len(donnees.get("M5", [])) else donnees.get("M15")
+    if df is None or df.empty:
+        return {"disponible": False, "raison": "Pas de bougies intraday pour les sessions."}
+    paris = df.tz_convert(PARIS) if df.index.tz is not None else df.tz_localize(PARIS)
+    prix = float(paris["c"].iloc[-1])
+    jour = paris.index[-1].normalize()
+    pools = []
+
+    def ajouter(nom, debut, fin):
+        session = paris[(paris.index >= debut) & (paris.index < fin)]
+        if len(session) < 3:
+            return
+        apres = paris[paris.index >= fin]
+        en_cours = paris.index[-1] < fin
+        for cote, valeur in (("haut", session["h"].max()), ("bas", session["l"].min())):
+            etat = {"etat": "en formation", "quand": None, "_ts": None} if en_cours else etat_niveau(apres, float(valeur), cote)
+            pools.append({"nom": f"{'plus haut' if cote == 'haut' else 'plus bas'} {nom}", "cote": cote,
+                          "prix": arrondi(valeur), **etat})
+
+    for nom, (h1_, m1_, h2_, m2_) in SESSIONS_PARIS.items():
+        for decalage, suffixe in ((1, " (veille)"), (0, "")):
+            base = jour - pd.Timedelta(days=decalage)
+            ajouter(nom + suffixe, base + pd.Timedelta(hours=h1_, minutes=m1_), base + pd.Timedelta(hours=h2_, minutes=m2_))
+    d1 = donnees.get("D1")
+    if d1 is not None and len(d1) >= 2:
+        debut_jour = jour + pd.Timedelta(hours=0)
+        apres = paris[paris.index >= debut_jour]
+        for cote, valeur in (("haut", d1["h"].iloc[-2]), ("bas", d1["l"].iloc[-2])):
+            pools.append({"nom": f"{'plus haut' if cote == 'haut' else 'plus bas'} de la veille (D1)", "cote": cote,
+                          "prix": arrondi(valeur), **etat_niveau(apres, float(valeur), cote)})
+    prises = [p for p in pools if p["etat"] == "balayée" and p["_ts"] is not None]
+    derniere = max(prises, key=lambda p: p["_ts"]) if prises else None  # la prise la plus récente
+    for p in pools:
+        p.pop("_ts", None)
+    intactes = [p for p in pools if p["etat"] == "intacte"]
+    dessus = sorted((p for p in intactes if p["prix"] > prix), key=lambda p: p["prix"])
+    dessous = sorted((p for p in intactes if p["prix"] < prix), key=lambda p: -p["prix"])
+    distance = lambda p: round(abs(p["prix"] - prix) / a_h1, 2) if p and a_h1 else None
+    return {
+        "disponible": True,
+        "prix": arrondi(prix),
+        "sessions_paris": "Asie 1h-8h, Londres 8h-15h30",
+        "niveaux": pools,
+        "liquidite_intacte_au_dessus": dict(dessus[0], distance_atr_H1=distance(dessus[0])) if dessus else None,
+        "liquidite_intacte_en_dessous": dict(dessous[0], distance_atr_H1=distance(dessous[0])) if dessous else None,
+        "derniere_liquidite_prise": derniere,
+        "lecture": ("Jabran : avant son vrai mouvement, le marché va chercher la liquidité (plus hauts / plus bas "
+                    "d'Asie et de Londres). Une liquidité « balayée » = prise (mèche puis retour) ; « intacte » = "
+                    "pas encore prise, le prix peut aller la chercher."),
+    }
+
+
 def resume_smc(df, nom, a):
     struct = structure(df)
     zones = [z for z in fvg(df, 0.1 * a) if z["etat"] != "comblé"]
@@ -519,16 +595,30 @@ def calendrier(maintenant=None, config=None, source=telecharger_calendrier):
 # ---------------------------------------------------------------- macro (dollar et taux)
 
 
-def macro(ticker):
-    """Dollar (DXY) et taux 10 ans US : les deux moteurs classiques de l'or. Seulement pour les métaux."""
+def macro(ticker, d1=None, telecharger=None):
+    """Agent Dollar & taux : dollar (DXY), taux 10 ans US et argent (silver), les moteurs classiques de l'or.
+
+    Pour chacun : dernier, variation sur 5 jours et sur ~24 h (bougies 1 h), position par rapport à la moyenne
+    20 jours ; plus la corrélation sur 20 jours entre l'or et le dollar. Seulement pour les métaux.
+    `telecharger(symbole, periode, intervalle)` -> série des clôtures (remplaçable dans les tests).
+    """
     if ticker not in ("GC=F", "MGC=F", "SI=F") and "XAU" not in ticker:
         return {"disponible": False, "raison": "Données macro réservées aux métaux."}
-    import yfinance as yf
 
-    res = {"disponible": True, "lecture": "en général, dollar et taux qui montent pèsent sur l'or ; l'inverse le soutient"}
-    for nom, symbole in (("dollar_DXY", "DX-Y.NYB"), ("taux_10_ans_US", "^TNX")):
+    def yahoo(symbole, periode, intervalle):
+        import yfinance as yf
+
+        return yf.Ticker(symbole).history(period=periode, interval=intervalle, auto_adjust=False)["Close"].dropna()
+
+    telecharger = telecharger or yahoo
+    res = {"disponible": True,
+           "lecture": "en général, dollar et taux qui montent pèsent sur l'or ; l'inverse le soutient. "
+                      "L'argent (silver) qui monte avec l'or confirme le mouvement ; s'il ne suit pas, prudence."}
+    journaliers = {}
+    for nom, symbole in (("dollar_DXY", "DX-Y.NYB"), ("taux_10_ans_US", "^TNX"), ("argent_SI", "SI=F")):
         try:
-            c = yf.Ticker(symbole).history(period="3mo", interval="1d", auto_adjust=False)["Close"].dropna()
+            c = telecharger(symbole, "3mo", "1d")
+            journaliers[nom] = c
             res[nom] = {
                 "dernier": round(float(c.iloc[-1]), 3),
                 "variation_5_jours_pct": round(float((c.iloc[-1] / c.iloc[-6] - 1) * 100), 2),
@@ -536,6 +626,35 @@ def macro(ticker):
             }
         except Exception:
             res[nom] = None
+            continue
+        try:
+            h = telecharger(symbole, "5d", "1h")
+            if len(h) >= 2:
+                depuis = h[h.index >= h.index[-1] - pd.Timedelta(hours=24)]
+                res[nom]["variation_24h_pct"] = round(float((h.iloc[-1] / depuis.iloc[0] - 1) * 100), 2)
+        except Exception:
+            pass
+    dollar = journaliers.get("dollar_DXY")
+    if d1 is not None and dollar is not None and len(d1) > 25:
+        try:
+            or_ = d1["c"].copy()
+            or_.index = pd.DatetimeIndex(or_.index).tz_localize(None).normalize()
+            dx = dollar.copy()
+            dx.index = pd.DatetimeIndex(dx.index).tz_localize(None).normalize()
+            commun = pd.concat([or_.pct_change(), dx.pct_change()], axis=1, join="inner").dropna().tail(20)
+            if len(commun) >= 10:
+                r = float(commun.iloc[:, 0].corr(commun.iloc[:, 1]))
+                res["correlation_20j_or_dollar"] = round(r, 2)
+                res["lecture_correlation"] = ("l'or évolue à l'inverse du dollar (normal)" if r <= -0.3 else
+                                              "l'or monte ou baisse AVEC le dollar (demande refuge, inhabituel)" if r >= 0.3 else
+                                              "l'or et le dollar sont peu liés en ce moment")
+        except Exception:
+            pass
+    argent = res.get("argent_SI")
+    if argent and d1 is not None and len(d1) > 6:
+        or_5j = float((d1["c"].iloc[-1] / d1["c"].iloc[-6] - 1) * 100)
+        meme_sens = (or_5j >= 0) == (argent["variation_5_jours_pct"] >= 0)
+        res["argent_confirme_or_5j"] = bool(meme_sens)
     return res
 
 
@@ -567,6 +686,7 @@ def preparer(ticker, donnees=None):
                           for n in ("D1", "H4", "H1", "M15") if len(donnees[n]) > 30],
             "liquidite": liquidite(donnees, a_h1),
         },
+        "liquidite": liquidite_sessions(donnees, a_h1),
         "fibo": {
             **fibo(donnees, a_h1),
             "biais_regle_jabran": {
@@ -579,5 +699,5 @@ def preparer(ticker, donnees=None):
         "tendance": tendance(donnees, ticker),
         "orderflow": order_flow(donnees, ticker),
         "calendrier": cal,
-        "macro": macro(ticker),
+        "macro": macro(ticker, donnees.get("D1")),
     }
