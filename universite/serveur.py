@@ -32,6 +32,14 @@ UNITES_GRAPHIQUE = ("H1", "M15", "M5", "D1", "M1")   # unité préférée pour l
 log = logging.getLogger("universite")
 
 
+def empreinte_code():
+    """Date du fichier Python le plus récent de l'université : si elle change, le code a été mis à jour."""
+    return max(f.stat().st_mtime for f in Path(__file__).resolve().parent.rglob("*.py") if "tests" not in f.parts)
+
+
+EMPREINTE_DEMARRAGE = empreinte_code()
+
+
 class Universite:
     def __init__(self, dossier=None, demarrer_moteur=True):
         self.dossier = Path(dossier or config.DONNEES)
@@ -289,6 +297,9 @@ def fabriquer_handler(univ):
                 if len(morceaux) == 3 and morceaux[:2] == ["api", "agent"]:
                     f = univ.fiche_agent(morceaux[2])
                     return self._envoyer(200 if f else 404, f or {"erreur": "agent inconnu"})
+                if u.path == "/api/a_jour":   # « Universite MGC.bat » : relancer si le code a changé depuis le démarrage
+                    a_jour = empreinte_code() <= EMPREINTE_DEMARRAGE
+                    return self._envoyer(200 if a_jour else 409, {"a_jour": a_jour})
                 if u.path == "/api/scene":
                     return self._envoyer(200, scene.scene())
                 if len(morceaux) == 4 and morceaux[:2] == ["api", "agent"] and morceaux[3] == "espace":

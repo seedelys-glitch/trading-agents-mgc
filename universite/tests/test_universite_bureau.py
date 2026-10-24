@@ -173,3 +173,10 @@ def test_bureau_3d_servi_en_javascript(univ):
     with urllib.request.urlopen(univ.url + "/", timeout=5) as r:
         page = r.read().decode()
     assert '"three": "./vendor/three/three.module.js"' in page and 'id="scene3d"' in page
+
+
+def test_a_jour_tant_que_le_code_ne_change_pas(univ, monkeypatch):
+    from universite import serveur
+    assert lire(univ, "/api/a_jour") == (200, {"a_jour": True})
+    monkeypatch.setattr(serveur, "EMPREINTE_DEMARRAGE", serveur.EMPREINTE_DEMARRAGE - 10)
+    assert lire(univ, "/api/a_jour") == (409, {"a_jour": False})
