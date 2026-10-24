@@ -31,7 +31,10 @@ Demande de Jabran : agents Piège, Règles Topstep, bulletin de notes, Liquidit�
   des 3 exigé), l'agent Piège et le chef, sans débat (5 appels d'IA). Case « Express » sur la page de la salle.
 - Règle de risque des consignes corrigée : 0,25 % (et non plus 1 %).
 - Commandes : `/express` (géré par Jarvis), `/bulletin`, `/liquidite`, `/topstep`, `/solde`.
-- Tests : `salle_des_marches/tests/test_nouveaux_agents.py` (34, dont un desk complet et un express avec une fausse IA).
+- **Agent Mémoire** : `mgc/memoire_setups.py` compare la configuration du desk au journal des setups (bot trad) :
+  même sens + niveau + session, sinon sens + niveau, sinon niveau (5 setups notés minimum) ; avis seulement
+  (`decision["memoire"]`, ligne dans le résumé Telegram).
+- Tests : `salle_des_marches/tests/test_nouveaux_agents.py` (33, dont un desk complet et un express avec une fausse IA).
 - Constat : la plupart des desks récents sont « ANALYSE BLOQUÉE » (données NinjaTrader absentes / périmées) : le
   branchement des données en direct reste la priorité n° 1 pour que ces agents servent.
 

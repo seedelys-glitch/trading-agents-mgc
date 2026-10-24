@@ -457,3 +457,41 @@ def test_desk_complet_avec_fausse_ia(fausse_ia, config):
     d = bureau.finaliser_mgc(decision, avis, debat, calculs_desk(), [], config)
     assert d["statut"] == "ACHAT ENVISAGEABLE" and d["biais"]["accord"] == "8/8"
     assert d["avis_piege"]["risque"] == "fort"         # l'avis de l'IA est affiché, le statut suit le calcul
+
+
+# ------------------------------------------------------------------ agent Mémoire (journal des setups)
+
+from mgc import memoire_setups  # noqa: E402
+from veille.journal_setups import COLUMNS  # noqa: E402
+
+
+def ecrire_journal(dossier, lignes):
+    entete = ";".join(COLUMNS)
+    corps = []
+    for i, (sens, niveau, session, resultat) in enumerate(lignes, 1):
+        cases = ["?"] * len(COLUMNS)
+        cases[0], cases[COLUMNS.index("Sens")], cases[COLUMNS.index("Niveau entree")] = str(i), sens, niveau
+        cases[COLUMNS.index("Session")], cases[COLUMNS.index("Resultat")] = session, resultat
+        corps.append(";".join(cases))
+    (dossier / "journal_setups.csv").write_text("﻿" + entete + "\n" + "\n".join(corps) + "\n", encoding="utf-8")
+
+
+def test_memoire_setups_semblables(tmp_path):
+    lignes = [("Short", "0.705", "New York", "TP1")] * 2 + [("Short", "0.705", "New York", "Stop")] * 4 \
+        + [("Long", "0.705", "Londres", "TP2")] * 3
+    ecrire_journal(tmp_path, lignes)
+    a_17h = datetime(2026, 10, 22, 15, 0, tzinfo=timezone.utc)
+    r = memoire_setups.comparer({"sens": "vente", "niveau": "0.705"}, a_17h, dossier=tmp_path)
+    assert r["critere"] == "ventes sur le 0.705 en session New York"
+    assert (r["total"], r["gagnants"], r["perdants"], r["taux_pct"]) == (6, 2, 4, 33)
+    r = memoire_setups.comparer({"sens": "achat", "niveau": "0.705"}, a_17h, dossier=tmp_path)
+    assert r["critere"] == "setups sur le 0.705" and r["total"] == 9      # trop peu d'achats : critère élargi
+
+
+def test_memoire_pas_assez_ou_vide(tmp_path):
+    ecrire_journal(tmp_path, [("Long", "0.618", "Asie", "TP1")] * 2)
+    r = memoire_setups.comparer({"sens": "achat", "niveau": "0.618"}, dossier=tmp_path)
+    assert r["total"] == 0 and "pas assez" in r["texte"]
+    assert "vide ou introuvable" in memoire_setups.comparer({"sens": "achat", "niveau": "0.618"},
+                                                            dossier=tmp_path / "rien")["texte"]
+    assert memoire_setups.comparer(None) is None

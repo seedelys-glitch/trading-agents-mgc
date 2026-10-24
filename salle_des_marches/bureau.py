@@ -565,6 +565,7 @@ def finaliser_mgc(decision, avis, debat, calculs_faits, informatifs, config, per
         "incertitudes": incertitudes(calculs_faits, perte_du_jour_usd),
         "piege": pieges,
         "topstep": compte,
+        "memoire": memoire_du_setup(config_trade),
     })
     # champs historiques (page, journal) : les niveaux affichés sont ceux du programme, jamais ceux de l'IA
     decision["blocages"] = structurels + informatifs
@@ -577,6 +578,18 @@ def finaliser_mgc(decision, avis, debat, calculs_faits, informatifs, config, per
     else:
         decision.update(zone="aucune", sl="aucun", tp1="–", tp2="–", tp3="–", tp4="–")
     return decision
+
+
+def memoire_du_setup(config_trade):
+    """Agent Mémoire : setups passés semblables du journal (avis seulement ; une panne ne casse rien)."""
+    if not config_trade:
+        return None
+    try:
+        from mgc import memoire_setups
+
+        return memoire_setups.comparer(config_trade)
+    except Exception as erreur:
+        return {"total": 0, "texte": f"Agent Mémoire indisponible ({type(erreur).__name__})."}
 
 
 def incertitudes(calculs_faits, perte_du_jour_usd):

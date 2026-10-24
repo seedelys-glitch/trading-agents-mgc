@@ -596,6 +596,8 @@ def resume_mgc(a, d):
     if ap.get("argument"):
         lignes.append(f"Agent Piège (avocat du diable) : risque {ap.get('risque')}. {ap['argument']}"
                       + (f" À attendre : {ap['invalidation']}" if ap.get("invalidation") else ""))
+    if (d.get("memoire") or {}).get("texte"):
+        lignes.append(d["memoire"]["texte"])
     if d.get("raison"):
         lignes.append(f"Chef de desk : {d['raison']}")
     if d.get("desaccord"):
