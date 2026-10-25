@@ -1616,6 +1616,15 @@ function cliquer() {
 }
 
 // étalonnage final : vignette et léger grain (cinéma)
+// garde-fou avant le halo : sur la carte graphique du PC, un reflet trop fort (cristaux des lustres, verre) dépasse la
+// limite des demi-flottants et devient « infini » ; le halo l'étalait puis le rendu de l'image en faisait du noir :
+// la petite caméra de l'écran Jarvis restait noire par moments. On borne chaque pixel (et un NaN devient noir seul).
+const BORNES = {
+  uniforms: { tDiffuse: { value: null } },
+  vertexShader: "varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
+  fragmentShader: "uniform sampler2D tDiffuse; varying vec2 vUv;" +
+    "void main(){ vec3 c = texture2D(tDiffuse, vUv).rgb; if (any(isnan(c))) c = vec3(0.0); gl_FragColor = vec4(clamp(c, 0.0, 64.0), 1.0); }",
+};
 const ETALONNAGE = {
   uniforms: { tDiffuse: { value: null }, temps: { value: 0 } },
   vertexShader: "varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }",
@@ -1711,6 +1720,7 @@ async function demarrer() {
   const cible = new THREE.WebGLRenderTarget(16, 16, { type: THREE.HalfFloatType, samples: LEGER ? 2 : 4 });
   composer = new EffectComposer(renderer, cible);
   composer.addPass(new RenderPass(scene, camera));
+  composer.addPass(new ShaderPass(BORNES));
   composer.addPass(new UnrealBloomPass(new THREE.Vector2(512, 512), 0.36, 0.5, 0.9));
   composer.addPass(new OutputPass());
   grain = new ShaderPass(ETALONNAGE); composer.addPass(grain);

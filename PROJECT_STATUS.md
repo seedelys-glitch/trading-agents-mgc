@@ -233,6 +233,10 @@ Aucun lien avec `ordres.py`.
      reste fluide. Petites animations : titre de la pièce à l'entrée (vrai nombre d'agents), pièces colorées avec le
      point d'état réel de leurs agents, point qui pulse sur un agent au travail, fiche qui glisse, astuces les 3
      premières fois.
+   - Caméra noire par moments (25/10, petite caméra de l'écran Jarvis) : sur la carte graphique du PC, un reflet trop
+     fort (cristaux des lustres, verre) dépasse la limite des demi-flottants, le halo l'étalait et l'image devenait
+     noire (seules les étiquettes restaient). Passe `BORNES` avant le halo : chaque pixel est borné, un NaN devient
+     un seul point noir. Reproduit et vérifié (un point très brillant noircit toute l'image sans la passe, pas avec).
    - E7 : livrer sur le PC (fichiers de `universite/`), Jabran relance l'université et regarde ; ensuite seulement,
      idées possibles : moteur 3D (Three.js) qui relirait la même scène, VR plus tard.
 3. Quand NinjaTrader 8 / Bookmap seront installés : temps réel et agent 4 (heatmap).
