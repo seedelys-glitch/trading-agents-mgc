@@ -272,3 +272,21 @@ def test_le_quiz_passe_d_abord_par_groq(base):
     r = entrainement.poser_quiz(ia, 4)
     assert r and r[0]["obtenu"] == "D" and r[0]["reussi"] and r[0]["ia"] == "Groq (via Jarvis)"
     assert base.un("SELECT modele FROM ia_appels")["modele"] == "Groq llama"
+    from universite import corpus
+
+    ligne = corpus.exemples(base, 4, "quiz")[0]
+    assert ligne["verdict"] == "juste" and ligne["messages"][2]["content"] == "La bonne réponse est D"
+    assert corpus.resume(base) == {"04-liquidite": 1}
+
+
+def test_corpus_garde_les_redactions_groq_et_masque_les_secrets(base):
+    from universite import corpus
+    from universite.ia import IALocale
+
+    ia = IALocale(base, {"ia_commentaires": True, "ia_appels_max_jour": 100, "ia_url": "http://127.0.0.1:1/v1",
+                         "ia_redaction": "groq", "redaction_url": "http://x"})
+    ia._par_jarvis = lambda consigne, texte, max_tokens: ("Le prix est au-dessus du nuage.", "Groq llama")
+    assert ia.rediger("Explique.", "Prix au-dessus du nuage. token: abcdefgh12345678", agent=3)
+    ligne = corpus.exemples(base, 3)[0]
+    assert ligne["verdict"] == "accepte" and "abcdefgh12345678" not in ligne["messages"][1]["content"]
+    assert (corpus.dossier(base) / "LISEZ-MOI.txt").exists()

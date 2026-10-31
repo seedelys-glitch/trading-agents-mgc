@@ -857,6 +857,10 @@ def poser_quiz(ia, agent, mission=None, temps_restant=None):
         if reponse is None:
             return res or None
         lettre = lire_lettre(reponse)
+        if modele.startswith("Groq"):
+            from . import corpus
+            corpus.noter(ia.base, agent, "quiz", consigne, texte, reponse, modele,
+                         "juste" if lettre == bonne else "faux", mission)
         res.append({"sujet": cle, "titre": titre, "question": question, "attendu": bonne, "obtenu": lettre,
                     "reussi": lettre == bonne, "bonne_reponse": choix[bonne], "ia": modele})
     return res

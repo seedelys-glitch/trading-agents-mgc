@@ -125,6 +125,7 @@ class IALocale:
         consigne = consigne + "\n\n" + charte.consigne()
         debut = time.time()
         res = self._par_jarvis(consigne, faits, max_tokens)
+        groq = bool(res)
         if res:
             texte, ia = res
             self._noter(mission, agent, role, ia, debut, "ok")
@@ -132,10 +133,17 @@ class IALocale:
             texte, ia = self.completer(consigne, faits, mission, agent, role, max_tokens), "LM Studio"
         if not texte:
             return None
+
+        def garder(verdict):   # corpus Groq : exemples pour les IA locales plus tard (31/10)
+            if groq:
+                from . import corpus
+                corpus.noter(self.base, agent, role or "redaction", consigne, faits, texte, ia, verdict, mission)
+
         manques = charte.verifier(texte)
         if manques:
             self.base.evenement("ia", f"Texte IA refusé (charte : {', '.join(manques)}).", agent=agent, mission=mission,
                                 niveau="alerte")
+            garder("refuse (charte)")
             return None
         if not chiffres_libres:
             autorises = {n.replace(",", ".") for n in NOMBRE.findall(faits)}
@@ -143,5 +151,7 @@ class IALocale:
             if etrangers:
                 self.base.evenement("ia", f"Texte IA refusé : chiffres non vérifiés ({', '.join(etrangers[:5])}).",
                                     agent=agent, mission=mission, niveau="alerte")
+                garder("refuse (chiffres)")
                 return None
+        garder("accepte")
         return {"texte": texte, "ia": ia}
