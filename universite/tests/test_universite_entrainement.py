@@ -260,3 +260,15 @@ def test_flux_en_replay_seulement_avec_des_bougies_5_min(base):
     tp = entrainement.travaux_pratiques(base, j, 7, n_max=20, graine=1)
     assert tp["cas"] and all(c["instant"] >= debut for c in tp["cas"])
     assert sum(1 for c in tp["cas"] if c["avis"]) == len(tp["cas"])
+
+
+def test_le_quiz_passe_d_abord_par_groq(base):
+    from universite.ia import IALocale
+
+    ia = IALocale(base, {"ia_commentaires": True, "ia_appels_max_jour": 100, "ia_url": "http://127.0.0.1:1/v1",
+                         "ia_redaction": "groq", "redaction_url": "http://x"})
+    ia.disponible = lambda: True
+    ia._par_jarvis = lambda consigne, texte, max_tokens: ("La bonne réponse est D", "Groq llama")
+    r = entrainement.poser_quiz(ia, 4)
+    assert r and r[0]["obtenu"] == "D" and r[0]["reussi"] and r[0]["ia"] == "Groq (via Jarvis)"
+    assert base.un("SELECT modele FROM ia_appels")["modele"] == "Groq llama"

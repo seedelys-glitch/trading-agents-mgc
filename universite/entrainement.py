@@ -816,6 +816,20 @@ def lire_lettre(reponse):
     return m.group(1) if m else "?"
 
 
+def _par_groq(ia, consigne, texte, mission, agent):
+    """Le quiz n'a rien de privé : on le pose d'abord à Groq (gratuit, rapide, via Jarvis qui garde la clé).
+    Jabran, 31/10 : « mets un meilleur modèle gratuit même si ce n'est pas en local ». Sinon : LM Studio."""
+    par_jarvis = getattr(ia, "_par_jarvis", None)
+    if not par_jarvis or ia.reglages.get("ia_redaction", "groq") != "groq":
+        return None
+    debut = time.time()
+    res = par_jarvis(consigne, texte, 20)
+    if not res:
+        return None
+    ia._noter(mission, agent, "professeur", res[1], debut, "ok")
+    return res[0]
+
+
 def poser_quiz(ia, agent, mission=None, temps_restant=None):
     """Chaque question à choix est posée à l'IA. None si l'IA n'est pas disponible (rien n'est inventé).
     temps_restant() -> secondes avant la fin du délai de la mission : on s'arrête avant (31/10 : 7 quiz coupés à 300 s
@@ -832,16 +846,19 @@ def poser_quiz(ia, agent, mission=None, temps_restant=None):
         if temps_restant and temps_restant() < delai_ia + 15:
             break
         texte = question + "\n" + "\n".join(f"{k}) {v}" for k, v in choix.items())
-        try:
-            reponse = ia.completer(consigne, texte + "\n/no_think", mission, agent, "professeur", max_tokens=600,
-                                   delai=DELAI_QUIZ_S)
-        except TypeError:   # IA sans ces réglages (anciennes versions, tests)
-            reponse = ia.completer(consigne, texte + "\n/no_think", mission, agent, "professeur")
+        reponse, modele = _par_groq(ia, consigne, texte, mission, agent), "Groq (via Jarvis)"
+        if reponse is None:
+            modele = "LM Studio"
+            try:
+                reponse = ia.completer(consigne, texte + "\n/no_think", mission, agent, "professeur", max_tokens=600,
+                                       delai=DELAI_QUIZ_S)
+            except TypeError:   # IA sans ces réglages (anciennes versions, tests)
+                reponse = ia.completer(consigne, texte + "\n/no_think", mission, agent, "professeur")
         if reponse is None:
             return res or None
         lettre = lire_lettre(reponse)
         res.append({"sujet": cle, "titre": titre, "question": question, "attendu": bonne, "obtenu": lettre,
-                    "reussi": lettre == bonne, "bonne_reponse": choix[bonne]})
+                    "reussi": lettre == bonne, "bonne_reponse": choix[bonne], "ia": modele})
     return res
 
 
