@@ -30,8 +30,14 @@ qui rédige : « comprendre » doit donc se PROUVER par des épreuves notées su
 - API : `GET /api/entrainement` (bulletins), `/api/entrainement/N` ; la fiche agent a une clé `entrainement`.
 - Tests : `universite/tests/test_universite_entrainement.py` (17, dont « un calcul faux est recalé » et « pas de
   look-ahead en replay »). 185 tests université + 238 Salle réussis (conteneur, fusion avec les personnalités).
-- Pas encore vu : les travaux pratiques sur les vraies bougies Yahoo du PC (le conteneur n'a pas Internet) ; à lire
-  dans le bulletin après le 1er entraînement. Agents 4 (Bookmap), 9, 11, 16, 17 : cours et quiz seulement.
+- INSTALLÉ sur le PC le 31/10 vers 6h45 (commit local 20f945a, sauvegarde sauvegardes\avant-entrainement-20261031,
+  185 + 233 tests). 1er entraînement (mission 573) : tous les examens réussis (20/20). Replay sur Yahoo : SMC 69 cas
+  59 % (hasard 55 %), Ichimoku 52 cas 56 % (58 %), EMA 200 67 cas 46 % (54 %) = aucune lecture seule ne prédit le gold
+  à 4 h mieux que le hasard (attendu) ; Fibo 9 cas (trop peu) ; Flux 0 cas.
+- Corrigé après ce 1er passage : quiz coupés à 300 s (7 missions) -> le quiz s'arrête avant le délai et garde ses
+  réponses, consigne /no_think ; lettre mal lue (« La réponse est D » lu A) -> `lire_lettre` ; Flux 0 cas -> instants
+  pris là où il y a des bougies 5 min ; le replay ne compte plus dans la moyenne (clé `valeur_lecture` à part) et
+  n'est « raté » que si la lecture fait pire qu'une pièce. 189 tests université.
 
 ## 0septies. Personnalités, mentor, réunion du soir (31/10/2026, session cloud « personnalité des agents »)
 - Charte (`universite/charte.py`) : Jabran décide ; respect de Jabran, Claude et Jarvis ; aucun ordre, aucun conseil

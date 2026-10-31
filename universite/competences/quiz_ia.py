@@ -20,7 +20,9 @@ def executer(ctx):
     if not entrainement.questions_quiz(eleve):
         return {"agent": eleve, "questions": 0}
     ctx.etape("professeur", f"Pose à l'IA locale les questions du cours de {nom}")
-    reponses = entrainement.poser_quiz(ctx.ia, eleve, ctx.id)
+    import time
+
+    reponses = entrainement.poser_quiz(ctx.ia, eleve, ctx.id, temps_restant=lambda: ctx.limite - time.time())
     if not reponses:
         ctx.journal(f"Quiz de {nom} non passé : IA locale indisponible (LM Studio fermé ou budget du jour atteint).")
         return {"agent": eleve, "passe": False}

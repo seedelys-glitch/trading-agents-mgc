@@ -25,6 +25,7 @@ import hashlib
 import json
 import math
 import random
+import re
 import tempfile
 import time
 from pathlib import Path
@@ -726,6 +727,11 @@ def travaux_pratiques(base, jeu, agent, n_max=80, graine=0, verifier=lambda: Non
         return {"cas": [], "bilan": {"n": 0, "verdict": f"pas assez de bougies H1 ({len(h1_tout)}, il en faut 300)"}}
     # instants possibles : fin d'une bougie H1, avec 250 bougies avant et HORIZON_H après, espacés d'au moins 4 h
     candidats = [b[0] + 3600 for b in h1_tout[250:-HORIZON_H]]
+    if agent == 7:   # le flux lit des bougies 5 min : seulement les instants où il y en a (31/10 : 0 cas sur le PC)
+        m5 = donnees.fenetre(base, jeu, "M5", time.time() + 86400)["bougies"]
+        debut_m5 = m5[0][0] + 600 * 300 if len(m5) > 600 else None
+        candidats = [t for t in candidats if debut_m5 and t >= debut_m5] or (
+            [t for t in candidats if m5 and t >= m5[0][0] + 3 * 3600])
     alea = random.Random(f"tp-{graine}-{agent}-{jeu}")
     alea.shuffle(candidats)
     choisis, cas = [], []
@@ -797,19 +803,34 @@ def questions_quiz(agent):
     return [(s["cle"], s["titre"], s["quiz"]) for s in PROGRAMME.get(int(agent), []) if s.get("quiz")]
 
 
-def poser_quiz(ia, agent, mission=None):
-    """Chaque question à choix est posée à l'IA. None si l'IA n'est pas disponible (rien n'est inventé)."""
+LETTRE = re.compile(r"(?<![A-Za-zÀ-ÿ])([ABCD])(?![A-Za-zÀ-ÿ])")
+
+
+def lire_lettre(reponse):
+    """La lettre choisie : une lettre seule (« D », « Réponse : D », « D) ... »), jamais le A de « La »."""
+    reponse = re.sub(r"<think>.*?</think>", "", reponse or "", flags=re.S)
+    m = LETTRE.search(reponse.strip())
+    return m.group(1) if m else "?"
+
+
+def poser_quiz(ia, agent, mission=None, temps_restant=None):
+    """Chaque question à choix est posée à l'IA. None si l'IA n'est pas disponible (rien n'est inventé).
+    temps_restant() -> secondes avant la fin du délai de la mission : on s'arrête avant (31/10 : 7 quiz coupés à 300 s
+    sur le PC), les questions déjà répondues sont gardées, les autres attendent le quiz suivant."""
     if not ia or not ia.disponible():
         return None
     consigne = ("Tu passes un examen de trading sur le Micro Gold. Réponds UNIQUEMENT par la lettre de la bonne "
-                "réponse (A, B, C ou D), sans rien d'autre.")
+                "réponse (A, B, C ou D), sans rien d'autre, sans réfléchir à voix haute. /no_think")
+    delai_ia = float(getattr(ia, "reglages", {}).get("ia_delai_s", 90))
     res = []
     for cle, titre, (bonne, question, choix) in questions_quiz(agent):
+        if temps_restant and temps_restant() < delai_ia + 15:
+            break
         texte = question + "\n" + "\n".join(f"{k}) {v}" for k, v in choix.items())
         reponse = ia.completer(consigne, texte, mission, agent, "professeur")
         if reponse is None:
             return res or None
-        lettre = next((ch for ch in reponse.strip().upper() if ch in "ABCD"), "?")
+        lettre = lire_lettre(reponse)
         res.append({"sujet": cle, "titre": titre, "question": question, "attendu": bonne, "obtenu": lettre,
                     "reussi": lettre == bonne, "bonne_reponse": choix[bonne]})
     return res
@@ -852,13 +873,16 @@ def bulletin(base, agent, depuis=None):
         dernieres.setdefault((r["genre"], r["sujet"]), r)
     notes = [{"genre": g, "sujet": s, "note": r["note"], "reussi": bool(r["reussi"]), "le": r["ts"]}
              for (g, s), r in dernieres.items()]
-    chiffrees = [n["note"] for n in notes if n["note"] is not None]
+    # la moyenne = ce que l'agent SAIT (examens, quiz) ; le replay dit si sa lecture prédit le gold, c'est à part
+    chiffrees = [n["note"] for n in notes if n["note"] is not None and n["genre"] != "replay"]
+    replay = next((n for n in notes if n["genre"] == "replay"), None)
     lecons = []
     if _table_lecons(base):
         lecons = base.lire("SELECT quoi, lecon, statut, fois, maj FROM lecons WHERE equipe='universite' AND agent=?"
                            " AND type LIKE ? AND statut!='appliquee' ORDER BY maj DESC LIMIT 10",
                            (int(agent), "%"))
     return {"agent": int(agent), "notes": notes, "moyenne": round(sum(chiffrees) / len(chiffrees), 1) if chiffrees else None,
+            "valeur_lecture": replay["note"] if replay else None,
             "examens": len(lignes), "rates": [n for n in notes if not n["reussi"]], "lecons": lecons,
             "programme": programme(agent)}
 

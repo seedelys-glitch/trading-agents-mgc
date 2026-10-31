@@ -228,3 +228,36 @@ def test_directeur_comprend_trace_moi_le_fibo():
 
     t = dc.plat("trace moi le fibo")
     assert re.search(dc.VERBE, t)
+
+
+# ------------------------------------------------------------------ leçons du 1er entraînement sur le PC (31/10)
+def test_lire_la_lettre_sans_se_tromper_de_mot():
+    assert entrainement.lire_lettre("La réponse est D") == "D"          # avant : le A de « La » était lu
+    assert entrainement.lire_lettre("D) Dire qu'il attend") == "D"
+    assert entrainement.lire_lettre("<think>A ou B ?</think>\nC") == "C"
+    assert entrainement.lire_lettre("Aucune idée") == "?"
+
+
+def test_le_quiz_s_arrete_avant_le_delai(moteur, base):
+    ia = FausseIA(bonnes=True)
+    ia.reglages = {"ia_delai_s": 90}
+    restant = iter([500, 500, 50, 50])
+    r = entrainement.poser_quiz(ia, 1, temps_restant=lambda: next(restant))
+    assert len(r) == 2 and all(x["reussi"] for x in r)
+
+
+def test_le_replay_ne_compte_pas_dans_la_moyenne(base):
+    entrainement.enregistrer(base, 6, "cas_ecole", "vwap", 20.0, {}, 1)
+    entrainement.enregistrer(base, 6, "replay", "lecture", 2.5, {}, 1, reussi=True)
+    b = entrainement.bulletin(base, 6)
+    assert b["moyenne"] == 20 and b["valeur_lecture"] == 2.5 and not b["rates"]
+
+
+def test_flux_en_replay_seulement_avec_des_bougies_5_min(base):
+    j = _jeu_h1(base, n=700)
+    debut = entrainement.DEPART + 3600 * 400
+    m5 = [(debut + 300 * i, 3000.0, 3001.0, 2999.0, 3000.0 + (i % 2), 10.0) for i in range(12 * 290)]
+    donnees.ajouter_bougies(base, j, "M5", m5)
+    tp = entrainement.travaux_pratiques(base, j, 7, n_max=20, graine=1)
+    assert tp["cas"] and all(c["instant"] >= debut for c in tp["cas"])
+    assert sum(1 for c in tp["cas"] if c["avis"]) == len(tp["cas"])

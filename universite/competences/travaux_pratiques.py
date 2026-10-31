@@ -55,7 +55,7 @@ def executer(ctx):
                "Limites : passé ≠ futur ; une seule lecture testée seule, sans le reste de la stratégie ; données "
                "Yahoo différées."]
     entrainement.enregistrer(ctx.base, eleve, "replay", "lecture", note, {"bilan": b, "jeu": jeu}, graine, ctx.id,
-                             reussi=note is not None and note >= 10)
+                             reussi=not b.get("verdict", "").startswith("la lecture s'est trompée"))
     pire = min(b.get("par_session", {}).items(), key=lambda kv: kv[1]["taux"], default=None)
     if note is not None and pire and pire[1]["n"] >= 10 and pire[1]["taux"] < 0.45:
         entrainement.noter_lecon(
