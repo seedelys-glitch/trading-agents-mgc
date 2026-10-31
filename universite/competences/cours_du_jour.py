@@ -65,7 +65,7 @@ def programme(n):
 
         sujets = entrainement.programme(n) or []
         if sujets:
-            return [(s.get("titre") or s.get("cle"), None, s.get("resume") or "") for s in sujets]
+            return [(s.get("titre") or s.get("cle"), s.get("wikipedia"), s.get("resume") or "") for s in sujets]
     except (ImportError, AttributeError, TypeError):
         pass
     return [(s, w, "") for s, w in PROGRAMME.get(n, [])]

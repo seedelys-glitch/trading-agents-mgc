@@ -51,7 +51,7 @@ SUJETS = [
     (r"risque", "evaluation_risque"),
 ]
 ANALYSES = ["analyse_smc", "analyse_fibo", "analyse_ichimoku", "analyse_vwap_ema", "analyse_flux"]
-VERBE = (r"(?<![a-z])(?:lance|lancer|relance|demande|demander|fais|faire|faites?|refais|confie|analyse|anlayse|analise|analyser|teste|tester|"
+VERBE = (r"(?<![a-z])(?:lance|lancer|trace|tracer|relance|demande|demander|fais|faire|faites?|refais|confie|analyse|anlayse|analise|analyser|teste|tester|"
          r"verifie|verifier|controle|controler|mesure|mesurer|cherche|chercher|retrouve|retrouver|extrais|extraire|"
          r"range|ranger|importe|importer|lis|lire|calcule|calculer|prepare|preparer|veux|voudrais|aimerais|faudrait|"
          r"peux|pourrais)\b")

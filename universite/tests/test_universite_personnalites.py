@@ -138,15 +138,19 @@ def test_cours_du_jour_avec_sources(univ, monkeypatch):
     r = lancer_mission(univ, 17, "cours_du_jour", {"agents": [3, 8]})
     assert r["statut"] == "terminee" and r["resultat"]["cours"] == [3, 8]
     c = univ.base.lire("SELECT * FROM cours ORDER BY id")
-    assert [x["agent"] for x in c] == [3, 8] and c[0]["sujet"] == "Ichimoku : les cinq lignes"
+    assert [x["agent"] for x in c] == [3, 8] and c[0]["sujet"] == "Le prix et le nuage"
     doc = univ.base.un("SELECT * FROM documents WHERE id=?", (c[0]["document"],))
     assert "Kenji" in doc["titre"] and "wikipedia" in doc["contenu"] and doc["statut"] == "verifie"
     # le sujet suivant au prochain cours
     lancer_mission(univ, 17, "cours_du_jour", {"agents": [3]})
-    assert univ.base.un("SELECT sujet FROM cours ORDER BY id DESC LIMIT 1")["sujet"] == "Le nuage (Kumo)"
+    assert univ.base.un("SELECT sujet FROM cours ORDER BY id DESC LIMIT 1")["sujet"] == "Tenkan et Kijun"
 
 
-def test_pas_de_cours_sans_renseignement(univ):
+def test_pas_de_cours_sans_renseignement(univ, monkeypatch):
+    from universite import entrainement
+
+    monkeypatch.setattr(entrainement, "programme", lambda n: [])     # ni programme, ni bibliothèque, ni Wikipédia
+    monkeypatch.setattr(cours_du_jour, "wikipedia", lambda page, delai=8: None)
     r = lancer_mission(univ, 17, "cours_du_jour", {"agents": [3]})
     assert r["resultat"] == {"cours": [], "reportes": [3]} and not univ.base.lire("SELECT * FROM cours")
 
