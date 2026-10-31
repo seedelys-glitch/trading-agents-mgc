@@ -50,7 +50,7 @@ OCCUPANTS = {
     "directeur": [14],
     "analyse": [1, 2, 3, 6, 7, 4],
     "macro": [5, 10, 11, 12],
-    "bibliotheque": [9, 15, 16],
+    "bibliotheque": [9, 15, 16, 17],
     "labo": [13],
     "risque": [8],
 }

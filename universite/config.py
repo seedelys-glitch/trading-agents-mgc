@@ -29,6 +29,8 @@ DEFAUTS = {
     "ia_commentaires": True,      # commentaire pédagogique sous les rapports, si LM Studio répond
     "ia_appels_max_jour": 200,    # budget d'appels IA par jour
     "ia_delai_s": 90,
+    "ia_redaction": "groq",       # textes longs (réunion, cours) : « groq » = Groq via Jarvis puis LM Studio, « local » = LM Studio
+    "redaction_url": "http://127.0.0.1:8765/api/rediger",   # Jarvis rédige avec sa clé Groq (la clé reste chez Jarvis)
     "ia_embeddings": "",          # modèle d'embeddings LM Studio (ex. nomic-embed), vide = recherche par mots seulement
     # Mémoire (Scribe, agent 15) : où relire le chat du desk de Jarvis et les sessions Claude Code du PC (vide = ne pas lire)
     "memoire_jarvis": str(Path.home() / "Documents" / "Jarvis"),

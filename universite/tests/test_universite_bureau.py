@@ -60,7 +60,7 @@ def test_chaque_piece_a_une_ouverture():
 
 def test_api_scene(univ):
     code, s = lire(univ, "/api/scene")
-    assert code == 200 and s["version"] == 2 and len(s["postes"]) == 16 and s["echelle"] > 1
+    assert code == 200 and s["version"] == 2 and len(s["postes"]) == 17 and s["echelle"] > 1
 
 
 def test_espace_vide_ne_montre_rien_d_invente(univ):

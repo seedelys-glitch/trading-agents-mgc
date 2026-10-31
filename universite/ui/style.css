@@ -206,6 +206,8 @@ pre.doc.apercu { max-height: 220px; overflow: auto; font-size: 13px; margin: 8px
 .tag3d.construction i { background: var(--gris); box-shadow: none; } .tag3d.construction b, .tag3d.construction small { color: var(--doux); }
 .tag3d.choisi b, .tag3d:hover b { border-color: var(--or-clair); }
 .tag3d.choisi b { box-shadow: 0 0 0 1px var(--or-clair), 0 0 16px rgba(240,207,133,.45); }
+.tag3d[hidden] { display: none; }
+.tag3d.reunion { cursor: default; } .tag3d.reunion b { padding: 4px 12px; font-size: 14px; } .tag3d.reunion small { color: var(--or-clair); }
 .tag3d.travail i { animation: pouls 1.6s ease-in-out infinite; } .tag3d.erreur i { animation: pouls .9s ease-in-out infinite; }
 @keyframes pouls { 50% { transform: scale(1.4); opacity: .6; } }
 .nom-zone3d { pointer-events: auto; cursor: pointer; font: 600 13px Georgia, "Times New Roman", serif; letter-spacing: 2px;

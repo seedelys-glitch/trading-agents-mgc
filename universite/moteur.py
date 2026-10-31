@@ -9,13 +9,16 @@ Le moteur : file de missions persistante, ouvriers, délais, nouveaux essais, re
 - Arrêt du programme : au redémarrage, les missions coupées en plein travail retournent dans la file.
 - Boucles : une boucle relance une mission à intervalle régulier, avec un nombre maximal d'itérations
   (budget) et une mise en pause automatique après 3 erreurs de suite.
+- S'améliorer chaque jour (31/10) : avant une mission, l'agent relit ses leçons encore à appliquer pour ce type
+  de travail (étape visible) ; si la mission réussit, ces leçons passent « appliquées ». Après chaque mission,
+  sa personnalité est mise à jour à partir de ce qu'il a réellement fait.
 """
 
 import threading
 import time
 import traceback
 
-from . import competences
+from . import competences, personnalites
 from .agents import DIRECTEUR, PAR_NUMERO, SOUTIENS
 
 
@@ -142,10 +145,14 @@ class Moteur:
         try:
             if comp is None:
                 raise ValueError(f"type de mission inconnu : {mission['type']}")
+            relues = self._relire_lecons(ctx, mission)
             resultat = comp.executer(ctx)
             ctx.verifier()
             self.base.fin_etapes(mission["id"])
             self.base.terminer(mission["id"], resultat)
+            if relues:
+                self.base.ecrire(f"UPDATE lecons SET statut='appliquee', maj=? WHERE id IN ({','.join('?' * len(relues))})",
+                                 (time.time(), *relues))
             self.base.evenement("mission", f"{nom} a terminé : {mission['titre']}", agent=mission["agent"],
                                 mission=mission["id"])
             self._suite_boucle(mission, ok=True)
@@ -168,6 +175,23 @@ class Moteur:
                 self.base.message(mission["agent"], DIRECTEUR, "alerte", f"Échec de la mission {mission['id']} : {e}",
                                   mission["id"])
                 self._suite_boucle(mission, ok=False, erreur=traceback.format_exception_only(e)[-1].strip())
+        finally:
+            try:
+                personnalites.evoluer(self.base, mission["agent"])
+            except Exception as e:  # noqa: BLE001 : la personnalité ne doit jamais faire échouer une mission
+                self.base.evenement("moteur", f"Personnalité non mise à jour : {e}", agent=mission["agent"], niveau="alerte")
+
+    def _relire_lecons(self, ctx, mission):
+        """Étape « relit ses leçons » : les leçons encore à appliquer pour ce type de travail. Renvoie leurs id."""
+        lecons = self.base.lire("SELECT id, lecon FROM lecons WHERE agent=? AND (type=? OR type='')"
+                                " AND statut IN ('a_appliquer','repetee') ORDER BY fois DESC, maj DESC LIMIT 3",
+                                (mission["agent"], mission["type"]))
+        if not lecons:
+            return []
+        ctx.etape("professeur", f"Relit {len(lecons)} leçon(s) tirée(s) de ses erreurs : {lecons[0]['lecon'][:140]}")
+        ids = [l["id"] for l in lecons]
+        self.base.ecrire(f"UPDATE lecons SET relue=relue+1 WHERE id IN ({','.join('?' * len(ids))})", tuple(ids))
+        return ids
 
     # ------------------------------------------------------------------ boucles
     def nouvelle_boucle(self, nom, responsable, genre, objectif, params=None, intervalle_s=600, iterations_max=100):

@@ -36,6 +36,8 @@ let image = 0;
 let K = 1;   // agrandissement du plan (scene.py ECHELLE) : les cotes écrites ici sont celles du plan d'origine 48 x 30 m
 let plan, L, P, renderer, scene, camera, controls, composer, labels, conteneur, pret = false, actif = false;
 const postes = {}, cliquables = [], tetes = {}, sols = [];
+// réunion du soir (21h30, 30 min) : les fauteuils autour de la grande table, et qui parle
+const placesReunion = []; let centreReunion = null, tagReunion = null, reunionActive = null, parole = { n: null, jusqu: 0, i: 0 };
 let liens3d = [], dernierLiens = "", t0 = performance.now(), poussiere = null, feu = null, grand = null, tableauEchanges = null;
 const horloges = [];
 
@@ -925,12 +927,18 @@ function decor(z) {
     t.scale.set(2.7, 1, 1.05); t.position.set(c.x, 0.78, c.z); ombre(t); scene.add(t);
     const bord = new THREE.Mesh(new THREE.TorusGeometry(1, 0.025, 6, 96), M.or); bord.scale.set(2.7, 1.05, 1); bord.rotation.x = Math.PI / 2; bord.position.set(c.x, 0.82, c.z); scene.add(bord);
     for (const dx of [-1.2, 1.2]) scene.add(cyl(0.18, 0.4, 0.74, M.bois, c.x + dx, 0.37, c.z, 24));
-    for (let k = 0; k < 10; k++) {
-      const a = (k / 10) * Math.PI * 2, x = c.x + Math.cos(a) * 3.35, zz = c.z + Math.sin(a) * 1.6;
+    // 18 fauteuils : toute l'équipe tient autour de la table pour la réunion du soir (31/10)
+    centreReunion = new THREE.Vector3(c.x, 0, c.z);
+    for (let k = 0; k < 18; k++) {
+      const a = (k / 18) * Math.PI * 2, x = c.x + Math.cos(a) * 3.6, zz = c.z + Math.sin(a) * 1.95;
       fauteuil(x, zz, Math.atan2(c.x - x, c.z - zz));
-      const bloc = boite(0.21, 0.015, 0.29, M.papier, c.x + Math.cos(a) * 2.35, 0.83, c.z + Math.sin(a) * 1.0, false);
+      placesReunion.push(new THREE.Vector3(x, 0, zz));
+      const bloc = boite(0.21, 0.015, 0.29, M.papier, c.x + Math.cos(a) * 2.3, 0.83, c.z + Math.sin(a) * 0.82, false);
       bloc.rotation.y = -a; scene.add(bloc);
     }
+    const d = document.createElement("div"); d.className = "tag3d reunion"; d.hidden = true;
+    d.innerHTML = "<b>Réunion du soir · débrief de la journée</b><small></small>";
+    tagReunion = new CSS2DObject(d); tagReunion.position.set(c.x, 2.6, c.z); scene.add(tagReunion);
     for (const dx of [-0.7, 0.7]) {
       scene.add(cyl(0.07, 0.09, 0.28, M.verre, c.x + dx, 0.97, c.z, 16));
       scene.add(cyl(0.04, 0.04, 0.09, M.verre, c.x + dx + 0.18, 0.87, c.z + 0.1, 12));
@@ -1123,6 +1131,7 @@ const LOOKS = {
   5: { coiffure: 2 }, 6: { coiffure: 5 }, 7: { coiffure: 0, barbe: true }, 8: { coiffure: 3, lunettes: true, gilet: true },
   9: { coiffure: 2, lunettes: true }, 10: { coiffure: 1 }, 11: { coiffure: 3, barbe: true, lunettes: true, cheveux: 6 },
   12: { coiffure: 4, lunettes: true }, 13: { coiffure: 0, sweat: true }, 15: { coiffure: 5, lunettes: true }, 16: { coiffure: 1, cheveux: 6, gilet: true },
+  17: { coiffure: 2, lunettes: true, gilet: true },   // mentor : professeure, chignon et lunettes
 };
 function personnage(n) {
   const r = hasard(n * 977), look = LOOKS[n] || {};
@@ -1244,7 +1253,14 @@ function vivre(ps, s, dt) {
   v.paupieres.forEach((p) => { p.scale.y += (ferme - p.scale.y) * Math.min(1, dt * 30); });
   // où regarder
   let lacet = 0, tangage = 0.05;
-  if (ps.regard && s < ps.regard.jusqu) {                  // un collègue vient de lui envoyer un vrai message
+  const parle = ps.reunion && parole.n === ps.n;
+  if (parle) v.bouche.scale.y = 0.35 + Math.abs(Math.sin(s * 11 + ps.n)) * 0.9;
+  else if (ps.reunion) v.bouche.scale.y = (EXPRESSIONS[ps.statut] || EXPRESSIONS.disponible).bouche;
+  if (ps.reunion) {                                         // réunion : on regarde celui qui parle (lui regarde le directeur)
+    const cible = postes[parle ? 14 : parole.n];
+    if (cible && cible !== ps) _v.copy(cible.agent.position).add(new THREE.Vector3(0, 1.35, 0));
+    else _v.copy(centreReunion).add(new THREE.Vector3(0, 0.9, 0));
+  } else if (ps.regard && s < ps.regard.jusqu) {            // un collègue vient de lui envoyer un vrai message
     _v.copy(ps.regard.cible);
   } else if (camera.position.distanceTo(ps.agent.position) < 7 && !ps.travail) {
     _v.copy(camera.position);                               // on entre dans la pièce : il lève les yeux vers nous
@@ -1370,7 +1386,7 @@ function maj3d(etat, choix) {
     const ps = postes[a.n];
     if (!ps) continue;
     if (ps.statut !== a.statut) { ps.statut = a.statut; exprimer(ps); }
-    ps.travail = a.statut === "travail";
+    ps.travail = a.statut === "travail" && !ps.reunion;   // en réunion, personne ne tape au clavier
     ps.anneau.children[0].material.color.setHex(COULEURS[a.statut] || COULEURS.disponible);
     ps.anneau.children[1].material.color.setHex(COULEURS[a.statut] || COULEURS.disponible).multiplyScalar(0.22);
     ps.agent.visible = a.statut !== "construction";
@@ -1396,8 +1412,45 @@ function maj3d(etat, choix) {
     for (const m of p.lampes) m.color.copy(col).multiplyScalar(st ? 2.4 : 1.3);
     for (const m of p.halos) m.color.copy(col).multiplyScalar(0.3);
   }
+  reunion3d(etat);
   const cle = JSON.stringify(etat.liens.map((l) => [l.de, l.a, l.genre]));
   if (cle !== dernierLiens) { dernierLiens = cle; liens(etat.liens); majEchanges(); }
+}
+
+// Réunion du soir : pendant 30 minutes (table reunions de la base), chaque agent quitte son bureau et s'assoit
+// autour de la grande table ; le directeur est en bout de table ; chacun parle à son tour, les autres le regardent.
+function reunion3d(etat) {
+  const r = etat.reunion && placesReunion.length ? etat.reunion : null;
+  if (tagReunion) {
+    tagReunion.element.hidden = !r;
+    if (r) tagReunion.element.querySelector("small").textContent =
+      `jusqu'à ${new Date(r.fin * 1000).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`;
+  }
+  if (!!r === !!reunionActive) return;
+  reunionActive = r;
+  const presents = Object.values(postes).filter((ps) => ps.statut !== "construction").sort((a, b) => (a.n === 14 ? -1 : b.n === 14 ? 1 : a.n - b.n));
+  presents.forEach((ps, i) => {
+    if (r) {
+      ps.bureau = { pos: ps.agent.position.clone(), rot: ps.agent.rotation.y, tag: ps.tagObj.position.clone() };
+      const place = placesReunion[i % placesReunion.length];
+      ps.agent.position.set(place.x, 0, place.z);
+      ps.agent.rotation.y = Math.atan2(-(centreReunion.x - place.x), -(centreReunion.z - place.z));
+      ps.tagObj.position.set(place.x, 2.05, place.z);
+      ps.anneau.visible = false; ps.reunion = true;
+    } else if (ps.bureau) {
+      ps.agent.position.copy(ps.bureau.pos); ps.agent.rotation.y = ps.bureau.rot; ps.tagObj.position.copy(ps.bureau.tag);
+      ps.anneau.visible = true; ps.reunion = false; ps.bureau = null;
+    }
+  });
+  parole = { n: r ? 14 : null, jusqu: 0, i: 0 };
+}
+
+// qui parle : le directeur ouvre, puis chacun son tour (8 secondes chacun)
+function tourDeParole(s) {
+  if (!reunionActive || s < parole.jusqu) return;
+  const presents = Object.values(postes).filter((ps) => ps.reunion).map((ps) => ps.n).sort((a, b) => (a === 14 ? -1 : b === 14 ? 1 : a - b));
+  if (!presents.length) return;
+  parole.n = presents[parole.i % presents.length]; parole.i++; parole.jusqu = s + 8;
 }
 
 // grand écran de la salle d'analyse : les vraies bougies H1 FERMÉES du jeu le plus récent (jamais inventées)
@@ -1861,6 +1914,7 @@ function boucle(t) {
   majCoupes(dt); majPieceVue(); majOptique(dt);
   if (camera3d) rondeCamera(t);
   // seulement les agents réellement au travail bougent (frappe au clavier, halo qui pulse)
+  tourDeParole(s);
   for (const ps of Object.values(postes)) {
     vivre(ps, s, dt);
     if (ps.travail) {

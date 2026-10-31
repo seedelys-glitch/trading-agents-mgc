@@ -204,10 +204,28 @@ async function majPanneau(premier) {
   const [f, esp] = await Promise.all([api(`/api/agent/${choisi}`),
     window.rendreEspace ? api(`/api/agent/${choisi}/espace`) : null]);
   const a = etat.agents.find((x) => x.n === choisi);
-  const onglets = { ...(esp ? { espace: "Son espace" } : {}), mission: "Mission", taches: `Tâches (${f.missions.length})`, documents: `Documents (${f.documents.length})`,
+  const onglets = { ...(esp ? { espace: "Son espace" } : {}), ...(f.personnalite ? { personnalite: "Personnalité" } : {}), mission: "Mission", taches: `Tâches (${f.missions.length})`, documents: `Documents (${f.documents.length})`,
     soutiens: "Soutiens", historique: "Historique" };
   const contenu = {
     espace: () => window.rendreEspace(esp),
+    personnalite: () => {
+      const p = f.personnalite, c = p.compteurs || {};
+      const statutLecon = { a_appliquer: "à appliquer", appliquee: "appliquée", repetee: "répétée" };
+      return `
+      <div class="bloc"><h3>${esc(p.prenom)} — ${esc(p.caractere.join(", "))}</h3>« ${esc(p.devise)} »
+        <br><span class="doux">Parle ainsi : ${esc(p.style)} · aime ${esc(p.passion)} · travaille sur : ${esc(p.a_travailler)}</span></div>
+      <div class="bloc"><h3>Aujourd'hui</h3>Humeur : ${esc(p.humeur)} · niveau : <b>${esc(p.niveau)}</b>
+        <br><span class="doux">Depuis le début : ${c.missions || 0} mission(s), ${c.verifies || 0} document(s) vérifié(s), ${c.rejetes || 0} rejeté(s),
+        ${c.lecons_appliquees || 0} leçon(s) appliquée(s), ${c.cours || 0} cours suivi(s).</span></div>
+      <div class="bloc"><h3>Ce qui a grandi (gagné par son vrai travail)</h3>${p.traits_gagnes.length ? p.traits_gagnes.map((t) =>
+        `<b>${esc(t.trait)}</b> <span class="doux">(${esc(t.pourquoi)}, le ${heure(t.le)})</span>`).join("<br>") : '<span class="doux">Rien encore : ça viendra avec le travail.</span>'}</div>
+      <div class="bloc"><h3>Leçons tirées de ses erreurs</h3>${p.lecons.length ? p.lecons.map((l) =>
+        `${esc(l.quoi)} <span class="doux">(${statutLecon[l.statut] || esc(l.statut)}${l.fois > 1 ? `, ${l.fois} fois` : ""})</span><br><small>${esc(l.lecon)}</small>`).join("<br>")
+        : '<span class="doux">Aucune erreur relevée.</span>'}</div>
+      <div class="bloc"><h3>Cours du mentor</h3>${p.cours.length ? p.cours.map((x) =>
+        `${x.document ? `<a data-doc="${x.document}">${esc(x.sujet)}</a>` : esc(x.sujet)} <span class="doux">${heure(x.cree)}</span>`).join("<br>")
+        : '<span class="doux">Pas encore de cours.</span>'}</div>`;
+    },
     mission: () => `
       <div class="bloc"><h3>Mission</h3>${esc(f.mission)}</div>
       ${a.mission ? `<div class="bloc"><h3>En ce moment</h3>${esc(a.mission.titre)}<br><span class="doux">Étape : ${esc(a.mission.etape)} — depuis ${duree(etat.maintenant - a.mission.battement)}</span></div>` : ""}

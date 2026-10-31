@@ -10,7 +10,9 @@ l'agent qui sait le faire (de vraies missions, avec de vrais messages, visibles 
   - calendrier des annonces toutes les 6 heures, discours de la Fed une fois par jour ;
   - réactions du gold aux annonces une fois par jour ;
   - synthèse du directeur chaque jour à partir de 15 h (avant la séance de New York) ;
-  - replay de la stratégie V1 une fois par semaine.
+  - replay de la stratégie V1 une fois par semaine ;
+  - mentor (31/10) : cours du jour (quelques agents toutes les 8 h, donc chacun chaque jour), retour sur les
+    erreurs une fois par jour ; réunion de débrief à 21h30 (heure de Paris) chaque jour de marché.
 Marché fermé (week-end, pause) : pas d'analyse technique (les mêmes bougies donneraient le même résultat).
 Une tâche déjà dans la file n'est jamais relancée. Recherche et simulation seulement : aucun ordre.
 """
@@ -20,6 +22,7 @@ import time
 from zoneinfo import ZoneInfo
 
 from .. import agents, config, donnees
+from . import reunion_debrief
 
 TYPE = "tournee_directeur"
 AGENT = 14
@@ -36,6 +39,8 @@ PLANNING = {
     "discours_fed": (24 * HEURE, False, False),
     "reaction_annonces": (24 * HEURE, True, False),
     "replay_strategie_v1": (7 * 24 * HEURE, True, False),
+    "cours_du_jour": (8 * HEURE, False, False),
+    "retour_erreurs": (24 * HEURE, False, False),
     **{t: (HEURE, True, True) for t in ANALYSES},
 }
 HEURE_SYNTHESE = 15
@@ -76,6 +81,11 @@ def _jeu(base):
     return None
 
 
+def jour_de_reunion(jour, etat):
+    """Réunion du soir : du lundi au vendredi, sauf si le marché est fermé (jour férié CME)."""
+    return jour.weekday() < 5 and etat != "fermée"
+
+
 def executer(ctx):
     from . import TYPES
 
@@ -113,6 +123,14 @@ def executer(ctx):
                                           "Synthèse du jour (emploi du temps).", priorite=5, demandeur="tournée",
                                           parent=ctx.id, tentatives_max=ctx.moteur.reglages["tentatives_max"])
             confiees.append({"mission": m, "type": "synthese_directeur", "agent": agents.DIRECTEUR})
+    if jour_de_reunion(jour, etat) and (jour.hour, jour.minute) >= (reunion_debrief.HEURE, reunion_debrief.MINUTE) \
+            and not ctx.base.un("SELECT id FROM reunions WHERE jour=?", (jour.date().isoformat(),)) \
+            and not ctx.base.un("SELECT id FROM missions WHERE type=? AND statut IN ('en_attente','en_cours')",
+                                (reunion_debrief.TYPE,)):
+        m = ctx.base.nouvelle_mission(agents.DIRECTEUR, reunion_debrief.TYPE, reunion_debrief.TITRE, {},
+                                      "Débrief de la journée (21h30, 30 minutes).", priorite=3, demandeur="tournée",
+                                      parent=ctx.id, tentatives_max=ctx.moteur.reglages["tentatives_max"])
+        confiees.append({"mission": m, "type": reunion_debrief.TYPE, "agent": agents.DIRECTEUR})
     ctx.etape("connaissances", f"{len(confiees)} tâche(s) confiée(s)", "verification")
     if confiees:
         noms = sorted({agents.agent(c["agent"])["court"] for c in confiees})

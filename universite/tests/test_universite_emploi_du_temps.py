@@ -69,7 +69,7 @@ def test_sans_bougies_rien_qui_en_demande(univ, monkeypatch):
     monkeypatch.setattr(td, "maintenant", lambda: DEBUT)
     monkeypatch.setattr(td, "seance", lambda t: "ouverte")
     m = tournee(univ)
-    assert types_en_file(univ) == ["calendrier_macro", "discours_fed"]
+    assert types_en_file(univ) == ["calendrier_macro", "cours_du_jour", "discours_fed", "retour_erreurs"]
     assert any("aucune bougie" in s for s in m["resultat"]["sautees"])
 
 

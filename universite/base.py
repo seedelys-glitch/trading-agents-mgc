@@ -124,6 +124,28 @@ MIGRATIONS = [
     """, """
         DROP TABLE IF EXISTS memoire_index; DROP TABLE memoire_curseurs; DROP TABLE memoire_blocs;
     """),
+    (7, "personnalités, leçons tirées des erreurs, cours du mentor, réunions du soir", """
+        CREATE TABLE personnalites (
+            agent INTEGER PRIMARY KEY, traits TEXT NOT NULL DEFAULT '[]',   -- traits gagnés par le travail réel
+            humeur TEXT NOT NULL DEFAULT '', etat TEXT NOT NULL DEFAULT '{}', maj REAL NOT NULL);
+        CREATE TABLE lecons (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, equipe TEXT NOT NULL DEFAULT 'universite',  -- universite, desk, jarvis
+            agent INTEGER, type TEXT NOT NULL DEFAULT '', empreinte TEXT NOT NULL, quoi TEXT NOT NULL,
+            cause TEXT NOT NULL, lecon TEXT NOT NULL, exemple TEXT NOT NULL DEFAULT '',
+            statut TEXT NOT NULL DEFAULT 'a_appliquer',   -- a_appliquer, appliquee, repetee
+            fois INTEGER NOT NULL DEFAULT 1, relue INTEGER NOT NULL DEFAULT 0,
+            cree REAL NOT NULL, maj REAL NOT NULL, UNIQUE(equipe, empreinte));
+        CREATE INDEX lecons_agent ON lecons(agent, statut);
+        CREATE TABLE cours (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, agent INTEGER NOT NULL, sujet TEXT NOT NULL,
+            document INTEGER, sources TEXT NOT NULL DEFAULT '[]', cree REAL NOT NULL);
+        CREATE INDEX cours_agent ON cours(agent, id);
+        CREATE TABLE reunions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, jour TEXT NOT NULL UNIQUE, debut REAL NOT NULL, fin REAL NOT NULL,
+            document INTEGER, mission INTEGER, cree REAL NOT NULL);
+    """, """
+        DROP TABLE reunions; DROP TABLE cours; DROP TABLE lecons; DROP TABLE personnalites;
+    """),
 ]
 
 CHAMPS_JSON = ("params", "resultat", "donnees", "sources", "etat", "detail", "source")

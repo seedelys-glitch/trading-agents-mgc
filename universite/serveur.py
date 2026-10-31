@@ -17,9 +17,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from . import agents, bibliotheque, competences, config, donnees, memoire, scene
+from . import agents, bibliotheque, charte, competences, config, donnees, memoire, personnalites, scene
 from .base import Base
-from .competences import tournee_directeur
+from .competences import reunion_debrief, tournee_directeur
 from .directeur_chat import DirecteurChat
 from .ia import IALocale
 from .moteur import Moteur
@@ -101,7 +101,19 @@ class Universite:
                     " (SELECT COUNT(*) FROM documents) AS documents,"
                     " (SELECT COUNT(*) FROM jeux) AS jeux,"
                     " (SELECT COUNT(*) FROM boucles WHERE statut='active') AS boucles"),
-                "dernier_evenement": (self.base.un("SELECT MAX(id) AS id FROM evenements") or {}).get("id") or 0}
+                "dernier_evenement": (self.base.un("SELECT MAX(id) AS id FROM evenements") or {}).get("id") or 0,
+                "reunion": reunion_debrief.en_cours(self.base, maintenant),
+                "prenoms": {n: p["prenom"] for n, p in personnalites.BASE.items()}}
+
+    def reunion(self, jour=None):
+        """Dernière réunion du soir (ou celle d'un jour), avec son compte rendu."""
+        r = self.base.un("SELECT * FROM reunions WHERE jour=?", (jour,)) if jour else \
+            self.base.un("SELECT * FROM reunions ORDER BY id DESC LIMIT 1")
+        if r and r.get("document"):
+            r["compte_rendu"] = self.base.un("SELECT id, titre, contenu, statut, donnees FROM documents WHERE id=?",
+                                             (r["document"],))
+        prochaine = "chaque jour de marché (lundi au vendredi) à 21h30, heure de Paris, pendant 30 minutes"
+        return {"reunion": r, "en_cours": reunion_debrief.en_cours(self.base), "horaire": prochaine}
 
     def fiche_agent(self, n):
         a = agents.agent(n)
@@ -119,6 +131,7 @@ class Universite:
                                        (a["n"], a["n"]))
         f["evenements"] = self.base.lire("SELECT * FROM evenements WHERE agent=? ORDER BY id DESC LIMIT 30", (a["n"],))
         f["boucles"] = self.base.lire("SELECT * FROM boucles WHERE responsable=? ORDER BY id DESC", (a["n"],))
+        f["personnalite"] = personnalites.fiche(self.base, a["n"])
         # Dernière étape de chaque fonction de soutien : ce qu'elle a réellement fait, et quand
         f["soutiens_etat"] = {r["role"]: r for r in self.base.lire(
             "SELECT role, libelle, statut, debut, fin, mission FROM etapes WHERE id IN"
@@ -306,6 +319,23 @@ def fabriquer_handler(univ):
                 if u.path == "/api/a_jour":   # « Universite MGC.bat » : relancer si le code a changé depuis le démarrage
                     a_jour = empreinte_code() <= EMPREINTE_DEMARRAGE
                     return self._envoyer(200 if a_jour else 409, {"a_jour": a_jour})
+                if u.path == "/api/personnalites":            # prénoms, caractères, ce qui a grandi (31/10)
+                    return self._envoyer(200, {"personnalites": [personnalites.fiche(univ.base, n)
+                                                                 for n in personnalites.BASE],
+                                               "charte": charte.CHARTE})
+                if len(morceaux) == 4 and morceaux[:2] == ["api", "agent"] and morceaux[3] == "personnalite":
+                    f = personnalites.fiche(univ.base, int(morceaux[2])) if morceaux[2].isdigit() else None
+                    return self._envoyer(200 if f else 404, f or {"erreur": "agent inconnu"})
+                if u.path == "/api/charte":
+                    return self._envoyer(200, {"charte": charte.CHARTE})
+                if u.path == "/api/reunion":                   # réunion du soir (21h30, jours de marché)
+                    return self._envoyer(200, univ.reunion(q.get("jour")))
+                if u.path == "/api/lecons":                    # leçons tirées des erreurs (université, desk, Jarvis)
+                    sql, args = "SELECT * FROM lecons", []
+                    if q.get("equipe"):
+                        sql, args = sql + " WHERE equipe=?", [q["equipe"]]
+                    return self._envoyer(200, univ.base.lire(sql + " ORDER BY maj DESC LIMIT ?",
+                                                             (*args, min(500, int(q.get("n", 100))))))
                 if u.path == "/api/scene":
                     return self._envoyer(200, scene.scene())
                 if len(morceaux) == 4 and morceaux[:2] == ["api", "agent"] and morceaux[3] == "espace":

@@ -164,7 +164,7 @@ def test_migration_6_reversible(tmp_path):
     assert memoire.chercher(b, "bloc")
     b.migrer(5)
     assert not b.lire("SELECT name FROM sqlite_master WHERE name LIKE 'memoire%'")
-    assert b.migrer() == 6
+    assert b.migrer() == 7
     b.fermer()
 
 

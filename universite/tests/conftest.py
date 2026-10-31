@@ -41,3 +41,11 @@ def jeu(base):
     j = donnees.creer_jeu(base, "test", "artificiel (tests)", "MGC")
     donnees.ajouter_bougies(base, j, "M1", bougies_m1(4 * 1440))
     return j
+
+
+@pytest.fixture(autouse=True)
+def sans_internet_pour_le_mentor(monkeypatch):
+    """Les cours du mentor ne vont jamais sur Wikipédia pendant les tests (un test peut remettre un faux résumé)."""
+    from universite.competences import cours_du_jour
+
+    monkeypatch.setattr(cours_du_jour, "wikipedia", lambda page, delai=8: None)

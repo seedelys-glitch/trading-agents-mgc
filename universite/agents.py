@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Les agents de l'université (le directeur est le n° 14 ; la mémoire : Scribe n° 15 et Archiviste n° 16) et leurs
+Les agents de l'université (le directeur est le n° 14 ; la mémoire : Scribe n° 15 et Archiviste n° 16 ; le mentor n° 17) et leurs
 4 fonctions de soutien.
 
 Ce fichier dit QUI fait QUOI. Ce qu'un agent sait réellement faire est la liste `competences` : chaque nom
@@ -28,6 +28,8 @@ REGLES_COMMUNES = [
     "Toujours dire ce qui est réel, estimé ou supposé.",
     "Pas de look-ahead : à l'instant t, seules les bougies déjà fermées sont visibles.",
     "Un échantillon trop petit n'est pas une preuve : le dire.",
+    "Respecter la charte (charte.py) : Jabran décide, respect de Jabran, Claude et Jarvis, rien de publié sans son accord.",
+    "S'améliorer chaque jour : chercher la cause de chaque erreur ou raté, en tirer une leçon et l'appliquer.",
 ]
 
 AGENTS = [
@@ -127,7 +129,7 @@ AGENTS = [
      "outils": ["file de missions", "états réels des agents"],
      "qualite": ["La synthèse ne reprend que des documents existants, avec leur statut."],
      "escalade": "Décision qui change l'objectif -> la pose à Jabran.",
-     "competences": ["synthese_directeur", "demande_directeur", "tournee_directeur"]},
+     "competences": ["synthese_directeur", "demande_directeur", "tournee_directeur", "reunion_debrief"]},
     {"n": 15, "cle": "scribe", "nom": "Scribe", "court": "Scribe", "salle": None,
      "mission": "Noter en blocs tout ce qui se passe : missions des agents, conversations avec le directeur et le "
                 "desk de Jarvis, sessions Claude du PC, règles décidées, alertes, état du projet ; ranger chaque "
@@ -146,6 +148,17 @@ AGENTS = [
      "qualite": ["Ne cite que des blocs existants, avec leur numéro.", "Dit franchement quand rien n'est trouvé."],
      "escalade": "Rien trouvé -> le dit, ne répond pas de mémoire.",
      "competences": ["recherche_memoire"]},
+    {"n": 17, "cle": "mentor", "nom": "Mentor (professeur des agents)", "court": "Mentor", "salle": None,
+     "mission": "Faire progresser chaque agent tous les jours : chercher des renseignements sur chaque spécialité "
+                "(bibliothèque, sources publiques citées) et donner un cours ; chercher la cause de chaque erreur ou "
+                "raté (université, desk, Jarvis) et en tirer une leçon que l'agent relit avant de retravailler.",
+     "outils": ["bibliothèque de l'université", "Wikipédia (résumés publics, source citée)", "table des leçons",
+                "journaux du desk et de Jarvis (lecture seule)"],
+     "qualite": ["Chaque cours cite ses sources ; rien de résumé de mémoire.",
+                 "Une leçon dit l'erreur réelle, sa cause et ce qu'on change.",
+                 "Une erreur qui revient est signalée au directeur."],
+     "escalade": "Même erreur trois fois -> le directeur la met à l'ordre du jour de la réunion du soir.",
+     "competences": ["cours_du_jour", "retour_erreurs"]},
 ]
 
 PAR_NUMERO = {a["n"]: a for a in AGENTS}
