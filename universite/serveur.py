@@ -17,9 +17,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from . import agents, bibliotheque, competences, config, donnees, memoire, scene
+from . import agents, bibliotheque, competences, config, donnees, entrainement, memoire, scene
 from .base import Base
-from .competences import tournee_directeur
+from .competences import entrainement_quotidien, tournee_directeur
 from .directeur_chat import DirecteurChat
 from .ia import IALocale
 from .moteur import Moteur
@@ -52,6 +52,7 @@ class Universite:
         memoire.preparer(self.base)
         memoire.assurer_boucle(self.moteur)        # le Scribe note tout, en continu
         tournee_directeur.assurer_boucle(self.moteur)   # le directeur donne leur travail aux agents (31/10)
+        entrainement_quotidien.assurer_boucle(self.moteur)   # examens, replay et quiz de chaque agent (31/10)
         if demarrer_moteur:
             self.moteur.demarrer()
 
@@ -123,6 +124,7 @@ class Universite:
         f["soutiens_etat"] = {r["role"]: r for r in self.base.lire(
             "SELECT role, libelle, statut, debut, fin, mission FROM etapes WHERE id IN"
             " (SELECT MAX(id) FROM etapes WHERE agent=? GROUP BY role)", (a["n"],))}
+        f["entrainement"] = entrainement.bulletin(self.base, a["n"])
         return f
 
     def espace_agent(self, n):
@@ -306,6 +308,12 @@ def fabriquer_handler(univ):
                 if u.path == "/api/a_jour":   # « Universite MGC.bat » : relancer si le code a changé depuis le démarrage
                     a_jour = empreinte_code() <= EMPREINTE_DEMARRAGE
                     return self._envoyer(200 if a_jour else 409, {"a_jour": a_jour})
+                if u.path == "/api/entrainement":               # bulletins de notes de tous les agents
+                    return self._envoyer(200, {"bulletins": entrainement.bulletins(univ.base, q.get("depuis"))})
+                if len(morceaux) == 3 and morceaux[:2] == ["api", "entrainement"]:
+                    if not morceaux[2].isdigit() or not agents.agent(morceaux[2]):
+                        return self._envoyer(404, {"erreur": "agent inconnu"})
+                    return self._envoyer(200, entrainement.bulletin(univ.base, morceaux[2], q.get("depuis")))
                 if u.path == "/api/scene":
                     return self._envoyer(200, scene.scene())
                 if len(morceaux) == 4 and morceaux[:2] == ["api", "agent"] and morceaux[3] == "espace":

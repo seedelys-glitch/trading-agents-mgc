@@ -9,7 +9,7 @@ import pytest
 from aides_universite import executer_tout
 
 from universite import config, memoire
-from universite.base import Base
+from universite.base import MIGRATIONS, Base
 from universite.serveur import Universite, lancer
 
 SESSION = "abcd1234-0000-0000-0000-000000000000"
@@ -164,7 +164,7 @@ def test_migration_6_reversible(tmp_path):
     assert memoire.chercher(b, "bloc")
     b.migrer(5)
     assert not b.lire("SELECT name FROM sqlite_master WHERE name LIKE 'memoire%'")
-    assert b.migrer() == 6
+    assert b.migrer() == MIGRATIONS[-1][0]
     b.fermer()
 
 

@@ -37,7 +37,7 @@ AGENTS = [
      "outils": ["calculs.structure", "calculs.order_blocks", "calculs.liquidite"],
      "qualite": ["Chaque cassure citée a une bougie et une heure.", "Unité de temps toujours précisée."],
      "escalade": "Structure contradictoire entre unités de temps -> demande l'avis du directeur.",
-     "competences": ["analyse_smc"]},
+     "competences": ["analyse_smc", "travaux_pratiques"]},
     {"n": 2, "cle": "fibo", "nom": "Fibonacci", "court": "Fibo", "salle": "fibo",
      "mission": "Tracer les retracements et extensions sur la bonne impulsion, selon STRATEGIE.md "
                 "(zones 0.618 à 0.893, jamais le 0.5).",
@@ -94,7 +94,8 @@ AGENTS = [
      "competences": ["verification_analyse", "verification_reproductibilite", "verification_risque",
                      "verification_calendrier", "verification_reactions", "verification_discours",
                      "verification_citations", "verification_memoire",
-                     "verification_replay", "extraction_regles", "indexation_bibliotheque"]},
+                     "verification_replay", "extraction_regles", "indexation_bibliotheque",
+                     "examen_ecole", "quiz_ia", "entrainement_quotidien"]},
     {"n": 10, "cle": "discours", "nom": "Analyse des discours", "court": "Disc", "salle": None,
      "mission": "Analyser le ton des discours (Fed, BCE, Trésor) : faucon, colombe, neutre, et ce qui change.",
      "outils": ["flux officiel des discours (federalreserve.gov)", "lexique fixé à l'avance", "bibliothèque"],

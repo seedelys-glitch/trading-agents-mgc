@@ -124,6 +124,17 @@ MIGRATIONS = [
     """, """
         DROP TABLE IF EXISTS memoire_index; DROP TABLE memoire_curseurs; DROP TABLE memoire_blocs;
     """),
+    # 7 = personnalités, leçons, cours, réunions (session « personnalités », 31/10)
+    (8, "entraînement : examens et notes des agents", """
+        CREATE TABLE IF NOT EXISTS examens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, ts REAL NOT NULL, agent INTEGER NOT NULL,
+            genre TEXT NOT NULL,                          -- cas_ecole, replay, quiz_ia
+            sujet TEXT NOT NULL, note REAL, reussi INTEGER NOT NULL DEFAULT 0, detail TEXT NOT NULL DEFAULT '{}',
+            graine INTEGER, mission INTEGER);
+        CREATE INDEX IF NOT EXISTS examens_agent ON examens(agent, genre, ts);
+    """, """
+        DROP TABLE examens;
+    """),
 ]
 
 CHAMPS_JSON = ("params", "resultat", "donnees", "sources", "etat", "detail", "source")
