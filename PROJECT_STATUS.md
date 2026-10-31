@@ -1,8 +1,58 @@
 # MGC AI Trading Desk — état du projet
 
-Dernière mise à jour : 24/10/2026 (nouveaux agents du desk : Liquidité, Dollar & taux, Piège, Règles Topstep, bulletin de notes, mode express). Ce fichier est la mémoire du projet : on le lit
+Dernière mise à jour : 31/10/2026 (entraînement des agents : examens, replay, quiz, bulletin). Ce fichier est la mémoire du projet : on le lit
 avant de reprendre le travail, on le met à jour après chaque étape.
 
+
+## 0octies. Entraînement des agents sur leur spécialité (31/10/2026, session cloud « entraîner les agents »)
+Demande de Jabran (25/10) : que chaque agent comprenne vraiment sa spécialité. Un agent = un calcul Python + une IA
+qui rédige : « comprendre » doit donc se PROUVER par des épreuves notées sur 20 (table `examens`, migration 8).
+- `universite/entrainement.py` : le PROGRAMME (cours de chaque agent 1 à 17 : sujets, définition de référence, page
+  Wikipédia pour le mentor, question de quiz) ; 19 examens « cas d'école » ; travaux pratiques en replay ; quiz de l'IA ;
+  `bulletin(base, n, depuis)` et `programme(n)` (lus par le mentor et la réunion du soir).
+- Examens « cas d'école » (`examen_ecole`, l'agent passe l'examen, l'auditeur corrige) : bougies FABRIQUÉES dont la
+  réponse est connue par construction (BOS/CHoCH et niveau cassé, niveaux Fibo 0.618/0.786, lecture 0.5 interdite,
+  nuage/Chikou/Tenkan/Kijun, VWAP exact, retard de l'EMA 200 = 99,5 x pas, delta et POC, taille de position MGC et
+  vetos, heures des annonces (semaine du décalage d'heure été/hiver), ton faucon/colombe, réaction sans look-ahead,
+  bougies non fermées invisibles, trous de données, aiguillage du directeur, secrets masqués par le Scribe).
+  Chiffres différents chaque jour (graine = date). L'agent répond avec son VRAI calcul (celui des analyses).
+  Raté = défaut de code : leçon dans `lecons` (type de la mission, relue avant elle) + alerte au directeur.
+  Premier passage : tout réussi ; une faiblesse trouvée et corrigée : le directeur ne comprenait pas « trace-moi le fibo »
+  (`directeur_chat.VERBE` + trace/tracer).
+- Travaux pratiques (`travaux_pratiques`, agents 1 SMC, 2 Fibo, 3 Ichimoku, 6 EMA 200, 7 Flux) : instants passés tirés
+  au hasard dans les vraies bougies, lecture avec les seules bougies fermées, résultat 4 h plus tard (moins de 0,25 ATR =
+  plat). Taux de bonnes lectures + Wilson, comparé au « hasard intelligent » (toujours le sens le plus fréquent).
+  Moins de 30 cas = échantillon insuffisant, pas de note. Rien n'est optimisé : pas de surapprentissage. Leçon si une
+  session (Asie/Londres/New York) est sous 45 % ou si la lecture fait pire que le hasard.
+- Quiz de l'IA (`quiz_ia`) : questions à choix du cours, une lettre attendue ; sans LM Studio, rien n'est noté.
+- Boucle `entrainement_quotidien` (agent 9, toutes les 24 h, créée une fois, 1re fois 10 min après le démarrage) :
+  examens de tous, travaux pratiques si des bougies existent, quiz si l'IA répond.
+- API : `GET /api/entrainement` (bulletins), `/api/entrainement/N` ; la fiche agent a une clé `entrainement`.
+- Tests : `universite/tests/test_universite_entrainement.py` (17, dont « un calcul faux est recalé » et « pas de
+  look-ahead en replay »). 185 tests université + 238 Salle réussis (conteneur, fusion avec les personnalités).
+- Pas encore vu : les travaux pratiques sur les vraies bougies Yahoo du PC (le conteneur n'a pas Internet) ; à lire
+  dans le bulletin après le 1er entraînement. Agents 4 (Bookmap), 9, 11, 16, 17 : cours et quiz seulement.
+
+## 0septies. Personnalités, mentor, réunion du soir (31/10/2026, session cloud « personnalité des agents »)
+- Charte (`universite/charte.py`) : Jabran décide ; respect de Jabran, Claude et Jarvis ; aucun ordre, aucun conseil
+  d'achat/vente, aucune promesse de gain, aucun secret, ne pas se faire passer pour un humain ; rien de publié sans
+  l'accord écrit de Jabran (réseaux sociaux plus tard). Chaque texte d'IA est relu par la charte, sinon refusé.
+- Personnalités (`universite/personnalites.py`, migration 7) : prénom, caractère, devise, style, défaut à travailler ;
+  ce qui grandit vient du travail réel (missions, documents vérifiés/rejetés, leçons appliquées, cours) : niveau,
+  humeur du jour, traits gagnés. API /api/personnalites, /api/agent/N/personnalite ; onglet « Personnalité ».
+- Agent 17 « Mentor » (Margaux) : `cours_du_jour` (bibliothèque + résumé Wikipédia cité ; chaque agent chaque jour)
+  et `retour_erreurs` (erreurs de l'université, du desk rapports\salle\*.log et de Jarvis\jarvis.log, lecture
+  seule) -> table lecons ; l'agent relit ses leçons avant la mission suivante du même type (étape visible), la leçon
+  passe « appliquée » si elle réussit, « répétée » si l'erreur revient (3 fois -> directeur). Bugs de code déposés dans
+  rapports\universite\memoire\a_ranger\bugs-a-corriger-*.md.
+- Réunion du soir `reunion_debrief` : jours de marché (lun-ven, sauf marché fermé) à 21h30 Paris, 30 min ;
+  tour de table avec personnalités, leçons, priorités de demain ; en 3D les agents s'assoient autour de la table
+  (18 fauteuils) et parlent à tour de rôle. API /api/reunion, /api/lecons.
+- Rédaction : Groq via Jarvis (POST 127.0.0.1:8765/api/rediger, la clé reste chez Jarvis), sinon LM Studio, sinon
+  texte fait des seuls faits. Réglages ia_redaction / redaction_url.
+- Règle « s'améliorer chaque jour » : université (mentor), desk et Jarvis (leçons), Claude (mémoire + CLAUDE.md Jarvis).
+- Un autre fil (« Entraîner les agents ») ajoute la migration 8 (examens) et écrit ses leçons dans la même table.
+- Tests conteneur : 163 université (test_universite_aucun_ordre à lancer sur le PC), 469 Jarvis.
 
 ## 0sexies. Université plus vivante et plus grande (31/10/2026, session cloud « réveiller les agents »)
 - Plan agrandi ×1,3 (`scene.py`, version 2, champ `echelle`) + une bande « salons » devant les bureaux :
