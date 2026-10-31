@@ -799,6 +799,9 @@ def note_tp(bilan):
 
 
 # ------------------------------------------------------------------ quiz de l'IA locale
+DELAI_QUIZ_S = 170        # une question au plus 170 s ; le quiz s'arrête avant le délai de 300 s de la mission
+
+
 def questions_quiz(agent):
     return [(s["cle"], s["titre"], s["quiz"]) for s in PROGRAMME.get(int(agent), []) if s.get("quiz")]
 
@@ -820,14 +823,20 @@ def poser_quiz(ia, agent, mission=None, temps_restant=None):
     if not ia or not ia.disponible():
         return None
     consigne = ("Tu passes un examen de trading sur le Micro Gold. Réponds UNIQUEMENT par la lettre de la bonne "
-                "réponse (A, B, C ou D), sans rien d'autre, sans réfléchir à voix haute. /no_think")
-    delai_ia = float(getattr(ia, "reglages", {}).get("ia_delai_s", 90))
+                "réponse (A, B, C ou D), sans rien d'autre, sans réfléchir à voix haute.")
+    # Qwen 3.5 réfléchit longtemps avant de répondre (31/10 sur le PC : 150 s par question, la plupart coupées à 90 s) :
+    # « /no_think » dans la QUESTION (pas la consigne) coupe cette réflexion ; on laisse aussi plus de temps au quiz
+    delai_ia = DELAI_QUIZ_S
     res = []
     for cle, titre, (bonne, question, choix) in questions_quiz(agent):
         if temps_restant and temps_restant() < delai_ia + 15:
             break
         texte = question + "\n" + "\n".join(f"{k}) {v}" for k, v in choix.items())
-        reponse = ia.completer(consigne, texte, mission, agent, "professeur")
+        try:
+            reponse = ia.completer(consigne, texte + "\n/no_think", mission, agent, "professeur", max_tokens=600,
+                                   delai=DELAI_QUIZ_S)
+        except TypeError:   # IA sans ces réglages (anciennes versions, tests)
+            reponse = ia.completer(consigne, texte + "\n/no_think", mission, agent, "professeur")
         if reponse is None:
             return res or None
         lettre = lire_lettre(reponse)

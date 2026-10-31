@@ -54,8 +54,9 @@ class IALocale:
         return bool(r.get("ia_commentaires")) and self.appels_du_jour() < int(r.get("ia_appels_max_jour", 0)) \
             and self.etat()["joignable"]
 
-    def completer(self, consigne, texte, mission=None, agent=None, role="", max_tokens=400):
-        """Un appel de chat. Renvoie le texte, ou None (pas joignable, budget atteint, erreur)."""
+    def completer(self, consigne, texte, mission=None, agent=None, role="", max_tokens=400, delai=None):
+        """Un appel de chat. Renvoie le texte, ou None (pas joignable, budget atteint, erreur).
+        delai : secondes d'attente au plus pour cet appel (par défaut ia_delai_s)."""
         if not self.disponible():
             return None
         modele = self.reglages.get("ia_modele") or (self.etat()["modeles"] or [""])[0]
@@ -67,7 +68,7 @@ class IALocale:
             try:
                 req = urllib.request.Request(self._url("/chat/completions"), data=corps,
                                              headers={"Content-Type": "application/json"})
-                with urllib.request.urlopen(req, timeout=float(self.reglages.get("ia_delai_s", 90))) as r:
+                with urllib.request.urlopen(req, timeout=float(delai or self.reglages.get("ia_delai_s", 90))) as r:
                     reponse = json.loads(r.read().decode("utf-8"))
                 contenu = reponse["choices"][0]["message"]["content"]
                 contenu = re.sub(r"<think>.*?</think>", "", contenu, flags=re.S).strip()

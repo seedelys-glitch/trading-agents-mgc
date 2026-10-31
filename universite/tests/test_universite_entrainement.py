@@ -167,7 +167,7 @@ class FausseIA:
         self.posees.append(texte)
         for p in entrainement.PROGRAMME.values():
             for s in p:
-                if s.get("quiz") and texte.startswith(s["quiz"][1]):
+                if s.get("quiz") and texte.startswith(s["quiz"][1]) and texte.endswith("/no_think"):
                     return f"Réponse : {s['quiz'][0]}" if self.bonnes else "Z ... A"
         return "?"
 
@@ -240,8 +240,7 @@ def test_lire_la_lettre_sans_se_tromper_de_mot():
 
 def test_le_quiz_s_arrete_avant_le_delai(moteur, base):
     ia = FausseIA(bonnes=True)
-    ia.reglages = {"ia_delai_s": 90}
-    restant = iter([500, 500, 50, 50])
+    restant = iter([500, 500, 150, 150])
     r = entrainement.poser_quiz(ia, 1, temps_restant=lambda: next(restant))
     assert len(r) == 2 and all(x["reussi"] for x in r)
 
