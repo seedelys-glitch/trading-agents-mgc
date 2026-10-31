@@ -127,7 +127,7 @@ AGENTS = [
      "outils": ["file de missions", "états réels des agents"],
      "qualite": ["La synthèse ne reprend que des documents existants, avec leur statut."],
      "escalade": "Décision qui change l'objectif -> la pose à Jabran.",
-     "competences": ["synthese_directeur", "demande_directeur"]},
+     "competences": ["synthese_directeur", "demande_directeur", "tournee_directeur"]},
     {"n": 15, "cle": "scribe", "nom": "Scribe", "court": "Scribe", "salle": None,
      "mission": "Noter en blocs tout ce qui se passe : missions des agents, conversations avec le directeur et le "
                 "desk de Jarvis, sessions Claude du PC, règles décidées, alertes, état du projet ; ranger chaque "

@@ -9,7 +9,11 @@ Une zone dit ce qu'elle montre et d'où ça vient : elle n'affiche jamais une ac
 
 from . import agents
 
-SOL = {"l": 48, "p": 30}
+# 31/10 : le bâtiment est 1,3 fois plus grand (plan d'origine en 48 x 30 m, multiplié par ECHELLE) : plus d'espace
+# entre les postes, des salons dans le hall. Les meubles gardent leur taille réelle.
+ECHELLE = 1.3
+SALON = 7   # bande de salons devant les pièces (canapés, café, plantes) : décor, aucune activité
+SOL = {"l": round(48 * ECHELLE, 2), "p": round(30 * ECHELLE + SALON, 2)}
 HAUTEUR_MUR = 3.4
 # Chaque pièce est un bureau fermé, avec une ouverture sans porte : côté du mur (x0 / x1 = murs à x et x + l,
 # y0 / y1 = murs à y et y + p), centre de l'ouverture le long de ce mur (même repère que le plan), largeur.
@@ -51,6 +55,11 @@ OCCUPANTS = {
     "risque": [8],
 }
 
+for _z in ZONES:   # plan d'origine -> plan agrandi
+    for _k in ("x", "y", "l", "p"):
+        _z[_k] = round(_z[_k] * ECHELLE, 2)
+    _z["porte"]["centre"] = round(_z["porte"]["centre"] * ECHELLE, 2)
+
 PAR_CLE = {z["cle"]: z for z in ZONES}
 
 
@@ -65,7 +74,8 @@ def _postes():
             postes.append({"agent": n, "zone": cle,
                            "x": round(z["x"] + z["l"] * (col + 0.5) / colonnes, 2),
                            "y": round(z["y"] + z["p"] * (rang + 0.5) / rangees, 2),
-                           "z": 0, "orientation": 180, "l": 2.2, "p": 1.2})
+                           # l'agent regarde l'entrée de sa pièce : on voit son visage en entrant (31/10)
+                           "z": 0, "orientation": 0 if z["porte"]["cote"] == "y1" else 180, "l": 2.2, "p": 1.2})
     return postes
 
 
@@ -77,7 +87,7 @@ def scene():
     zones = [{**z, "z": 0, "h": HAUTEUR_MUR} for z in ZONES]
     postes = [{**p, "nom": agents.agent(p["agent"])["nom"], "court": agents.agent(p["agent"])["court"]}
               for p in POSTES]
-    return {"version": 1, "unite": "m", "sol": SOL, "zones": zones, "postes": postes}
+    return {"version": 2, "unite": "m", "echelle": ECHELLE, "sol": SOL, "zones": zones, "postes": postes}
 
 
 def poste(n):

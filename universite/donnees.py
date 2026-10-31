@@ -171,15 +171,18 @@ def importer_yahoo(base, contrat, chargeur=None):
     from mgc import sources
 
     bougies = sources.charger_yahoo(contrat, chargeur or sources.yahoo_brut)
-    jeu = creer_jeu(base, f"Yahoo {contrat}", "Yahoo (différé)", contrat, temps_reel=False,
-                    note="Données différées d'environ 10 minutes ; historique court en 1 min (5 jours).")
+    # le même contrat garde le même jeu : un rafraîchissement ajoute seulement les nouvelles bougies (31/10)
+    deja = base.un("SELECT id FROM jeux WHERE nom=? AND source=? ORDER BY id DESC LIMIT 1",
+                   (f"Yahoo {contrat}", "Yahoo (différé)"))
+    jeu = deja["id"] if deja else creer_jeu(base, f"Yahoo {contrat}", "Yahoo (différé)", contrat, temps_reel=False,
+                                            note="Données différées d'environ 10 minutes ; historique court en 1 min (5 jours).")
     total = 0
     for unite, df in bougies.items():
         if unite in PERIODES and df is not None and not df.empty:
             lignes = [(t.timestamp(), float(r.o), float(r.h), float(r.l), float(r.c), float(r.v))
                       for t, r in df.iterrows()]
             total += ajouter_bougies(base, jeu, unite, lignes)
-    if not total:
+    if not total and not deja:
         raise ErreurDonnees(f"Yahoo n'a renvoyé aucune bougie pour {contrat}")
     base.evenement("donnees", f"Yahoo {contrat} : {total} bougies importées (différées).")
     return {"jeu": jeu, "ajoutees": total}

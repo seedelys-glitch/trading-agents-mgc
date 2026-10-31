@@ -112,3 +112,13 @@ def test_api_directeur(univ):
     assert rep["intention"] == "etat" and rep["messages"][-1]["de"] == "directeur"
     with urllib.request.urlopen(univ.url + "/api/directeur", timeout=10) as r:
         assert len(json.loads(r.read())["messages"]) == 2
+
+
+@pytest.mark.parametrize("phrase", ["FAITE MOI UNE ANLAYSE DU GOLD", "analyse le gold", "fais une analyse du MGC",
+                                    "lance une analyse du marché"])
+def test_analyse_du_gold_lance_les_techniciens(univ, phrase):
+    avec_bougies(univ)
+    r = dire(univ, phrase)
+    assert r["intention"] == "mission"
+    types = sorted(m["params"]["type"] for m in univ.base.lire("SELECT params FROM missions WHERE type='demande_directeur'"))
+    assert types == sorted(["analyse_smc", "analyse_fibo", "analyse_ichimoku", "analyse_vwap_ema", "analyse_flux"])

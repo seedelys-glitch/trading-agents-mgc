@@ -19,6 +19,7 @@ from urllib.parse import parse_qs, urlparse
 
 from . import agents, bibliotheque, competences, config, donnees, memoire, scene
 from .base import Base
+from .competences import tournee_directeur
 from .directeur_chat import DirecteurChat
 from .ia import IALocale
 from .moteur import Moteur
@@ -50,6 +51,7 @@ class Universite:
         self.directeur = DirecteurChat(self)
         memoire.preparer(self.base)
         memoire.assurer_boucle(self.moteur)        # le Scribe note tout, en continu
+        tournee_directeur.assurer_boucle(self.moteur)   # le directeur donne leur travail aux agents (31/10)
         if demarrer_moteur:
             self.moteur.demarrer()
 

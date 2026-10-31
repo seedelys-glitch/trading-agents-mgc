@@ -4,6 +4,7 @@ Agent 14 — synthèse du directeur : uniquement à partir de ce qui existe dans
 (missions, documents et leur statut de vérification). Il n'ajoute aucune analyse de marché.
 """
 
+import re
 import time
 
 from .. import agents
@@ -14,10 +15,16 @@ TITRE = "Synthèse du directeur"
 PARAMS = {"heures": "période couverte (24 par défaut)"}
 
 
+def lire_heures(valeur, defaut=24.0):
+    """« 12H », « 12 h », « 24 heures », 48 -> nombre d'heures (26/10 : « 12H » faisait planter la synthèse)."""
+    m = re.search(r"\d+(?:[.,]\d+)?", str(valeur or ""))
+    return max(1.0, min(24.0 * 31, float(m.group(0).replace(",", ".")))) if m else defaut
+
+
 def executer(ctx):
     from . import TYPES
 
-    heures = float(ctx.params.get("heures") or 24)
+    heures = lire_heures(ctx.params.get("heures"))
     depuis = time.time() - heures * 3600
     ctx.etape("documentaliste", f"Relit les missions et les documents des {heures:g} dernières heures")
     missions = ctx.base.lire("SELECT agent, statut, COUNT(*) AS n FROM missions WHERE cree>=? GROUP BY agent, statut",

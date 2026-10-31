@@ -33,6 +33,7 @@ if (tactile) document.documentElement.classList.add("tactile");
 const camLente = camera3d && !tactile;   // la petite caméra de l'écran Jarvis : 30 images/s ; au doigt : fluide
 let image = 0;
 
+let K = 1;   // agrandissement du plan (scene.py ECHELLE) : les cotes écrites ici sont celles du plan d'origine 48 x 30 m
 let plan, L, P, renderer, scene, camera, controls, composer, labels, conteneur, pret = false, actif = false;
 const postes = {}, cliquables = [], tetes = {}, sols = [];
 let liens3d = [], dernierLiens = "", t0 = performance.now(), poussiere = null, feu = null, grand = null, tableauEchanges = null;
@@ -546,12 +547,12 @@ function lumieres() {
   soleil.position.copy(SOLEIL).multiplyScalar(-60); soleil.target.position.set(0, 0, 0);
   soleil.castShadow = true;
   soleil.shadow.mapSize.set(LEGER ? 1024 : 4096, LEGER ? 1024 : 4096);
-  Object.assign(soleil.shadow.camera, { left: -42, right: 42, top: 34, bottom: -34, near: 10, far: 130 });
+  Object.assign(soleil.shadow.camera, { left: -42 * K, right: 42 * K, top: 34 * K, bottom: -34 * K, near: 10, far: 130 * K });
   soleil.shadow.bias = -0.0004; soleil.shadow.normalBias = 0.04; soleil.shadow.radius = 3;
   scene.add(soleil, soleil.target);
   // lustres du grand hall, au-dessus des allées (deux grands éclairent, les autres décorent)
   for (const [x, y, fort] of [[9, 15, true], [39, 15, true], [18, 15, false], [30, 15, false], [24, 10, false], [24, 20, false]]) {
-    const pos = P3(x, y, fort ? 7 : 7.6);
+    const pos = P3(x * K, y * K, fort ? 7 : 7.6);
     lustre(pos, fort ? 1 : 0.6, MUR + 1 - pos.y);
     if (!fort) continue;
     const l = new THREE.PointLight(0xffc27a, 26, 22, 1.8); l.position.copy(pos).add(new THREE.Vector3(0, -0.3, 0)); scene.add(l);
@@ -743,18 +744,18 @@ const TABLEAUX = { analyse: [["x0", 7, 0], ["x1", 7, 1]], macro: [["x0", 7, 2], 
   directeur: [["x1", 13.4, 3]], bibliotheque: [["x0", 23, 2], ["x1", 23, 0]], labo: [["x1", 25, 3]], risque: [["x1", 23.5, 1]] };
 function habillage(z) {
   for (const [cote, s, n] of TABLEAUX[z.cle] || []) {
-    tableauMur(z, cote, s, 1.95, 1.5, 0.95, n);
-    applique(z, cote, s - 1.3, 2.05); applique(z, cote, s + 1.3, 2.05);
+    tableauMur(z, cote, s * K, 1.95, 1.5, 0.95, n);
+    applique(z, cote, s * K - 1.3, 2.05); applique(z, cote, s * K + 1.3, 2.05);
   }
   if (z.cle === "analyse") grand = ecranMural(z, "y0", z.x + z.l / 2, 2.05, 4.4, 2.1);
   if (z.cle === "reunion") tableauEchanges = ecranMural(z, "y0", z.x + z.l / 2, 1.95, 3.2, 1.7);
   if (z.cle === "macro") {
     [["PARIS", "Europe/Paris"], ["LONDRES", "Europe/London"], ["NEW YORK", "America/New_York"], ["TOKYO", "Asia/Tokyo"]]
-      .forEach(([v, tz], k) => horlogeMurale(z, "y0", z.x + 3.5 + k * 3, 2.4, v, tz));
+      .forEach(([v, tz], k) => horlogeMurale(z, "y0", z.x + (3.5 + k * 3) * K, 2.4, v, tz));
   }
   if (z.cle === "directeur") {
-    cheminee(z, "x0", z.y + 4.6);
-    tableauMur(z, "x0", z.y + 4.6, 2.25, 1.3, 0.8, 1);
+    cheminee(z, "x0", z.y + 4.6 * K);
+    tableauMur(z, "x0", z.y + 4.6 * K, 2.25, 1.3, 0.8, 1);
   }
 }
 
@@ -774,11 +775,11 @@ function piece(z) {
   murs(z, p);
   p.plafond = dalle(z.cle === "directeur" ? M.plafondNoyer : M.plafond, z.h - 0.002, true, 2);
   p.plafond.visible = false; ombre(p.plafond); scene.add(p.plafond);
-  const n = z.l > 12 ? 2 : 1;
+  const n = Math.max(1, Math.round(z.l / 8));   // pièces agrandies (31/10) : un lustre tous les 8 m environ
   for (let k = 0; k < n; k++) {
     const pos = P3(z.x + z.l * (k + 0.5) / n, z.y + z.p / 2, z.h - 0.75);
     lustre(pos, 0.5, 0.75);
-    const l = new THREE.PointLight(0xffc98a, z.cle === "directeur" ? 10 : 8, 11, 1.6); l.position.copy(pos).add(new THREE.Vector3(0, -0.15, 0)); scene.add(l);
+    const l = new THREE.PointLight(0xffc98a, z.cle === "directeur" ? 12 : 10, 11 * K, 1.6); l.position.copy(pos).add(new THREE.Vector3(0, -0.15, 0)); scene.add(l);
   }
   habillage(z);
 }
@@ -786,6 +787,7 @@ function piece(z) {
 // tapis des allées entre les bureaux
 function allees() {
   const chemin = (x0, y0, x1, y1, larg) => {
+    [x0, y0, x1, y1, larg] = [x0 * K, y0 * K, x1 * K, y1 * K, larg * K];
     const long = Math.hypot(x1 - x0, y1 - y0), g = new THREE.PlaneGeometry(long, larg), uv = g.attributes.uv;
     for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * long / 2);
     const m = new THREE.Mesh(g, M.couloir); m.rotation.x = -Math.PI / 2; if (x0 === x1) m.rotation.z = Math.PI / 2;
@@ -903,14 +905,14 @@ function decor(z) {
   if (z.cle === "bibliotheque") {
     // rayonnages contre le mur de l'entrée, de part et d'autre de l'ouverture
     const yb = z.y + EP + 0.27;
-    for (const [dx, k] of [[1.95, 0], [5.1, 1], [10.9, 2], [14.05, 3]]) bibliothequeMeuble(P3(z.x + dx, 0).x, P3(0, yb).z, 0, 3.05, 11 + k);
+    for (const [dx, k] of [[1.95, 0], [5.1, 1], [10.9, 2], [14.05, 3]]) bibliothequeMeuble(P3(z.x + dx * K, 0).x, P3(0, yb).z, 0, 3.05, 11 + k);
     // échelle de bibliothèque
-    const e = new THREE.Group(); e.position.copy(P3(z.x + 3.5, yb + 0.6)); e.rotation.x = -0.22;
+    const e = new THREE.Group(); e.position.copy(P3(z.x + 3.5 * K, yb + 0.6)); e.rotation.x = -0.22;
     for (const s of [-0.25, 0.25]) e.add(boite(0.05, 3.0, 0.06, M.bois, s, 1.45, 0));
     for (let k = 0; k < 8; k++) e.add(boite(0.5, 0.035, 0.05, M.laiton, 0, 0.3 + k * 0.35, 0));
     scene.add(e);
     // table de lecture, lampes de banquier, fauteuils club
-    const t = P3(z.x + 3.8, z.y + 9.4);
+    const t = P3(z.x + 3.8 * K, z.y + 9.4 * K);
     const table = new THREE.Group(); table.position.copy(t);
     table.add(arrondi(3.6, 0.08, 1.5, 0.03, M.bois, 0, 0.78, 0));
     for (const sx of [-1.6, 1.6]) for (const sz of [-0.6, 0.6]) table.add(cyl(0.05, 0.04, 0.74, M.bois, sx, 0.37, sz, 10));
@@ -943,7 +945,7 @@ function decor(z) {
   } else if (z.cle === "donnees") {
     const face = std({ map: T.led, emissive: 0xffffff, emissiveMap: T.led, emissiveIntensity: 1.2, roughness: 0.25 });
     for (let k = 0; k < 3; k++) {   // baies de serveurs le long du mur du fond, face à la pièce
-      const g = new THREE.Group(); g.position.copy(P3(z.x + z.l - EP - 0.65, z.y + 3.6 + k * 2.6)); g.rotation.y = -Math.PI / 2;
+      const g = new THREE.Group(); g.position.copy(P3(z.x + z.l - EP - 0.65, z.y + (3.6 + k * 2.6) * K)); g.rotation.y = -Math.PI / 2;
       g.add(ombre(poser(new THREE.Mesh(new RoundedBoxGeometry(1.05, 2.3, 1.2, 2, 0.03), M.noir), { position: new THREE.Vector3(0, 1.15, 0) })));
       g.add(poser(new THREE.Mesh(new THREE.PlaneGeometry(0.9, 2.1), face), { position: new THREE.Vector3(0, 1.15, 0.61) }));
       const h = new THREE.Mesh(new THREE.PlaneGeometry(2, 1.6), M.halo(0x3d7bd6, 0.18)); h.rotation.x = -Math.PI / 2; h.position.set(0, 0.03, 1.3); g.add(h);
@@ -969,15 +971,15 @@ function decor(z) {
       cx.font = "700 150px Georgia, serif"; cx.textAlign = "center"; cx.textBaseline = "middle"; cx.fillText("MGC", w / 2, h / 2 + 8);
     });
     const med = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), std({ map: embleme, transparent: true, metalness: 1, roughness: 0.25, color: 0xffffff }));
-    med.rotation.x = -Math.PI / 2; med.position.set(c.x, 0.305, c.z + 2.6); scene.add(med);
+    med.rotation.x = -Math.PI / 2; med.position.set(c.x, 0.305, c.z + 2.6 * K); scene.add(med);
     bibliothequeMeuble(c.x, c.z - z.p / 2 + EP + 0.27, 0, 4.2, 99, 2.8);
     // globe terrestre ancien
-    const gl = P3(z.x + 1.6, z.y + 2.2, 0.3);
+    const gl = P3(z.x + 1.6 * K, z.y + 2.2 * K, 0.3);
     scene.add(cyl(0.05, 0.25, 0.08, M.bois, gl.x, gl.y + 0.04, gl.z, 16), cyl(0.03, 0.03, 0.7, M.bois, gl.x, gl.y + 0.4, gl.z, 8));
     const globe = new THREE.Mesh(new THREE.SphereGeometry(0.32, 32, 20), std({ map: T.globe, roughness: 0.45 })); globe.position.set(gl.x, gl.y + 1.05, gl.z); globe.rotation.z = 0.41; ombre(globe); scene.add(globe);
     const meridien = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.012, 6, 48), M.laiton); meridien.position.copy(globe.position); scene.add(meridien);
     // canapé Chesterfield et table basse
-    const ca = P3(z.x + 8.3, z.y + 2.4, 0.3);
+    const ca = P3(z.x + 8.3 * K, z.y + 2.4 * K, 0.3);
     const canape = new THREE.Group(); canape.position.copy(ca); canape.rotation.y = -Math.PI / 2;
     canape.add(arrondi(2, 0.4, 0.85, 0.12, M.cuir, 0, 0.32, 0));
     canape.add(arrondi(2, 0.55, 0.22, 0.1, M.cuir, 0, 0.72, -0.35));
@@ -985,7 +987,63 @@ function decor(z) {
     scene.add(canape);
     scene.add(arrondi(0.6, 0.06, 1.1, 0.02, M.bois, ca.x - 1.0, ca.y + 0.42, ca.z));
     scene.add(boite(0.5, 0.36, 1.0, M.boisMat, ca.x - 1.0, ca.y + 0.2, ca.z));
-    for (const dx of [-0.7, 0.7]) fauteuil(c.x + dx, c.z - 1.35, 0, 0.3, M.cuirNoir);   // invités, en face du directeur
+    for (const dx of [-0.7, 0.7]) fauteuil(c.x + dx, c.z + 1.35, Math.PI, 0.3, M.cuirNoir);   // invités, en face du directeur (il regarde l'entrée)
+  }
+}
+
+// salons du hall (31/10) : la bande devant les pièces, avec canapés, tables basses, lampadaires, plantes et un comptoir
+// de café. Pur décor : personne n'y est assis (un agent n'a pas d'activité inventée).
+function canapeCuir(x, z, angle, m = M.cuir) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = angle;
+  g.add(arrondi(2, 0.4, 0.85, 0.12, m, 0, 0.32, 0));
+  g.add(arrondi(2, 0.55, 0.22, 0.1, m, 0, 0.72, -0.35));
+  for (const s of [-1, 1]) g.add(arrondi(0.24, 0.6, 0.85, 0.1, m, s * 1.05, 0.5, 0));
+  for (const s of [-0.5, 0.5]) g.add(arrondi(0.9, 0.12, 0.7, 0.06, m, s, 0.56, 0.04));
+  scene.add(g);
+}
+function lampadaire(x, z) {
+  scene.add(cyl(0.16, 0.2, 0.04, M.laiton, x, 0.02, z, 20), cyl(0.018, 0.018, 1.55, M.laiton, x, 0.8, z, 8));
+  scene.add(poser(new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.26, 0.32, 24, 1, true), M.abatJour), { position: new THREE.Vector3(x, 1.68, z) }));
+  flaque(x, 0.012, z, 2.2, 0xffc070, 0.12);
+}
+function salons() {
+  const y0 = 30 * K + 0.6, y1 = P - 0.6, ym = (y0 + y1) / 2;
+  if (y1 - y0 < 4) return;
+  // grand tapis de couloir le long de la bande
+  const tap = new THREE.Mesh(new THREE.PlaneGeometry(L - 4, 1.6), M.couloir); tap.rotation.x = -Math.PI / 2;
+  tap.position.copy(P3(L / 2, ym, 0.006)); tap.receiveShadow = true; scene.add(tap);
+  // coins salon : deux canapés face à face, table basse, lampadaires
+  const coins = [L * 0.1, L * 0.27, L * 0.73, L * 0.9];
+  coins.forEach((x, k) => {
+    const c = P3(x, ym);
+    canapeCuir(c.x, c.z - 1.6, 0, k % 2 ? M.cuirNoir : M.cuir);
+    canapeCuir(c.x, c.z + 1.6, Math.PI, k % 2 ? M.cuirNoir : M.cuir);
+    scene.add(arrondi(1.3, 0.06, 0.7, 0.02, M.bois, c.x, 0.42, c.z), boite(1.1, 0.36, 0.5, M.boisMat, c.x, 0.2, c.z));
+    scene.add(boite(0.3, 0.04, 0.22, M.papier, c.x - 0.3, 0.47, c.z + 0.05));
+    lampadaire(c.x + 1.5, c.z - 1.7); lampadaire(c.x - 1.5, c.z + 1.7);
+    plante(x - 2.6, ym, 0.9);
+  });
+  // comptoir de café au centre : marbre, machine à expresso, tasses, tabourets
+  const c = P3(L / 2, ym);
+  scene.add(arrondi(4.2, 1.05, 0.8, 0.04, M.bois, c.x, 0.525, c.z + 0.6));
+  scene.add(arrondi(4.4, 0.06, 0.95, 0.02, M.marbreBlanc, c.x, 1.08, c.z + 0.6));
+  scene.add(boite(4.25, 0.04, 0.04, M.or, c.x, 0.15, c.z + 1.0));
+  const machine = new THREE.Group(); machine.position.set(c.x - 1.1, 1.11, c.z + 0.55);
+  machine.add(arrondi(0.7, 0.45, 0.42, 0.04, M.chrome, 0, 0.23, 0));
+  machine.add(boite(0.6, 0.06, 0.3, M.noir, 0, 0.48, 0));
+  for (const s of [-0.18, 0.18]) machine.add(cyl(0.03, 0.03, 0.09, M.noir, s, 0.06, -0.24, 10));
+  scene.add(machine);
+  for (let k = 0; k < 6; k++) scene.add(cyl(0.035, 0.03, 0.07, M.porcelaine, c.x + 0.2 + k * 0.17, 1.15, c.z + 0.5, 14));
+  for (let k = 0; k < 4; k++) {
+    const x = c.x - 1.5 + k * 1.0;
+    scene.add(cyl(0.2, 0.2, 0.06, M.cuir, x, 0.78, c.z - 0.2, 20), cyl(0.025, 0.025, 0.75, M.laiton, x, 0.38, c.z - 0.2, 8), cyl(0.18, 0.18, 0.02, M.laiton, x, 0.01, c.z - 0.2, 20));
+  }
+  plante(L / 2 - 3, ym + 1.5, 1.1); plante(L / 2 + 3, ym + 1.5, 1.1);
+  // lumière chaude au-dessus des salons
+  for (const x of [L * 0.18, L / 2, L * 0.82]) {
+    const pos = P3(x, ym, 6.8);
+    lustre(pos, 0.7, MUR + 1 - pos.y);
+    const l = new THREE.PointLight(0xffc27a, 14, 14, 1.8); l.position.copy(pos).add(new THREE.Vector3(0, -0.3, 0)); scene.add(l);
   }
 }
 
@@ -1053,15 +1111,27 @@ function ficheAgent(p) {
   });
 }
 
-const VESTES = [0x1b2438, 0x2a2d33, 0x3a1f26, 0x23302a, 0x3b3226, 0x1e1e24, 0x2b3346];
-const PEAUX = [0xe2c4a6, 0xc69a74, 0x9a6a46, 0x6e4a32, 0xd8b28c, 0xb4835e];
-const CHEVEUX = [0x1a1410, 0x2c1e14, 0x4a3220, 0x0e0e10, 0x6a5a48, 0x8a6a3c];
+const VESTES = [0x1b2438, 0x2a2d33, 0x3a1f26, 0x23302a, 0x3b3226, 0x1e1e24, 0x2b3346, 0x4a2a3a, 0x30404a, 0x5a4632];
+const PEAUX = [0xf0d2b8, 0xe2c4a6, 0xc69a74, 0x9a6a46, 0x6e4a32, 0xd8b28c, 0xb4835e, 0x5a3a26];
+const CHEVEUX = [0x1a1410, 0x2c1e14, 0x4a3220, 0x0e0e10, 0x6a5a48, 0x8a6a3c, 0xa8a49c, 0x5a2a16];
+const IRIS = [0x3b2414, 0x5a3a1c, 0x2e4a6a, 0x3e5a3a, 0x241a12, 0x6a5a30];
+// Chaque agent a un physique fixe (même tirage à chaque visite) : coiffure, lunettes, barbe, tenue de son métier.
+// Coiffures : 0 courte, 1 longue, 2 chignon, 3 dégarnie, 4 bouclée, 5 queue de cheval.
+const LOOKS = {
+  14: { coiffure: 0, barbe: true, lunettes: false, gilet: true, cheveux: 6 },    // directeur : costume trois pièces, tempes grises
+  1: { coiffure: 4 }, 2: { coiffure: 1, lunettes: true }, 3: { coiffure: 0, lunettes: true }, 4: { coiffure: 0 },
+  5: { coiffure: 2 }, 6: { coiffure: 5 }, 7: { coiffure: 0, barbe: true }, 8: { coiffure: 3, lunettes: true, gilet: true },
+  9: { coiffure: 2, lunettes: true }, 10: { coiffure: 1 }, 11: { coiffure: 3, barbe: true, lunettes: true, cheveux: 6 },
+  12: { coiffure: 4, lunettes: true }, 13: { coiffure: 0, sweat: true }, 15: { coiffure: 5, lunettes: true }, 16: { coiffure: 1, cheveux: 6, gilet: true },
+};
 function personnage(n) {
-  const r = hasard(n * 977);
-  const veste = std({ color: VESTES[Math.floor(r() * VESTES.length)], roughness: 0.72 });
-  const peau = std({ color: PEAUX[Math.floor(r() * PEAUX.length)], roughness: 0.55 });
-  const cheveux = std({ color: CHEVEUX[Math.floor(r() * CHEVEUX.length)], roughness: 0.6 });
+  const r = hasard(n * 977), look = LOOKS[n] || {};
+  const veste = std({ color: look.sweat ? 0x3a4a5a : VESTES[Math.floor(r() * VESTES.length)], roughness: look.sweat ? 0.9 : 0.72 });
+  const peau = phy({ color: PEAUX[Math.floor(r() * PEAUX.length)], roughness: 0.48, sheen: 0.3, sheenColor: 0xffc8a8 });
+  const cheveux = std({ color: CHEVEUX[look.cheveux ?? Math.floor(r() * 6)], roughness: 0.55 });
   const cravate = std({ color: [0x6a1a1a, 0x1a2a5a, 0x8a6a1a, 0x2a4a2a][Math.floor(r() * 4)], roughness: 0.5 });
+  const levres = std({ color: new THREE.Color(PEAUX[0]).lerp(new THREE.Color(0x8a3a3a), 0.55), roughness: 0.5 });
+  const sombre = std({ color: 0x120c0a, roughness: 0.6 });
   const g = new THREE.Group(), V = (x, y, z) => new THREE.Vector3(x, y, z);
   // jambes assises
   for (const s of [-1, 1]) {
@@ -1069,18 +1139,71 @@ function personnage(n) {
     g.add(membre(V(s * 0.12, 0.54, -0.4), V(s * 0.12, 0.1, -0.44), 0.06, M.pantalon));
     g.add(arrondi(0.11, 0.08, 0.27, 0.035, M.chaussure, s * 0.12, 0.04, -0.5));
   }
-  // haut du corps (bouge seulement quand l'agent travaille vraiment)
+  // haut du corps : il respire toujours ; il ne tape au clavier que pendant une vraie mission
   const haut = new THREE.Group(); g.add(haut);
   const profil = [[0.001, 0.52], [0.16, 0.54], [0.17, 0.62], [0.165, 0.75], [0.19, 0.92], [0.22, 1.02], [0.2, 1.08], [0.09, 1.12], [0.001, 1.13]].map(([x, y]) => new THREE.Vector2(x, y));
   const tronc = new THREE.Mesh(new THREE.LatheGeometry(profil, 28), veste); tronc.scale.z = 0.68; tronc.rotation.x = -0.06; ombre(tronc); haut.add(tronc);
-  const plastron = new THREE.Mesh(new THREE.CircleGeometry(0.075, 3), M.chemise); plastron.position.set(0, 1.05, -0.122); plastron.rotation.set(Math.PI, 0, Math.PI / 2 * 0); haut.add(plastron);
-  const cr = boite(0.035, 0.2, 0.01, cravate, 0, 0.98, -0.125, false); haut.add(cr);
-  haut.add(cyl(0.065, 0.07, 0.06, M.chemise, 0, 1.13, 0, 16));
+  if (!look.sweat) {
+    const plastron = new THREE.Mesh(new THREE.CircleGeometry(0.075, 3), M.chemise); plastron.position.set(0, 1.05, -0.122); haut.add(plastron);
+    haut.add(boite(0.035, 0.2, 0.01, cravate, 0, 0.98, -0.125, false));
+    if (look.gilet) haut.add(arrondi(0.2, 0.26, 0.02, 0.01, std({ color: 0x2a2a30, roughness: 0.6 }), 0, 0.9, -0.118, false));
+  }
+  haut.add(cyl(0.065, 0.07, 0.06, look.sweat ? veste : M.chemise, 0, 1.13, 0, 16));
   haut.add(cyl(0.05, 0.055, 0.1, peau, 0, 1.19, 0, 12));
-  const tete = new THREE.Mesh(new THREE.SphereGeometry(0.115, 28, 20), peau); tete.scale.set(0.9, 1.12, 1); tete.position.set(0, 1.35, -0.01); ombre(tete); haut.add(tete);
-  for (const s of [-1, 1]) haut.add(poser(new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), peau), { position: V(s * 0.1, 1.35, 0) }));
-  const coupe = new THREE.Mesh(new THREE.SphereGeometry(0.122, 28, 14, 0, Math.PI * 2, 0, Math.PI * (0.45 + r() * 0.12)), cheveux);
-  coupe.scale.set(0.93, 1.1, 1.04); coupe.position.set(0, 1.365, 0.012); coupe.rotation.x = 0.35; ombre(coupe); haut.add(coupe);
+  // tête : un groupe qui tourne (regard), avec un vrai visage
+  const tete = new THREE.Group(); tete.position.set(0, 1.35, -0.01); haut.add(tete);
+  const crane = new THREE.Mesh(new THREE.SphereGeometry(0.115, 32, 24), peau); crane.scale.set(0.9, 1.12, 1); ombre(crane); tete.add(crane);
+  const machoire = new THREE.Mesh(new THREE.SphereGeometry(0.085, 24, 16), peau); machoire.scale.set(0.95, 0.8, 1); machoire.position.set(0, -0.055, -0.02); tete.add(machoire);
+  for (const s of [-1, 1]) {
+    const oreille = new THREE.Mesh(new THREE.SphereGeometry(0.024, 12, 8), peau); oreille.scale.set(0.5, 1, 0.8); oreille.position.set(s * 0.102, 0, 0.005); tete.add(oreille);
+  }
+  const nez = new THREE.Mesh(new THREE.SphereGeometry(0.017, 12, 10), peau); nez.scale.set(0.75, 1.25, 1.1); nez.position.set(0, -0.012, -0.112); tete.add(nez);
+  // yeux : blanc, iris de couleur, pupille, petit reflet ; paupière qui descend (clignement, concentration)
+  const blanc = std({ color: 0xf4f1ea, roughness: 0.15 }), iris = std({ color: IRIS[Math.floor(r() * IRIS.length)], roughness: 0.3 });
+  const yeux = [], paupieres = [], sourcils = [];
+  for (const s of [-1, 1]) {
+    const oeil = new THREE.Group(); oeil.position.set(s * 0.036, 0.016, -0.094); tete.add(oeil);
+    oeil.add(new THREE.Mesh(new THREE.SphereGeometry(0.0155, 16, 12), blanc));
+    const i = new THREE.Mesh(new THREE.CircleGeometry(0.0085, 20), iris); i.position.z = -0.0153; i.rotation.y = Math.PI; oeil.add(i);
+    const p = new THREE.Mesh(new THREE.CircleGeometry(0.0042, 16), M.noir); p.position.z = -0.0156; p.rotation.y = Math.PI; oeil.add(p);
+    const reflet = new THREE.Mesh(new THREE.CircleGeometry(0.0018, 8), new THREE.MeshBasicMaterial({ color: 0xffffff })); reflet.position.set(0.003, 0.003, -0.0158); reflet.rotation.y = Math.PI; oeil.add(reflet);
+    const geo = new THREE.SphereGeometry(0.0172, 16, 12); geo.translate(0, -0.0172, 0);
+    const paupiere = new THREE.Mesh(geo, peau); paupiere.position.set(s * 0.036, 0.016 + 0.0172, -0.094); paupiere.scale.y = 0.25; tete.add(paupiere);
+    const sourcil = arrondi(0.034, 0.007, 0.009, 0.003, cheveux, s * 0.037, 0.043, -0.104, false); sourcil.rotation.x = 0.2; tete.add(sourcil);
+    yeux.push(oeil); paupieres.push(paupiere); sourcils.push(sourcil);
+  }
+  // bouche : un arc (sourire, neutre, inquiet)
+  const bouche = new THREE.Mesh(new THREE.TorusGeometry(0.019, 0.0042, 8, 20, Math.PI), levres);
+  bouche.position.set(0, -0.052, -0.098); bouche.rotation.z = Math.PI; bouche.scale.y = 0.35; tete.add(bouche);
+  // cheveux
+  const calotte = (part, rx = 0.93) => {
+    const c = new THREE.Mesh(new THREE.SphereGeometry(0.122, 28, 14, 0, Math.PI * 2, 0, Math.PI * part), cheveux);
+    c.scale.set(rx, 1.1, 1.04); c.position.set(0, 0.015, 0.022); c.rotation.x = 0.35; ombre(c); tete.add(c); return c;
+  };
+  const co = look.coiffure ?? Math.floor(r() * 6);
+  if (co === 3) {   // dégarnie : couronne autour de la nuque
+    const t = new THREE.Mesh(new THREE.TorusGeometry(0.098, 0.022, 8, 24, Math.PI * 1.2), cheveux); t.rotation.set(Math.PI / 2, 0, -0.95 * Math.PI); t.position.set(0, 0.0, 0.02); tete.add(t);
+  } else calotte(co === 4 ? 0.6 : 0.5);
+  if (co === 1) {   // longs : un rideau dans le dos et sur les côtés
+    const l = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.14, 0.26, 24, 1, true, -Math.PI * 0.85, Math.PI * 1.7), cheveux);
+    l.position.set(0, -0.08, 0.03); ombre(l); tete.add(l);   // l'ouverture du rideau (θ = π, côté −z) reste devant le visage
+  }
+  if (co === 2) tete.add(poser(new THREE.Mesh(new THREE.SphereGeometry(0.05, 16, 12), cheveux), { position: V(0, 0.08, 0.1) }));
+  if (co === 5) { tete.add(poser(new THREE.Mesh(new THREE.SphereGeometry(0.03, 12, 8), cheveux), { position: V(0, 0.03, 0.125) })); tete.add(membre(V(0, 0.02, 0.135), V(0, -0.14, 0.15), 0.025, cheveux)); }
+  if (co === 4) for (let k = 0; k < 14; k++) {
+    const a = r() * Math.PI * 2, b = r() * 1.1;
+    tete.add(poser(new THREE.Mesh(new THREE.SphereGeometry(0.03, 10, 8), cheveux), { position: V(Math.cos(a) * Math.sin(b) * 0.11, 0.03 + Math.cos(b) * 0.1, 0.02 + Math.sin(a) * Math.sin(b) * 0.11) }));
+  }
+  if (look.barbe) {
+    const b = new THREE.Mesh(new THREE.SphereGeometry(0.088, 24, 12, 0, Math.PI * 2, Math.PI * 0.45, Math.PI * 0.55), cheveux);
+    b.scale.set(0.98, 0.95, 1.02); b.position.set(0, -0.045, -0.018); tete.add(b);
+  }
+  if (look.lunettes) {
+    const monture = std({ color: 0x1a1612, metalness: 0.4, roughness: 0.3 });
+    for (const s of [-1, 1]) { const v = new THREE.Mesh(new THREE.TorusGeometry(0.019, 0.0028, 6, 20), monture); v.position.set(s * 0.036, 0.016, -0.112); tete.add(v); }
+    tete.add(boite(0.02, 0.003, 0.003, monture, 0, 0.02, -0.113, false));
+    for (const s of [-1, 1]) tete.add(boite(0.003, 0.003, 0.1, monture, s * 0.055, 0.02, -0.065, false));
+  }
   const bras = [];
   for (const s of [-1, 1]) {
     const epaule = V(s * 0.21, 1.04, 0), coude = V(s * 0.25, 0.83, -0.13), main = V(s * 0.13, 0.84, -0.44);
@@ -1091,12 +1214,63 @@ function personnage(n) {
     pivot.add(poser(new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 8), peau), { position: poignet.clone().add(V(0, -0.005, -0.03)), scale: new THREE.Vector3(1, 0.6, 1.3) }));
     pivot.userData.base = 0; bras.push(pivot);
   }
-  return { g, haut, bras };
+  return { g, haut, bras, tete, yeux, paupieres, sourcils, bouche };
+}
+
+// Expression = état réel : concentré au travail, souriant quand il est disponible, inquiet en erreur, pensif en file.
+const EXPRESSIONS = {
+  travail: { paupiere: 0.42, sourcil: -0.12, bouche: 0.15, sourire: false },
+  disponible: { paupiere: 0.22, sourcil: 0.05, bouche: 0.5, sourire: true },
+  attente: { paupiere: 0.3, sourcil: 0.0, bouche: 0.1, sourire: false },
+  erreur: { paupiere: 0.18, sourcil: 0.32, bouche: 0.45, sourire: false },
+};
+function exprimer(ps) {
+  const e = EXPRESSIONS[ps.statut] || EXPRESSIONS.disponible, v = ps.visage;
+  ps.paupiere = e.paupiere;
+  v.sourcils.forEach((s, k) => { s.rotation.z = (k ? -1 : 1) * e.sourcil; s.position.y = 0.043 + Math.abs(e.sourcil) * 0.012; });
+  v.bouche.rotation.z = e.sourire ? Math.PI : 0;
+  v.bouche.position.y = e.sourire ? -0.052 : -0.06;
+  v.bouche.scale.y = e.bouche;
+}
+// la vie des personnages : respiration, clignements, regard (écran, visiteur, collègue qui écrit)
+const _v = new THREE.Vector3();
+function vivre(ps, s, dt) {
+  if (!ps.agent.visible) return;
+  const v = ps.visage;
+  ps.corps.scale.y = 1 + Math.sin(s * 1.5 + ps.n) * 0.006;
+  // clignement toutes les 2 à 6 s
+  if (s > ps.cligne) ps.cligne = s + 2 + ((ps.n * 7.3 + s * 13.1) % 4);
+  const ferme = ps.cligne - s < 0.12 ? 1 : ps.paupiere;
+  v.paupieres.forEach((p) => { p.scale.y += (ferme - p.scale.y) * Math.min(1, dt * 30); });
+  // où regarder
+  let lacet = 0, tangage = 0.05;
+  if (ps.regard && s < ps.regard.jusqu) {                  // un collègue vient de lui envoyer un vrai message
+    _v.copy(ps.regard.cible);
+  } else if (camera.position.distanceTo(ps.agent.position) < 7 && !ps.travail) {
+    _v.copy(camera.position);                               // on entre dans la pièce : il lève les yeux vers nous
+  } else _v.set(NaN, 0, 0);
+  if (!Number.isNaN(_v.x)) {
+    ps.agent.worldToLocal(_v);
+    _v.y -= 1.35 + ps.y0;
+    lacet = THREE.MathUtils.clamp(Math.atan2(-_v.x, -_v.z), -0.9, 0.9);
+    tangage = THREE.MathUtils.clamp(Math.atan2(_v.y, Math.hypot(_v.x, _v.z)), -0.35, 0.35);
+  } else if (ps.travail) {                                  // les yeux sur l'écran, petits mouvements de lecture
+    lacet = Math.sin(s * 0.9 + ps.n) * 0.12; tangage = -0.12 + Math.sin(s * 2.3) * 0.02;
+  } else if (ps.statut === "erreur") {
+    lacet = Math.sin(s * 0.3 + ps.n) * 0.2; tangage = -0.2;
+  } else {                                                  // disponible : il regarde autour de lui, tranquillement
+    lacet = Math.sin(s * 0.23 + ps.n * 1.7) * 0.45 + Math.sin(s * 0.61 + ps.n) * 0.12; tangage = Math.sin(s * 0.17 + ps.n) * 0.08;
+  }
+  const k = Math.min(1, dt * 3);
+  v.tete.rotation.y += (lacet - v.tete.rotation.y) * k;
+  v.tete.rotation.x += (tangage - v.tete.rotation.x) * k;
 }
 
 function poste(p) {
   const dir = p.agent === 14, l = dir ? 3.2 : 2.2, pr = dir ? 1.3 : 1.05, y0 = dir ? 0.3 : 0;
   const g = new THREE.Group(); g.position.copy(P3(p.x, p.y, y0)); g.userData = { agent: p.agent };
+  const face = p.orientation === 0 ? 1 : -1;   // 1 : l'agent regarde vers le fond du plan (+y), -1 : vers l'avant
+  if (face === 1) g.rotation.y = Math.PI;
   // bureau en noyer verni : plateau, caissons à tiroirs (poignées de laiton), panneau de fond, sous-main de cuir
   g.add(arrondi(l, 0.06, pr, 0.025, M.bois, 0, 0.76, 0));
   g.add(boite(l - 0.04, 0.012, 0.03, M.or, 0, 0.73, pr / 2 - 0.01, false));
@@ -1121,9 +1295,10 @@ function poste(p) {
     g.add(m);
     return v;
   };
-  const vitre = ecran(dir ? 0 : -larg / 2 - 0.02, dir ? 0 : 0.12, e.t);
-  if (dir) { ecran(-larg - 0.08, 0.32, ficheAgent(p)); ecran(larg + 0.08, -0.32, ficheAgent(p)); }
-  else ecran(larg / 2 + 0.02, -0.12, ficheAgent(p));
+  // les écrans s'écartent du milieu : en entrant dans la pièce on voit le visage de l'agent entre eux (31/10)
+  const vitre = ecran(dir ? -larg / 2 - 0.2 : -larg / 2 - 0.16, dir ? 0.2 : 0.16, e.t);
+  if (dir) { ecran(-larg * 1.5 - 0.32, 0.45, ficheAgent(p)); ecran(larg / 2 + 0.2, -0.2, ficheAgent(p)); }
+  else ecran(larg / 2 + 0.16, -0.16, ficheAgent(p));
   const lueur = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.9), M.halo(0x6aa0ff, 0.12)); lueur.rotation.x = -Math.PI / 2; lueur.position.set(0, 0.795, -0.05); g.add(lueur);
   // clavier, souris, papiers, tasse
   const clav = new THREE.Mesh(new RoundedBoxGeometry(0.44, 0.018, 0.14, 2, 0.006), [M.noir, M.noir, M.clavier, M.noir, M.noir, M.noir]);
@@ -1135,10 +1310,10 @@ function poste(p) {
   const anse = new THREE.Mesh(new THREE.TorusGeometry(0.025, 0.007, 6, 12), M.porcelaine); anse.position.set(l / 2 - 0.45, 0.84, 0.2); g.add(anse);
   lampeBanquier(g, l / 2 - 0.35, 0.79, -pr / 2 + 0.3);
   scene.add(g);
-  // fauteuil + agent devant le bureau, tourné vers les écrans
-  const assise = P3(p.x, p.y + pr / 2 + 0.5, y0);
-  fauteuil(assise.x, assise.z, Math.PI, y0, dir ? M.cuir : (p.agent % 2 ? M.cuirNoir : M.cuir));
-  const pers = personnage(p.agent), agent = pers.g; agent.position.copy(assise); scene.add(agent);
+  // fauteuil + agent devant le bureau, tourné vers les écrans (et vers l'entrée de la pièce : on voit son visage)
+  const assise = P3(p.x, p.y - face * (pr / 2 + 0.5), y0);
+  fauteuil(assise.x, assise.z, face === 1 ? 0 : Math.PI, y0, dir ? M.cuir : (p.agent % 2 ? M.cuirNoir : M.cuir));
+  const pers = personnage(p.agent), agent = pers.g; agent.position.copy(assise); if (face === 1) agent.rotation.y = Math.PI; scene.add(agent);
   // anneau lumineux au sol : la couleur de son état réel
   const anneau = new THREE.Group();
   anneau.add(new THREE.Mesh(new THREE.RingGeometry(0.62, 0.68, 64), new THREE.MeshBasicMaterial({ color: COULEURS.disponible, toneMapped: false, transparent: true, opacity: 0.95 })));
@@ -1152,7 +1327,8 @@ function poste(p) {
   d.addEventListener("click", () => window.voirAgent(p.agent));
   const tag = new CSS2DObject(d); tag.position.copy(P3(p.x, p.y, y0 + 2.2)); scene.add(tag);
   for (const o of [g, agent]) o.traverse((m) => { if (m.isMesh) { m.userData.agent = p.agent; cliquables.push(m); } });
-  postes[p.agent] = { g, agent, corps: pers.haut, bras: pers.bras, anneau, vitre, e, tag: d, tagObj: tag, zone: p.zone, cle: "", statut: "", y0, travail: false };
+  postes[p.agent] = { g, agent, corps: pers.haut, bras: pers.bras, anneau, vitre, e, tag: d, tagObj: tag, zone: p.zone, cle: "", statut: "", y0, travail: false,
+    n: p.agent, visage: pers, paupiere: 0.22, cligne: 1 + (p.agent % 5), regard: null };
 }
 
 function dessinerEcran(ps, a) {
@@ -1193,7 +1369,8 @@ function maj3d(etat, choix) {
   for (const a of etat.agents) {
     const ps = postes[a.n];
     if (!ps) continue;
-    ps.statut = a.statut; ps.travail = a.statut === "travail";
+    if (ps.statut !== a.statut) { ps.statut = a.statut; exprimer(ps); }
+    ps.travail = a.statut === "travail";
     ps.anneau.children[0].material.color.setHex(COULEURS[a.statut] || COULEURS.disponible);
     ps.anneau.children[1].material.color.setHex(COULEURS[a.statut] || COULEURS.disponible).multiplyScalar(0.22);
     ps.agent.visible = a.statut !== "construction";
@@ -1304,6 +1481,7 @@ function liens(liste) {
     scene.add(mesh, point);
     mesh.visible = point.visible = !pieceVue;
     liens3d.push({ mesh, point, courbe });
+    if (postes[l.a]) postes[l.a].regard = { cible: a.clone(), jusqu: (performance.now() - t0) / 1000 + 6 };
   }
 }
 
@@ -1340,7 +1518,7 @@ function regarder() {
 function entrer(cle) {
   const p = pieces[cle];
   if (!actif || !p) return false;
-  const z = p.z, [pc, cc] = PLACES[cle] || [[z.x + z.l * 0.75, z.y + z.p - 0.9, 1.75], [z.x + z.l / 2, z.y + z.p * 0.35, 1.2]];
+  const z = p.z, [pc, cc] = (PLACES[cle] && PLACES[cle].map(([x, y, h]) => [x * K, y * K, h])) || [[z.x + z.l * 0.75, z.y + z.p - 0.9, 1.75], [z.x + z.l / 2, z.y + z.p * 0.35, 1.2]];
   const depuis = pieceActuelle && pieceActuelle !== cle ? pieces[pieceActuelle].z : null;
   const c1 = depuis ? P3(depuis.x + depuis.l / 2, depuis.y + depuis.p / 2, depuis.h + 5) : null;
   const c2 = P3(z.x + z.l / 2, z.y + z.p / 2, z.h + 6);
@@ -1462,13 +1640,35 @@ function majOptique(dt) {
 }
 // mode caméra (Jarvis) : la ronde passe voir les pièces où un agent travaille VRAIMENT, puis revient sur l'ensemble
 let ronde = 0, rondeI = 0, priseEnMain = 0;
+// l'écran Jarvis peut fixer la caméra sur une pièce (?piece=directeur, ou fixer3d("analyse")) : plus de ronde
+// « ensemble » = la vue d'ensemble qui tourne lentement ; « ronde » (ou rien) = la ronde habituelle
+let fixe = camera3d ? new URLSearchParams(location.search).get("piece") : null;
+// portrait : la caméra se pose face à un agent, à hauteur de visage (clic « voir son visage », caméra de Jarvis)
+function portrait3d(n) {
+  const ps = postes[n];
+  if (!actif || !ps) return false;
+  const tete = ps.agent.localToWorld(new THREE.Vector3(0, 1.38, -0.01));
+  const devant = new THREE.Vector3(0, 0, -1).applyQuaternion(ps.agent.quaternion);
+  pieceActuelle = ps.zone; zoomPiece = 1; limites();
+  allerVers(tete.clone().addScaledVector(devant, 1.25).add(new THREE.Vector3(0.25, 0.08, 0)), tete, 1400);
+  majBarre();
+  return true;
+}
+function fixer3d(cle) {
+  if (!actif) return false;
+  fixe = cle === "ensemble" || pieces[cle] ? cle : null;
+  ronde = 0; priseEnMain = 0;
+  if (fixe && fixe !== "ensemble") { controls.autoRotate = false; return entrer(fixe); }
+  controls.autoRotate = true;
+  return ensemble();
+}
 // l'utilisateur prend la main : la ronde et la rotation lente s'arrêtent (3 min au doigt, 1 min à la souris)
 function pris() {
   if (!camera3d) return;
   controls.autoRotate = false; priseEnMain = performance.now() + (tactile ? 180000 : 60000);
 }
 function rondeCamera(t) {
-  if (vol || t < priseEnMain) return;
+  if (vol || t < priseEnMain || fixe) return;
   if (!ronde) { ronde = t + 40000; return; }
   if (t < ronde) return;
   if (pieceActuelle) { ensemble(); controls.autoRotate = true; ronde = t + 45000; return; }
@@ -1662,6 +1862,7 @@ function boucle(t) {
   if (camera3d) rondeCamera(t);
   // seulement les agents réellement au travail bougent (frappe au clavier, halo qui pulse)
   for (const ps of Object.values(postes)) {
+    vivre(ps, s, dt);
     if (ps.travail) {
       ps.corps.position.y = Math.sin(s * 3) * 0.008;
       ps.bras[0].rotation.x = Math.sin(s * 14) * 0.06; ps.bras[1].rotation.x = Math.sin(s * 14 + 2) * 0.06;
@@ -1693,7 +1894,8 @@ async function demarrer() {
   conteneur = document.getElementById("scene3d");
   if (!conteneur || new URLSearchParams(location.search).get("vue") === "plan" || !webglPossible()) return;
   plan = await (await fetch("api/scene")).json();
-  L = plan.sol.l; P = plan.sol.p;
+  L = plan.sol.l; P = plan.sol.p; K = plan.echelle || 1;
+  for (const v of VUES.ensemble) v.multiplyScalar(K);
   renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
   renderer.setPixelRatio(camLente ? 1 : Math.min(window.devicePixelRatio, camera3d ? 1.5 : telephone ? 1.75 : 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
@@ -1726,15 +1928,17 @@ async function demarrer() {
   grain = new ShaderPass(ETALONNAGE); composer.addPass(grain);
   materiaux(); salle(); allees(); lumieres();
   for (const z of plan.zones) { piece(z); tapis(z); decor(z); }
-  plante(0.5, 15); plante(47.5, 0.6); plante(29.6, 9.6); plante(18.4, 20.4); plante(47.5, 29.4); plante(0.5, 29.4);
+  for (const [x, y] of [[0.5, 15], [47.5, 0.6], [29.6, 9.6], [18.4, 20.4], [47.5, 29.4], [0.5, 29.4]]) plante(x * K, y * K);
+  salons();
   for (const p of plan.postes) poste(p);
   cliquer(); limites(); barrePieces(); navigation();
   majGraphique(); majEchanges();
   setInterval(majGraphique, 5 * 60000); setInterval(majEchanges, 60000);
   new ResizeObserver(taille).observe(conteneur);
   pret = true;
-  window.maj3d = maj3d; window.vue3d = vue3d; window.zoom3d = zoom3d;
+  window.maj3d = maj3d; window.vue3d = vue3d; window.zoom3d = zoom3d; window.fixer3d = fixer3d; window.portrait3d = portrait3d;
   basculer(window.modePlateau ? window.modePlateau() : "bureau");
+  if (fixe) fixer3d(fixe);
   if (window.etatCourant) maj3d(window.etatCourant(), null);
   requestAnimationFrame(boucle);
   astuce("ensemble", tactile ? "Un doigt : faire glisser · deux doigts : zoomer et tourner · touche une pièce pour y entrer"

@@ -31,7 +31,9 @@ CONSIGNE = (
 
 # Sujet d'une mission -> type de mission (l'ordre compte : « réaction aux annonces » avant « annonces »)
 SUJETS = [
-    (r"analyse complete|toutes les analyses|tous les techniciens|analyse technique", "analyses"),
+    (r"analyse complete|toutes les analyses|tous les techniciens|analyse technique|"
+     r"(?:analyse|anlayse|analise|analyser|analyses?)\s+(?:du |de l'|de la |le |la |l'|sur (?:le |l')?)?"
+     r"(?:gold|or|mgc|xau\w*|marche|micro gold)\b", "analyses"),
     (r"precedent", "precedents"),
     (r"reaction", "reaction_annonces"),
     (r"replay|backtest|teste[rz]? (?:la |ma )?strategie", "replay_strategie_v1"),
@@ -49,7 +51,7 @@ SUJETS = [
     (r"risque", "evaluation_risque"),
 ]
 ANALYSES = ["analyse_smc", "analyse_fibo", "analyse_ichimoku", "analyse_vwap_ema", "analyse_flux"]
-VERBE = (r"(?<![a-z])(?:lance|lancer|relance|demande|demander|fais|faire|refais|confie|analyse|analyser|teste|tester|"
+VERBE = (r"(?<![a-z])(?:lance|lancer|relance|demande|demander|fais|faire|faites?|refais|confie|analyse|anlayse|analise|analyser|teste|tester|"
          r"verifie|verifier|controle|controler|mesure|mesurer|cherche|chercher|retrouve|retrouver|extrais|extraire|"
          r"range|ranger|importe|importer|lis|lire|calcule|calculer|prepare|preparer|veux|voudrais|aimerais|faudrait|"
          r"peux|pourrais)\b")

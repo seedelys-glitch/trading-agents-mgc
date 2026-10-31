@@ -3,6 +3,32 @@
 Dernière mise à jour : 24/10/2026 (nouveaux agents du desk : Liquidité, Dollar & taux, Piège, Règles Topstep, bulletin de notes, mode express). Ce fichier est la mémoire du projet : on le lit
 avant de reprendre le travail, on le met à jour après chaque étape.
 
+
+## 0sexies. Université plus vivante et plus grande (31/10/2026, session cloud « réveiller les agents »)
+- Plan agrandi ×1,3 (`scene.py`, version 2, champ `echelle`) + une bande « salons » devant les bureaux :
+  4 coins canapés, comptoir café avec machine espresso, plantes, lustres. Chaque agent fait face à la porte de sa pièce.
+- Personnages (`ui/bureau3d.js`, `personnage()`) : vrais visages (yeux avec iris et pupille, paupières, sourcils,
+  bouche, nez, oreilles), 6 coiffures, barbes, lunettes, gilets / sweats, physique fixe par agent.
+- Vie (`vivre()`) : respiration, clignements, expression selon le statut (travail, disponible, attente, erreur),
+  l'agent regarde celui qui lui envoie un vrai message, la caméra quand elle approche, son écran quand il travaille.
+- `window.portrait3d(n)` : la caméra vient devant le visage de l'agent n.
+- Éclairage des pièces agrandies renforcé. 141 tests de l'université réussis (conteneur).
+- Sauvegarde des anciennes versions : `sauvegardes\avant-universite-vivante-20261031\`.
+
+## 0quinquies. Les agents travaillent seuls (31/10/2026, session cloud « réveiller les agents »)
+- Constat : en 8 jours, 2 vraies analyses (seul le Scribe tournait), 0 bougie, demande « analyse du gold » plantée
+  (formulaire -> synthèse avec heures="12H"), université éteinte après un redémarrage du PC, desk « ANALYSE BLOQUÉE »
+  (NinjaTrader fermé depuis le 24/10, Yahoo trop en retard), desk et université non reliés.
+- Fait : compétence `tournee_directeur` (agent 14, boucle toutes les 15 min, créée une fois) = emploi du temps :
+  Yahoo rafraîchi (même jeu, `importer_yahoo` réutilise le jeu du contrat) et analyse technique complète toutes les
+  heures marché ouvert ; calendrier 6 h ; discours Fed, réactions 24 h ; replay V1 7 j ; synthèse chaque jour après 15 h.
+  Directeur : « analyse du gold / MGC / marché » (même mal écrit) = 5 techniciens ; synthèse lit « 12H ».
+  Jarvis : `universite_lien.garder` relance l'université si arrêtée ou si son code a changé (/api/a_jour), importe Yahoo
+  si 0 jeu ; le desk gold prévient le directeur (analyse complète) ; desk auto de 15h20 jusqu'à 20h.
+- Vérifié sur le PC 31/10 02:10 : université redémarrée seule, 1re tournée = 13 missions, 18 documents vérifiés.
+  Tests : 139 université (+ 2 tests du bureau qui demandent ui/vendor), 468 Jarvis. Sauvegarde : sauvegardes\avant-tournee-20261031.
+- Suite : visages et expressions des personnages (bureau3d.js personnage()), données TradingView, NinjaTrader en séance.
+
 ## 0quater. Nouveaux agents du desk (24/10/2026, session cloud « améliorations Jarvis / université / desk »)
 Demande de Jabran : agents Piège, Règles Topstep, bulletin de notes, Liquidité, Dollar & taux, mode express.
 - **8 votants** dans `bureau.SPECIALISTES` : smc, fibo, ichimoku, tendance, orderflow, calendrier, **liquidite**,

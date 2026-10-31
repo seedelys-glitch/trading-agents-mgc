@@ -11,7 +11,7 @@ Ce que les agents savent RÉELLEMENT faire. Chaque module expose :
 from . import (analyse_fibo, analyse_flux, analyse_ichimoku, analyse_smc, analyse_vwap_ema, calendrier_macro,
                controle_donnees, demande_directeur, discours_fed, ecriture_memoire, evaluation_risque, extraction_regles,
                import_tradingview, indexation_bibliotheque, precedents, reaction_annonces, recherche_memoire, replay_strategie_v1,
-               synthese_directeur,
+               synthese_directeur, tournee_directeur,
                verification_analyse, verification_calendrier, verification_citations, verification_discours,
                verification_memoire, verification_reactions, verification_replay, verification_reproductibilite,
                verification_risque)
@@ -20,7 +20,7 @@ MODULES = [analyse_smc, analyse_fibo, analyse_ichimoku, calendrier_macro, analys
            reaction_annonces, discours_fed, precedents, verification_analyse, verification_reproductibilite,
            verification_risque, verification_calendrier, verification_reactions, verification_discours,
            verification_citations, import_tradingview, controle_donnees, replay_strategie_v1, verification_replay, extraction_regles,
-           indexation_bibliotheque, synthese_directeur, demande_directeur, ecriture_memoire, recherche_memoire,
+           indexation_bibliotheque, synthese_directeur, demande_directeur, tournee_directeur, ecriture_memoire, recherche_memoire,
            verification_memoire]
 TYPES = {m.TYPE: m for m in MODULES}
 
