@@ -49,3 +49,4 @@ def sans_internet_pour_le_mentor(monkeypatch):
     from universite.competences import cours_du_jour
 
     monkeypatch.setattr(cours_du_jour, "wikipedia", lambda page, delai=8: None)
+    monkeypatch.setattr(cours_du_jour, "lire_page", lambda url, delai=8: None)

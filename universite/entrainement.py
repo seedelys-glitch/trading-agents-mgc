@@ -43,24 +43,24 @@ MIN_CAS = 30                # travaux pratiques : en dessous, « échantillon in
 # quiz = question à choix pour l'IA (bonne lettre en premier champ).
 PROGRAMME = {
     1: [
-        {"cle": "pivots", "wikipedia": "Analyse technique", "titre": "Sommets et creux confirmés",
+        {"cle": "pivots", "lectures": ["https://en.wikipedia.org/wiki/Technical_analysis", "https://en.wikipedia.org/wiki/Support_and_resistance"], "wikipedia": "Analyse technique", "titre": "Sommets et creux confirmés",
          "resume": "Un sommet (creux) est confirmé quand les 3 bougies de chaque côté ont un plus haut plus bas "
                    "(un plus bas plus haut). On ne le connaît donc que 3 bougies après.",
          "quiz": ("B", "Quand un sommet de structure est-il confirmé ?",
                   {"A": "Dès que la bougie ferme", "B": "Quand les bougies suivantes font des plus hauts plus bas",
                    "C": "Quand le volume augmente", "D": "Jamais, on le devine"})},
-        {"cle": "bos", "wikipedia": "Analyse technique", "titre": "BOS : cassure dans le sens de la tendance", "examen": "smc_bos",
+        {"cle": "bos", "lectures": ["https://en.wikipedia.org/wiki/Market_trend", "https://en.wikipedia.org/wiki/Technical_analysis"], "wikipedia": "Analyse technique", "titre": "BOS : cassure dans le sens de la tendance", "examen": "smc_bos",
          "resume": "En tendance haussière, une CLÔTURE au-dessus du dernier sommet confirmé est un BOS haussier "
                    "(la tendance continue). Une mèche seule ne casse rien.",
          "quiz": ("C", "En tendance haussière, qu'est-ce qu'un BOS ?",
                   {"A": "Une mèche sous le dernier creux", "B": "Une clôture sous le dernier creux",
                    "C": "Une clôture au-dessus du dernier sommet", "D": "Un croisement de moyennes"})},
-        {"cle": "choch", "wikipedia": "Analyse technique", "titre": "CHoCH : changement de caractère", "examen": "smc_choch",
+        {"cle": "choch", "lectures": ["https://en.wikipedia.org/wiki/Market_trend"], "wikipedia": "Analyse technique", "titre": "CHoCH : changement de caractère", "examen": "smc_choch",
          "resume": "En tendance haussière, une clôture SOUS le dernier creux confirmé est un CHoCH baissier : "
                    "la structure change de sens.",
          "quiz": ("A", "En tendance haussière, une clôture sous le dernier creux confirmé est :",
                   {"A": "Un CHoCH baissier", "B": "Un BOS haussier", "C": "Un order block", "D": "Rien du tout"})},
-        {"cle": "fvg_ob", "wikipedia": "Liquidité (finance)", "titre": "FVG et order blocks",
+        {"cle": "fvg_ob", "lectures": ["https://en.wikipedia.org/wiki/Market_liquidity", "https://en.wikipedia.org/wiki/Order_(exchange)"], "wikipedia": "Liquidité (finance)", "titre": "FVG et order blocks",
          "resume": "FVG haussier : le plus bas de la bougie 3 est au-dessus du plus haut de la bougie 1. Order block "
                    "haussier : dernière bougie baissière avant l'impulsion qui a fait la cassure.",
          "quiz": ("D", "Un FVG haussier existe quand :",
@@ -68,38 +68,38 @@ PROGRAMME = {
                    "D": "Le plus bas de la bougie 3 est au-dessus du plus haut de la bougie 1"})},
     ],
     2: [
-        {"cle": "impulsion", "wikipedia": "Retracement de Fibonacci", "titre": "Choisir la bonne impulsion", "examen": "fibo_niveaux",
+        {"cle": "impulsion", "lectures": ["https://en.wikipedia.org/wiki/Fibonacci_retracement", "https://www.investopedia.com/terms/f/fibonacciretracement.asp"], "wikipedia": "Retracement de Fibonacci", "titre": "Choisir la bonne impulsion", "examen": "fibo_niveaux",
          "resume": "On trace sur la dernière impulsion nette H1 (au moins 2,5 ATR), du creux au sommet confirmés. "
                    "0 = fin de l'impulsion, 1 = départ.",
          "quiz": ("B", "Sur une impulsion haussière, où est le niveau 1 du Fibonacci ?",
                   {"A": "Au sommet", "B": "Au départ (le creux)", "C": "Au milieu", "D": "Au prix actuel"})},
-        {"cle": "zones", "wikipedia": "Retracement de Fibonacci", "titre": "Zones d'entrée 0.618 à 0.893, jamais le 0.5", "examen": "fibo_zones",
+        {"cle": "zones", "lectures": ["https://en.wikipedia.org/wiki/Fibonacci_retracement", "https://en.wikipedia.org/wiki/Golden_ratio"], "wikipedia": "Retracement de Fibonacci", "titre": "Zones d'entrée 0.618 à 0.893, jamais le 0.5", "examen": "fibo_zones",
          "resume": "Selon STRATEGIE.md, les entrées se cherchent entre 0.618 et 0.893 (0.618, 0.705, 0.786, 0.893). "
                    "Le 0.5 est une zone interdite pour entrer. Au-delà de 1, le Fibo est invalidé.",
          "quiz": ("A", "Dans la stratégie de Jabran, le niveau 0.5 est :",
                   {"A": "Une zone interdite pour entrer", "B": "La meilleure entrée", "C": "L'objectif", "D": "Le stop"})},
     ],
     3: [
-        {"cle": "nuage", "wikipedia": "Ichimoku Kinko Hyo", "titre": "Le prix et le nuage", "examen": "ichimoku_tendance",
+        {"cle": "nuage", "lectures": ["https://en.wikipedia.org/wiki/Ichimoku_Kink%C5%8D_Hy%C5%8D", "https://www.investopedia.com/terms/i/ichimoku-cloud.asp"], "wikipedia": "Ichimoku Kinko Hyo", "titre": "Le prix et le nuage", "examen": "ichimoku_tendance",
          "resume": "Le nuage sous le prix actuel est celui calculé il y a 26 bougies (Senkou A et B décalés). "
                    "Prix au-dessus = contexte haussier, dessous = baissier, dedans = indécis.",
          "quiz": ("C", "Le nuage d'Ichimoku visible sous la bougie actuelle a été calculé :",
                   {"A": "Sur la bougie actuelle", "B": "Sur les 9 dernières bougies", "C": "Il y a 26 bougies",
                    "D": "Sur le jour précédent"})},
-        {"cle": "tenkan_kijun", "wikipedia": "Ichimoku Kinko Hyo", "titre": "Tenkan et Kijun", "examen": "ichimoku_tenkan",
+        {"cle": "tenkan_kijun", "lectures": ["https://en.wikipedia.org/wiki/Ichimoku_Kink%C5%8D_Hy%C5%8D"], "wikipedia": "Ichimoku Kinko Hyo", "titre": "Tenkan et Kijun", "examen": "ichimoku_tenkan",
          "resume": "Tenkan = milieu du plus haut et du plus bas des 9 dernières bougies ; Kijun = la même chose "
                    "sur 26 bougies. Une Kijun plate attire souvent le prix.",
          "quiz": ("B", "La Tenkan-sen se calcule comme :",
                   {"A": "La moyenne des 9 dernières clôtures", "B": "(plus haut 9 + plus bas 9) / 2",
                    "C": "La clôture d'il y a 26 bougies", "D": "Le volume moyen"})},
-        {"cle": "chikou", "wikipedia": "Ichimoku Kinko Hyo", "titre": "La Chikou",
+        {"cle": "chikou", "lectures": ["https://en.wikipedia.org/wiki/Ichimoku_Kink%C5%8D_Hy%C5%8D"], "wikipedia": "Ichimoku Kinko Hyo", "titre": "La Chikou",
          "resume": "La Chikou est la clôture actuelle reportée 26 bougies en arrière : on la compare au prix "
                    "d'il y a 26 bougies.",
          "quiz": ("A", "La Chikou compare la clôture actuelle :",
                   {"A": "Au prix d'il y a 26 bougies", "B": "Au nuage futur", "C": "À la Kijun", "D": "Au VWAP"})},
     ],
     4: [
-        {"cle": "carnet", "wikipedia": "Carnet d'ordres", "titre": "Lire une heatmap de liquidité",
+        {"cle": "carnet", "lectures": ["https://en.wikipedia.org/wiki/Order_book", "https://en.wikipedia.org/wiki/Market_depth"], "wikipedia": "Carnet d'ordres", "titre": "Lire une heatmap de liquidité",
          "resume": "Murs d'ordres, absorption, zones vidées : seulement avec un vrai carnet (Bookmap). On ne déduit "
                    "jamais un carnet d'ordres de simples bougies. L'agent reste en attente des données Bookmap.",
          "quiz": ("D", "Sans données Bookmap, l'agent heatmap doit :",
@@ -107,13 +107,13 @@ PROGRAMME = {
                    "D": "Dire qu'il attend les données"})},
     ],
     5: [
-        {"cle": "heures", "wikipedia": "Heure d'été", "titre": "Heures des annonces en heure de Paris", "examen": "macro_heures",
+        {"cle": "heures", "lectures": ["https://en.wikipedia.org/wiki/Daylight_saving_time_in_the_United_States", "https://en.wikipedia.org/wiki/Summer_time_in_Europe"], "wikipedia": "Heure d'été", "titre": "Heures des annonces en heure de Paris", "examen": "macro_heures",
          "resume": "Les annonces américaines tombent à 8h30 New York. L'Europe passe à l'heure d'hiver le dernier "
                    "dimanche d'octobre, les États-Unis le premier dimanche de novembre : pendant cette semaine-là, "
                    "8h30 New York = 13h30 à Paris (et non 14h30).",
          "quiz": ("B", "Le vendredi 30 octobre 2026, une annonce de 8h30 New York tombe à Paris à :",
                   {"A": "14h30", "B": "13h30", "C": "15h30", "D": "8h30"})},
-        {"cle": "majeures", "wikipedia": "Federal Open Market Committee", "titre": "Les annonces qui bougent le gold",
+        {"cle": "majeures", "lectures": ["https://en.wikipedia.org/wiki/Federal_Open_Market_Committee", "https://en.wikipedia.org/wiki/Nonfarm_payrolls", "https://en.wikipedia.org/wiki/Consumer_price_index", "https://www.federalreserve.gov/monetarypolicy/fomc.htm", "https://www.bls.gov/cpi/"], "wikipedia": "Federal Open Market Committee", "titre": "Les annonces qui bougent le gold",
          "resume": "CPI (inflation), NFP (emploi), FOMC (taux de la Fed), PCE : impact fort sur le dollar et l'or. "
                    "Le gestionnaire des risques est prévenu quand une annonce majeure arrive dans l'heure.",
          "quiz": ("C", "Laquelle de ces annonces a le plus d'impact sur le gold ?",
@@ -121,25 +121,25 @@ PROGRAMME = {
                    "D": "Le prix du blé"})},
     ],
     6: [
-        {"cle": "vwap", "wikipedia": "Prix moyen pondéré par le volume", "titre": "VWAP de séance", "examen": "vwap_exact",
+        {"cle": "vwap", "lectures": ["https://en.wikipedia.org/wiki/Volume-weighted_average_price", "https://www.investopedia.com/terms/v/vwap.asp"], "wikipedia": "Prix moyen pondéré par le volume", "titre": "VWAP de séance", "examen": "vwap_exact",
          "resume": "VWAP = somme(prix typique x volume) / somme(volume), prix typique = (haut + bas + clôture) / 3, "
                    "depuis l'ouverture de séance CME (17 h Chicago = 18 h New York).",
          "quiz": ("A", "Le prix typique utilisé pour le VWAP est :",
                   {"A": "(haut + bas + clôture) / 3", "B": "L'ouverture", "C": "(haut + bas) / 2 seulement",
                    "D": "La clôture de la veille"})},
-        {"cle": "ema200", "wikipedia": "Moyenne mobile", "titre": "EMA 200 : niveau et pente", "examen": "ema_retard",
+        {"cle": "ema200", "lectures": ["https://en.wikipedia.org/wiki/Exponential_smoothing", "https://en.wikipedia.org/wiki/Moving_average"], "wikipedia": "Moyenne mobile", "titre": "EMA 200 : niveau et pente", "examen": "ema_retard",
          "resume": "L'EMA 200 suit le prix avec du retard : sur une hausse régulière de a points par bougie, elle "
                    "reste environ 99,5 x a points sous le prix. Il faut au moins 200 bougies fermées.",
          "quiz": ("D", "Combien de bougies fermées faut-il au minimum pour une EMA 200 sérieuse ?",
                   {"A": "20", "B": "50", "C": "100", "D": "200"})},
     ],
     7: [
-        {"cle": "delta", "wikipedia": "Volume (finance)", "titre": "Delta estimé depuis les bougies", "examen": "flux_delta",
+        {"cle": "delta", "lectures": ["https://en.wikipedia.org/wiki/Volume_(finance)", "https://en.wikipedia.org/wiki/Order_flow_trading"], "wikipedia": "Volume (finance)", "titre": "Delta estimé depuis les bougies", "examen": "flux_delta",
          "resume": "Sans vrai carnet, le delta est ESTIMÉ : une bougie qui ferme en haut de son range compte comme "
                    "acheteuse. Toujours écrire « estimé ».",
          "quiz": ("B", "Un delta calculé depuis des bougies de 5 minutes est :",
                   {"A": "Un vrai footprint", "B": "Une estimation", "C": "Le carnet d'ordres réel", "D": "Interdit"})},
-        {"cle": "poc", "wikipedia": "Volume (finance)", "titre": "Profil de volume : POC et zone de valeur", "examen": "flux_poc",
+        {"cle": "poc", "lectures": ["https://en.wikipedia.org/wiki/Volume_profile", "https://en.wikipedia.org/wiki/Market_profile"], "wikipedia": "Volume (finance)", "titre": "Profil de volume : POC et zone de valeur", "examen": "flux_poc",
          "resume": "Le POC est le prix où il s'est échangé le plus de volume ; la zone de valeur contient 70 % du "
                    "volume autour du POC.",
          "quiz": ("C", "Le POC d'un profil de volume est :",
@@ -147,19 +147,19 @@ PROGRAMME = {
                    "D": "La moyenne des clôtures"})},
     ],
     8: [
-        {"cle": "taille", "wikipedia": "Gestion des risques", "titre": "Taille de position en MGC", "examen": "risque_taille",
+        {"cle": "taille", "lectures": ["https://www.cmegroup.com/markets/metals/precious/e-micro-gold.contractSpecs.html", "https://en.wikipedia.org/wiki/Money_management"], "wikipedia": "Gestion des risques", "titre": "Taille de position en MGC", "examen": "risque_taille",
          "resume": "MGC : 1 tick = 0,10 point = 1 $, 1 point = 10 $ par contrat. Contrats = budget de risque / "
                    "(risque du stop + frais + glissement), arrondi vers le bas. Budget = 0,25 % du capital.",
          "quiz": ("A", "Sur le Micro Gold (MGC), 1 point vaut :",
                   {"A": "10 $ par contrat", "B": "1 $", "C": "100 $", "D": "0,10 $"})},
-        {"cle": "vetos", "wikipedia": "Gestion des risques", "titre": "Les vetos", "examen": "risque_vetos",
+        {"cle": "vetos", "lectures": ["https://en.wikipedia.org/wiki/Risk_management", "https://en.wikipedia.org/wiki/Stop-loss_order"], "wikipedia": "Gestion des risques", "titre": "Les vetos", "examen": "risque_vetos",
          "resume": "Veto si le stop est du mauvais côté, si un prix n'est pas sur la grille de 0,10, si la limite de "
                    "perte du jour est atteinte ou si le ratio au TP1 est sous le minimum. Un veto est toujours expliqué.",
          "quiz": ("C", "À l'achat, où doit être le stop ?",
                   {"A": "Au-dessus de l'entrée", "B": "Au TP1", "C": "Sous l'entrée", "D": "N'importe où"})},
     ],
     9: [
-        {"cle": "recalcul", "wikipedia": "Reproductibilité", "titre": "Recalcul indépendant",
+        {"cle": "recalcul", "lectures": ["https://en.wikipedia.org/wiki/Reproducibility", "https://en.wikipedia.org/wiki/Audit"], "wikipedia": "Reproductibilité", "titre": "Recalcul indépendant",
          "resume": "Le secrétaire-auditeur refait chaque chiffre sans réutiliser le code de l'agent vérifié, avec "
                    "une tolérance écrite. Hors tolérance : rejet et message à l'auteur et au directeur.",
          "quiz": ("B", "Pour vérifier une analyse, l'auditeur doit :",
@@ -170,7 +170,7 @@ PROGRAMME = {
          "quiz": None},
     ],
     10: [
-        {"cle": "ton", "wikipedia": "Politique monétaire", "titre": "Ton d'un discours : faucon, colombe, neutre", "examen": "discours_ton",
+        {"cle": "ton", "lectures": ["https://en.wikipedia.org/wiki/Hawk_and_dove", "https://en.wikipedia.org/wiki/Monetary_policy", "https://www.federalreserve.gov/newsevents/speeches.htm"], "wikipedia": "Politique monétaire", "titre": "Ton d'un discours : faucon, colombe, neutre", "examen": "discours_ton",
          "resume": "Faucon = inquiet de l'inflation, prêt à resserrer (plutôt négatif pour l'or) ; colombe = parle "
                    "de baisses de taux (plutôt positif pour l'or). Lexique fixé à l'avance, citations exactes.",
          "quiz": ("A", "Un discours « faucon » de la Fed parle surtout de :",
@@ -178,13 +178,13 @@ PROGRAMME = {
                    "D": "Prix du pétrole"})},
     ],
     11: [
-        {"cle": "precedents", "wikipedia": "Réserve fédérale des États-Unis", "titre": "Retrouver des précédents datés",
+        {"cle": "precedents", "lectures": ["https://en.wikipedia.org/wiki/Gold_as_an_investment", "https://en.wikipedia.org/wiki/History_of_the_Federal_Reserve_System"], "wikipedia": "Réserve fédérale des États-Unis", "titre": "Retrouver des précédents datés",
          "resume": "Chaque précédent a sa date et sa source ; un précédent incertain est marqué « à vérifier ».",
          "quiz": ("C", "Un précédent dont on n'a pas la source est :",
                   {"A": "Gardé tel quel", "B": "Effacé sans le dire", "C": "Marqué « à vérifier »", "D": "Inventé"})},
     ],
     12: [
-        {"cle": "fenetre", "wikipedia": "Étude d'événement", "titre": "Mesurer une réaction sans look-ahead", "examen": "reaction_mesure",
+        {"cle": "fenetre", "lectures": ["https://en.wikipedia.org/wiki/Event_study"], "wikipedia": "Étude d'événement", "titre": "Mesurer une réaction sans look-ahead", "examen": "reaction_mesure",
          "resume": "La référence est la dernière bougie FERMÉE avant l'annonce ; la fenêtre de mesure (5, 15, 60 min) "
                    "est fixée avant de regarder. Moins de 20 cas = échantillon insuffisant.",
          "quiz": ("B", "Pour mesurer la réaction à une annonce de 14h30, la référence est :",
@@ -192,20 +192,20 @@ PROGRAMME = {
                    "C": "Le plus haut du jour", "D": "La clôture de la veille"})},
     ],
     13: [
-        {"cle": "look_ahead", "wikipedia": "Backtesting", "titre": "Pas de look-ahead", "examen": "donnees_look_ahead",
+        {"cle": "look_ahead", "lectures": ["https://en.wikipedia.org/wiki/Backtesting", "https://en.wikipedia.org/wiki/Overfitting"], "wikipedia": "Backtesting", "titre": "Pas de look-ahead", "examen": "donnees_look_ahead",
          "resume": "À l'instant t, une bougie n'est visible que si elle est FERMÉE (début + durée <= t). Une bougie H1 "
                    "reconstruite n'apparaît qu'une fois l'heure terminée.",
          "quiz": ("D", "À 10h20, la bougie H1 de 10h est-elle visible ?",
                   {"A": "Oui, entière", "B": "Oui, sans son plus haut", "C": "Oui si le volume est fort",
                    "D": "Non, elle n'est pas fermée"})},
-        {"cle": "qualite", "wikipedia": "Qualité des données", "titre": "Contrôle des données", "examen": "donnees_trous",
+        {"cle": "qualite", "lectures": ["https://en.wikipedia.org/wiki/Data_quality", "https://en.wikipedia.org/wiki/Gold_futures"], "wikipedia": "Qualité des données", "titre": "Contrôle des données", "examen": "donnees_trous",
          "resume": "Source, période et nombre de bougies toujours affichés ; trous et doublons signalés ; la pause "
                    "quotidienne et le week-end ne sont pas des trous.",
          "quiz": ("A", "Une absence de bougies le samedi sur le gold est :",
                   {"A": "Normale (marché fermé)", "B": "Un trou grave", "C": "Un doublon", "D": "Une erreur Yahoo"})},
     ],
     14: [
-        {"cle": "aiguillage", "wikipedia": "Management", "titre": "Confier chaque demande au bon agent", "examen": "directeur_aiguillage",
+        {"cle": "aiguillage", "lectures": ["https://en.wikipedia.org/wiki/Delegation"], "wikipedia": "Management", "titre": "Confier chaque demande au bon agent", "examen": "directeur_aiguillage",
          "resume": "« Analyse du gold » = les 5 techniciens ; « Fibo » = agent 2 ; « discours de Powell » = agent 10 ; "
                    "« calendrier » = agent 5. La synthèse ne reprend que des documents existants.",
          "quiz": ("C", "« Fais-moi une analyse du gold » doit être confiée à :",
@@ -213,21 +213,21 @@ PROGRAMME = {
                    "D": "Personne"})},
     ],
     15: [
-        {"cle": "secrets", "wikipedia": "Sécurité de l'information", "titre": "Masquer les secrets", "examen": "scribe_secrets",
+        {"cle": "secrets", "lectures": ["https://en.wikipedia.org/wiki/Information_security"], "wikipedia": "Sécurité de l'information", "titre": "Masquer les secrets", "examen": "scribe_secrets",
          "resume": "Avant d'écrire un bloc, le Scribe masque clés, tokens, mots de passe et lignes CLE=valeur.",
          "quiz": ("B", "Le Scribe trouve « API_KEY=abc123 » dans une session. Il écrit :",
                   {"A": "Le texte tel quel", "B": "Le texte avec la valeur masquée", "C": "Rien et il plante",
                    "D": "La clé en majuscules"})},
     ],
     16: [
-        {"cle": "citer", "wikipedia": "Recherche d'information", "titre": "Ne citer que des blocs existants",
+        {"cle": "citer", "lectures": ["https://en.wikipedia.org/wiki/Information_retrieval"], "wikipedia": "Recherche d'information", "titre": "Ne citer que des blocs existants",
          "resume": "L'Archiviste cite des blocs avec leur numéro, date et dossier ; si rien n'est trouvé, il le dit.",
          "quiz": ("A", "Si l'Archiviste ne trouve rien, il :",
                   {"A": "Le dit franchement", "B": "Répond de mémoire", "C": "Invente un bloc", "D": "Se tait"})},
     ],
 }
 PROGRAMME[17] = [
-    {"cle": "enseigner", "wikipedia": "Pédagogie", "titre": "Enseigner avec des sources",
+    {"cle": "enseigner", "lectures": ["https://en.wikipedia.org/wiki/Pedagogy"], "wikipedia": "Pédagogie", "titre": "Enseigner avec des sources",
      "resume": "Le mentor n'enseigne que ce qui vient d'une source (programme, bibliothèque, Wikipédia) et le cite ; "
                "si rien n'est trouvé, le cours est reporté.",
      "quiz": ("B", "Le mentor ne trouve aucune source sur un sujet. Il :",
@@ -240,8 +240,9 @@ MISSION_AGENT = {1: "analyse_smc", 2: "analyse_fibo", 3: "analyse_ichimoku", 5: 
 
 
 def programme(agent):
-    """Les sujets du cours d'un agent : [{cle, titre, resume, wikipedia, examen, quiz}] (liste vide si l'agent n'a pas de cours)."""
+    """Les sujets du cours d'un agent : [{cle, titre, resume, wikipedia, lectures, examen, quiz}] (liste vide si l'agent n'a pas de cours)."""
     return [{"cle": s["cle"], "titre": s["titre"], "resume": s["resume"], "wikipedia": s.get("wikipedia"),
+             "lectures": list(s.get("lectures", [])),
              "examen": bool(s.get("examen")),
              "quiz": bool(s.get("quiz"))} for s in PROGRAMME.get(int(agent), [])]
 

@@ -290,3 +290,72 @@ def test_corpus_garde_les_redactions_groq_et_masque_les_secrets(base):
     ligne = corpus.exemples(base, 3)[0]
     assert ligne["verdict"] == "accepte" and "abcdefgh12345678" not in ligne["messages"][1]["content"]
     assert (corpus.dossier(base) / "LISEZ-MOI.txt").exists()
+
+
+# ------------------------------------------------------------------ recherches du mentor (01/11)
+def test_liste_blanche_des_lectures():
+    from universite.competences import cours_du_jour as cdj
+
+    assert cdj.autorisee("https://en.wikipedia.org/wiki/Fibonacci_retracement")
+    assert cdj.autorisee("https://www.cmegroup.com/markets/x.html")
+    assert not cdj.autorisee("http://en.wikipedia.org/wiki/X")            # pas de https
+    assert not cdj.autorisee("https://wikipedia.org.pirate.com/x")
+    assert not cdj.autorisee("https://forum-trading.example/fibo")
+    toutes = [u for p in entrainement.PROGRAMME.values() for s in p for u in s.get("lectures", [])]
+    assert toutes and all(cdj.autorisee(u) for u in toutes)
+
+
+def test_lire_page_html(monkeypatch):
+    from universite.competences import cours_du_jour as cdj
+
+    page = ("<html><head><title>VWAP - Investopedia</title><script>var x=1</script></head><body><nav>Menu</nav>"
+            "<p>The volume-weighted average price (VWAP) is a trading benchmark used by traders that gives the average "
+            "price a security has traded at throughout the day, based on both volume and price.</p></body></html>")
+
+    class Reponse:
+        headers = type("H", (), {"get_content_charset": lambda self: "utf-8"})()
+
+        def read(self, n=None):
+            return page.encode()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    import importlib
+
+    vrai = importlib.reload(cdj)            # le conftest a remplacé lire_page : on reprend la vraie
+    monkeypatch.setattr(vrai.urllib.request, "urlopen", lambda req, timeout=8: Reponse())
+    r = vrai.lire_page("https://www.investopedia.com/terms/v/vwap.asp")
+    assert r["titre"] == "VWAP - Investopedia" and "volume-weighted" in r["texte"] and "Menu" not in r["texte"]
+    assert vrai.lire_page("https://example.com/x") is None
+
+
+def test_cours_avec_lectures_cite_et_range_les_sources(tmp_path, monkeypatch):
+    from universite import bibliotheque
+    from universite.competences import cours_du_jour as cdj
+
+    monkeypatch.setitem(config.DEFAUTS, "ia_commentaires", False)
+    u = Universite(tmp_path, demarrer_moteur=False)
+    try:
+        lus = []
+
+        def faux_lecteur(url, delai=8):
+            lus.append(url)
+            return {"titre": f"Page {len(lus)}", "texte": "Ichimoku Kinko Hyo est une méthode d'analyse japonaise. " * 5,
+                    "lien": url}
+
+        monkeypatch.setattr(cdj, "lire_page", faux_lecteur)
+        m = u.base.nouvelle_mission(17, "cours_du_jour", "Cours", {"agents": [3]})
+        executer_tout(u.moteur, limite=3)
+        assert u.base.mission(m)["statut"] == "terminee", u.base.mission(m)["erreur"]
+        assert lus == entrainement.programme(3)[0]["lectures"][:cdj.LECTURES_MAX]
+        c = u.base.un("SELECT * FROM cours")
+        doc = u.base.un("SELECT * FROM documents WHERE id=?", (c["document"],))
+        assert all(url in doc["contenu"] for url in lus)
+        assert u.base.un("SELECT COUNT(*) AS n FROM extraits WHERE origine LIKE 'source:%'")["n"] >= 1
+        assert bibliotheque.rechercher(u.base, "Ichimoku japonaise", n=2)
+    finally:
+        u.base.fermer()

@@ -39,7 +39,7 @@ PLANNING = {
     "discours_fed": (24 * HEURE, False, False),
     "reaction_annonces": (24 * HEURE, True, False),
     "replay_strategie_v1": (7 * 24 * HEURE, True, False),
-    "cours_du_jour": (8 * HEURE, False, False),
+    "cours_du_jour": (4 * HEURE, False, False),     # 3 élèves par cours (01/11) : chaque agent garde un cours par jour
     "retour_erreurs": (24 * HEURE, False, False),
     **{t: (HEURE, True, True) for t in ANALYSES},
 }

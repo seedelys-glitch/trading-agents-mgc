@@ -4,18 +4,23 @@ Agent 17 (mentor) — le cours du jour (31/10) : chaque agent apprend quelque ch
 
 Pour chaque agent (celui dont le dernier cours est le plus ancien d'abord, quelques-uns par mission) :
   1. le sujet suivant de son programme (programme du fil « entraînement » s'il existe, sinon PROGRAMME ci-dessous) ;
-  2. des renseignements réels : extraits de la bibliothèque de l'université (STRATEGIE.md, règles validées) et le
-     résumé public Wikipédia du sujet (source citée ; s'il n'y a pas d'Internet, on fait sans) ;
+  2. des renseignements réels : extraits de la bibliothèque de l'université (STRATEGIE.md, règles validées), le
+     résumé public Wikipédia du sujet et (01/11) les « lectures » du programme : pages publiques de sites sûrs
+     seulement (LISTE_BLANCHE), 8 s par page, 1 500 caractères par source, lien cité ; s'il n'y a pas d'Internet,
+     on fait sans. Les extraits des sources (pas le texte de l'IA) sont rangés dans la bibliothèque ;
   3. le cours, écrit par l'IA (Groq via Jarvis, sinon LM Studio) À PARTIR de ces seuls renseignements, dans la
      charte ; sans IA, le cours reprend les renseignements tels quels, avec leurs sources ;
   4. les leçons encore à appliquer de l'agent sont rappelées à la fin du cours.
 Rien n'est inventé : un cours sans aucun renseignement trouvé n'est pas écrit (le sujet est gardé pour demain).
 """
 
+import html
 import json
+import re
 import time
 import urllib.parse
 import urllib.request
+from html.parser import HTMLParser
 
 from .. import agents, bibliotheque, personnalites
 
@@ -24,7 +29,11 @@ AGENT = 17
 TITRE = "Cours du jour (mentor)"
 PARAMS = {"agents": "numéros des agents (vide = ceux dont le dernier cours est le plus ancien)"}
 INTERNE = True
-PAR_MISSION = 6
+PAR_MISSION = 3              # 01/11 : plusieurs lectures par sujet, la mission est coupée à 300 s
+LECTURES_MAX = 3             # sources lues au plus par cours, en plus du résumé Wikipédia
+TAILLE_SOURCE = 1500
+LISTE_BLANCHE = ("wikipedia.org", "cmegroup.com", "federalreserve.gov", "bls.gov", "bea.gov", "investopedia.com")
+AGENT_HTTP = "UniversiteMGC/1.0 (recherche personnelle, université d'agents de Jabran)"
 WIKI = "https://fr.wikipedia.org/api/rest_v1/page/summary/"
 
 # agent -> [(sujet, page Wikipédia en français ou None)]
@@ -65,10 +74,72 @@ def programme(n):
 
         sujets = entrainement.programme(n) or []
         if sujets:
-            return [(s.get("titre") or s.get("cle"), s.get("wikipedia"), s.get("resume") or "") for s in sujets]
+            return [(s.get("titre") or s.get("cle"), s.get("wikipedia"), s.get("resume") or "", s.get("lectures") or [])
+                    for s in sujets]
     except (ImportError, AttributeError, TypeError):
         pass
-    return [(s, w, "") for s, w in PROGRAMME.get(n, [])]
+    return [(s, w, "", []) for s, w in PROGRAMME.get(n, [])]
+
+
+def autorisee(url):
+    hote = (urllib.parse.urlparse(url).hostname or "").lower()
+    return urllib.parse.urlparse(url).scheme == "https" and any(hote == d or hote.endswith("." + d) for d in LISTE_BLANCHE)
+
+
+class _Paragraphes(HTMLParser):
+    """Le texte des paragraphes <p> d'une page (ni menus, ni scripts)."""
+
+    def __init__(self):
+        super().__init__()
+        self.dans, self.morceaux, self.titre, self._t = 0, [], "", False
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "p":
+            self.dans += 1
+            self.morceaux.append("")
+        elif tag == "title":
+            self._t = True
+
+    def handle_endtag(self, tag):
+        if tag == "p" and self.dans:
+            self.dans -= 1
+        elif tag == "title":
+            self._t = False
+
+    def handle_data(self, data):
+        if self._t:
+            self.titre += data
+        elif self.dans and self.morceaux:
+            self.morceaux[-1] += data
+
+
+def lire_page(url, delai=8):
+    """Une page publique d'un site de la liste blanche -> {titre, texte (1 500 car. au plus), lien} ou None.
+    Wikipédia passe par son résumé officiel (API REST) ; les autres sites : texte des paragraphes de la page."""
+    if not autorisee(url):
+        return None
+    try:
+        m = re.match(r"https://(\w+)\.wikipedia\.org/wiki/(.+)$", url)
+        if m:
+            api = f"https://{m.group(1)}.wikipedia.org/api/rest_v1/page/summary/{m.group(2)}"
+            req = urllib.request.Request(api, headers={"User-Agent": AGENT_HTTP})
+            with urllib.request.urlopen(req, timeout=delai) as r:
+                d = json.loads(r.read().decode("utf-8"))
+            texte, titre = (d.get("extract") or "").strip(), d.get("title") or m.group(2)
+        else:
+            req = urllib.request.Request(url, headers={"User-Agent": AGENT_HTTP, "Accept": "text/html"})
+            with urllib.request.urlopen(req, timeout=delai) as r:
+                brut = r.read(600_000).decode(r.headers.get_content_charset() or "utf-8", "replace")
+            p = _Paragraphes()
+            p.feed(brut)
+            texte = " ".join(x.strip() for x in p.morceaux if len(x.strip()) > 60)
+            titre = html.unescape(p.titre.strip()) or url
+        texte = re.sub(r"\s+", " ", html.unescape(texte)).strip()
+        if len(texte) < 80:
+            return None
+        return {"titre": titre[:120], "texte": texte[:TAILLE_SOURCE], "lien": url}
+    except (OSError, ValueError, UnicodeError):
+        return None
 
 
 def wikipedia(page, delai=8):
@@ -100,7 +171,7 @@ def un_cours(ctx, n):
     """Prépare et écrit le cours d'un agent. Renvoie l'id du document, ou None (rien trouvé)."""
     sujets = programme(n)
     deja = ctx.base.un("SELECT COUNT(*) AS c FROM cours WHERE agent=?", (n,))["c"]
-    sujet, page, resume = sujets[deja % len(sujets)]
+    sujet, page, resume, lectures = sujets[deja % len(sujets)]
     p = personnalites.BASE[n]
     ctx.etape("chercheur", f"Cherche des renseignements pour {p['prenom']} : {sujet}")
     sources, faits = [], []
@@ -114,6 +185,19 @@ def un_cours(ctx, n):
     if w:
         faits.append(f"Wikipédia ({w['titre']}) : {w['texte']}")
         sources.append({"wikipedia": w["titre"], "lien": w["lien"]})
+        bibliotheque.indexer_texte(ctx.base, f"source:{w['lien']}", w["titre"], w["texte"])
+    lues = 0
+    for url in lectures:
+        if lues >= LECTURES_MAX or ctx.limite - time.time() < 40:
+            break
+        lu = lire_page(url)
+        if not lu:
+            continue
+        lues += 1
+        faits.append(f"Source ({lu['titre']}, {lu['lien']}) : {lu['texte']}")
+        sources.append({"source": lu["titre"], "lien": lu["lien"]})
+        # la bibliothèque garde le texte réel de la source (jamais le texte rédigé par l'IA)
+        bibliotheque.indexer_texte(ctx.base, f"source:{lu['lien']}", lu["titre"], lu["texte"])
     if not faits:
         ctx.journal(f"Cours « {sujet} » pour {p['prenom']} reporté : aucun renseignement trouvé.", "alerte")
         return None
